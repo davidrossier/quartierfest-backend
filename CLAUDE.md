@@ -39,9 +39,25 @@ Spring Boot 4 / Java 21 REST backend. Code is organized by domain under `ch.quar
 - **Service** (`@Service`, `@RequiredArgsConstructor`) — business logic, calls repository
 - **Controller** (`@RestController`, `@RequestMapping("/api/...")`) — HTTP endpoints, calls service
 
-The only domain currently implemented is `person` (`/api/persons` — GET all, POST create, DELETE by id).
+All domains are implemented. Each follows the same package-per-domain structure `ch.quartierfest.backend.<domain>/` with 4 files: Entity, Repository, Service, Controller.
 
-New domains follow the same package-per-domain structure: `ch.quartierfest.backend.<domain>/`.
+| Domain | Endpoint | Beziehungen |
+|---|---|---|
+| `person` | `/api/persons` | — |
+| `partei` | `/api/parteien` | `@OneToMany` → Person |
+| `event` | `/api/events` | — |
+| `einladung` | `/api/einladungen` | `@ManyToOne` → Event, Partei |
+| `teilnahme` | `/api/teilnahmen` | `@OneToOne` → Einladung |
+| `konsumationsangebot` | `/api/konsumationsangebote` | `@ManyToOne` → Event |
+| `konsumation` | `/api/konsumationen` | `@ManyToOne` → Teilnahme, Konsumationsangebot |
+| `allgemeinausgabe` | `/api/allgemeinausgaben` | `@ManyToOne` → Event |
+| `abrechnung` | `/api/abrechnungen` | `@OneToOne` → Teilnahme |
+| `zahlung` | `/api/zahlungen` | `@ManyToOne` → Abrechnung |
+| `mahnung` | `/api/mahnungen` | `@ManyToOne` → Abrechnung |
+
+Enums sind als innere Klassen in der jeweiligen Entity definiert (`Einladung.EinladungStatus`, `Einladung.BuffetBeitrag`, `Abrechnung.Zustellungskanal`, `Zahlung.Zahlungskanal`).
+
+Die Spezifikationen liegen unter `specs/`: `use-cases.md`, `datamodel.md`, `architecture.md`.
 
 ## Key Libraries
 
