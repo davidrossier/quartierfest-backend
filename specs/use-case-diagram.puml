@@ -1,0 +1,108 @@
+@startuml Quartierfest-UseCaseDiagramm
+title Quartierfest – UML Use Case Diagramm
+
+' ── Layout ────────────────────────────────────────────────
+left to right direction
+skinparam defaultFontName Arial
+skinparam defaultFontSize 12
+skinparam packageStyle rectangle
+skinparam usecase {
+  BackgroundColor #FFFDE7
+  BorderColor     #F9A825
+  ArrowColor      #555555
+}
+skinparam actor {
+  BackgroundColor #E3F2FD
+  BorderColor     #1565C0
+}
+skinparam package {
+  BackgroundColor #FAFAFA
+  BorderColor     #BDBDBD
+}
+skinparam note {
+  BackgroundColor #F3E5F5
+  BorderColor     #7B1FA2
+}
+
+' ── Akteure ───────────────────────────────────────────────
+actor "Organisator" as ORG
+actor "Partei\n(extern)" as PARTEI
+
+' ── Systemgrenze ──────────────────────────────────────────
+rectangle "Quartierfest-System" {
+
+  ' ── Phase 1: Stammdaten ─────────────────────────────────
+  package "Stammdaten" {
+    usecase "UC-001\nPersonendaten\nverwalten"            as UC001
+    usecase "UC-002\nParteien\nverwalten"                 as UC002
+  }
+
+  ' ── Phase 2: Event-Planung ──────────────────────────────
+  package "Event-Planung" {
+    usecase "UC-003\nEvent\nanlegen"                      as UC003
+    usecase "UC-004\nEinladung\nerstellen & verwalten"    as UC004
+    usecase "UC-005\nTeilnahmen\nverwalten"               as UC005
+    usecase "UC-006\nBestätigung\nerstellen & versenden"  as UC006
+    usecase "UC-007\nAllgemeinausgaben\nverwalten"        as UC007
+    usecase "UC-008\nKonsumationsangebot\nverwalten"      as UC008
+  }
+
+  ' ── Phase 3: Event-Durchführung ─────────────────────────
+  package "Event-Durchführung" {
+    usecase "UC-009\nKonsumationsliste\nerstellen"        as UC009
+    usecase "UC-010\nKonsumation\nübernehmen"             as UC010
+  }
+
+  ' ── Phase 4: Nachbearbeitung ────────────────────────────
+  package "Nachbearbeitung" {
+    usecase "UC-011\nAbrechnung\nerstellen"               as UC011
+    usecase "UC-012\nAbrechnung\nzustellen"               as UC012
+    usecase "UC-013\nInkasso\nsicherstellen"              as UC013
+  }
+}
+
+' ── Akteur-Assoziationen ──────────────────────────────────
+
+ORG --> UC001
+ORG --> UC002
+ORG --> UC003
+ORG --> UC004
+ORG --> UC005
+ORG --> UC006
+ORG --> UC007
+ORG --> UC008
+ORG --> UC009
+ORG --> UC010
+ORG --> UC011
+ORG --> UC012
+ORG --> UC013
+
+PARTEI --> UC004 : Rückmeldung\nübermitteln
+PARTEI --> UC006 : empfängt\nBestätigung
+PARTEI --> UC012 : empfängt\nAbrechnung
+PARTEI --> UC013 : leistet\nZahlung
+
+' ── Prozessketten (<<precedes>>) ─────────────────────────
+' Stammdaten → Planung
+UC001 .down.> UC002 : <<precedes>>
+UC002 .right.> UC004 : <<precedes>>
+UC003 .down.> UC004  : <<precedes>>
+
+' Planung → Durchführung
+UC004 .down.> UC005  : <<precedes>>
+UC005 .right.> UC006 : <<precedes>>
+UC005 .down.> UC009  : <<precedes>>
+UC008 .down.> UC009  : <<precedes>>
+UC009 .right.> UC010 : <<precedes>>
+
+' Durchführung → Nachbearbeitung
+UC005 .down.> UC011  : <<precedes>>
+UC007 .down.> UC011  : <<precedes>>
+UC010 .down.> UC011  : <<precedes>>
+UC011 .right.> UC012 : <<precedes>>
+UC012 .right.> UC013 : <<precedes>>
+
+' ── Legende ───────────────────────────────────────────────
+note "Legende:\n──────────────\n──  Akteur-Assoziation\n..  <<precedes>> Prozesskette\n    (Vorbedingung erfüllt)" as LEGEND
+
+@enduml
