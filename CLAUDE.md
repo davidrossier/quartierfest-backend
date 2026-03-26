@@ -5,19 +5,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-# Build
-./mvnw clean install
+# Build (skip tests)
+./mvnw clean install -DskipTests
 
 # Run application
 ./mvnw spring-boot:run
 
-# Run all tests
+# Unit tests only  (BackendApplicationTests – context load smoke test)
 ./mvnw test
 
-# Run a single test class
-./mvnw test -Dtest=BackendApplicationTests
+# Integration tests only
+./mvnw test -Dtest="*IT"
 
-# Run a single test method
+# Unit tests + integration tests (preferred for CI)
+./mvnw verify
+
+# Single IT class
+./mvnw verify -Dit.test=PersonVerwaltenIT
+
+# Single test method
 ./mvnw test -Dtest=BackendApplicationTests#contextLoads
 ```
 
@@ -29,17 +35,36 @@ PostgreSQL is required. The app connects to:
 - Username: `qfuser` / Password: `qfpass`
 
 Schema is auto-managed via `spring.jpa.hibernate.ddl-auto=update`.
+SQL logging is enabled via `spring.jpa.show-sql=true`.
+
+## Tech Stack
+
+- **Spring Boot 4.0.3** / **Spring Framework 7.x** / **Java 21**
+- **Spring Data JPA** + **PostgreSQL** (runtime)
+- **Lombok** (`@Data`, `@RequiredArgsConstructor`) — never write boilerplate manually
+- **Spring WebMVC** (synchronous) — not WebFlux
+- **spring-boot-devtools** (runtime, optional)
+
+Test scope:
+- `spring-boot-starter-data-jpa-test` + `spring-boot-starter-webmvc-test`
+- `citrus-bom 4.9.4` (on classpath but **not used** — incompatible with Spring Framework 7.x; `HttpHeaders` no longer implements `MultiValueMap`)
+- **maven-failsafe-plugin** runs `*IT.java` classes during `verify`
 
 ## Architecture
 
-Spring Boot 4 / Java 21 REST backend. Code is organized by domain under `ch.quartierfest.backend`. Each domain follows a four-layer pattern:
+Code is organized by domain under `ch.quartierfest.backend`. Each domain is a package with exactly 4 files:
 
-- **Entity** (`@Entity`, Lombok `@Data`) — JPA-mapped table
+- **Entity** (`@Entity`, `@Data`) — JPA-mapped table
 - **Repository** (`JpaRepository<Entity, Long>`) — data access
-- **Service** (`@Service`, `@RequiredArgsConstructor`) — business logic, calls repository
-- **Controller** (`@RestController`, `@RequestMapping("/api/...")`) — HTTP endpoints, calls service
+- **Service** (`@Service`, `@RequiredArgsConstructor`) — business logic
+- **Controller** (`@RestController`, `@RequestMapping("/api/...")`) — HTTP endpoints
 
-All domains are implemented. Each follows the same package-per-domain structure `ch.quartierfest.backend.<domain>/` with 4 files: Entity, Repository, Service, Controller.
+All controllers expose the same three operations:
+- `GET /api/{resource}` — list all
+- `POST /api/{resource}` — create, returns `200 OK` + saved entity
+- `DELETE /api/{resource}/{id}` — delete, returns `200 OK`
+
+No PUT/PATCH endpoints exist.
 
 | Domain | Endpoint | Beziehungen |
 |---|---|---|
@@ -55,12 +80,74 @@ All domains are implemented. Each follows the same package-per-domain structure 
 | `zahlung` | `/api/zahlungen` | `@ManyToOne` → Abrechnung |
 | `mahnung` | `/api/mahnungen` | `@ManyToOne` → Abrechnung |
 
-Enums sind als innere Klassen in der jeweiligen Entity definiert (`Einladung.EinladungStatus`, `Einladung.BuffetBeitrag`, `Abrechnung.Zustellungskanal`, `Zahlung.Zahlungskanal`).
+Enums sind als innere Klassen in der jeweiligen Entity definiert:
+`Einladung.EinladungStatus`, `Einladung.BuffetBeitrag`, `Abrechnung.Zustellungskanal`, `Zahlung.Zahlungskanal`
 
-Die Spezifikationen liegen unter `specs/`: `use-cases.md`, `datamodel.md`, `architecture.md`.
+## Tests
 
-## Key Libraries
+### Unit tests
+`src/test/java/ch/quartierfest/backend/BackendApplicationTests.java` — Spring context load smoke test.
 
-- **Lombok** — used for `@Data`, `@RequiredArgsConstructor`; avoid writing boilerplate manually
-- **Spring Data JPA** — repositories extend `JpaRepository`
-- **Spring WebMVC** — not WebFlux; controllers are synchronous
+### Integration tests
+13 `*IT.java` Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`.
+Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
+**28 Testfälle (TC-001..TC-028), alle grün.**
+
+Verwendetes Muster:
+```java
+@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+class XxxIT {
+    private RestTemplate http;          // no-op error handler → wirft nie bei 4xx/5xx
+    @LocalServerPort private int port;
+    private RestTemplate setup;         // für @BeforeEach-Voraussetzungen
+    private HttpHeaders json;
+
+    @BeforeEach void setUp() {
+        setup = new RestTemplate();
+        http = new RestTemplate();
+        http.setErrorHandler(new ResponseErrorHandler() {
+            public boolean hasError(ClientHttpResponse r) { return false; }
+            public void handleError(ClientHttpResponse r) { }
+        });
+        json = new HttpHeaders();
+        json.setContentType(MediaType.APPLICATION_JSON);
+        // Voraussetzungen via setup.postForObject("http://localhost:" + port + "/api/...", ...)
+    }
+
+    @Test @DisplayName("TC-XXX – ...")
+    void tcXxx_...() {
+        ResponseEntity<Map> r = http.exchange(
+            "http://localhost:" + port + "/api/...", HttpMethod.POST,
+            new HttpEntity<>(Map.of(...), json), Map.class);
+        assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+}
+```
+
+Bekannte Einschränkungen (als TODO in den IT-Klassen markiert):
+- Kein `@Valid` auf Controllern → Pflichtfeldverletzungen liefern `500` statt `400`
+- Kein PATCH-Endpunkt (z.B. für `bestaetigungVersendet`, `zustellungsDatum`)
+- Kein `GET /api/events/{id}/konsumationsliste` (UC-009 nur teilweise abgedeckt)
+- Kein Auto-Kalkulationsendpunkt für Abrechnungen (UC-011 manuell)
+
+## Specifications
+
+Alle Spezifikationen liegen unter `specs/`:
+
+| Datei | Inhalt |
+|---|---|
+| `use-cases_overview.md` | Übersicht aller 13 Use Cases |
+| `UC-001` .. `UC-013` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme) |
+| `testdesign.md` | Testdesign mit TC-001..TC-028, Transportstrategie, Open Items |
+| `datamodel.md` | Datenmodell |
+| `architecture.md` | Architekturdiagramm |
+
+## Claude Code Skills
+
+Drei projektspezifische Skills in `.claude/commands/`:
+
+| Slash-Befehl | Zweck |
+|---|---|
+| `/refine-use-case` | Rohe Use Cases in das Standard-Format (`_template_use-case.md`) umschreiben |
+| `/review-use-case` | Alle `UC-*.md` in `specs/` prüfen, kleine Fehler beheben, Open Items anlegen |
+| `/design-citrus-tests` | Testdesign erstellen und IT-Klassen generieren |
