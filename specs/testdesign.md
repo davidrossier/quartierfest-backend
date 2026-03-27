@@ -8,7 +8,7 @@
 | UC-002 Parteien verwalten | Yes | TC-004..005 |
 | UC-003 Event anlegen | Yes | TC-006..007 |
 | UC-004 Einladung verwalten | Yes | TC-008..010 |
-| UC-005 Teilnahme verwalten | Yes | TC-011..012 |
+| UC-005 Teilnahme verwalten | Partial | TC-011..012 – kein Auto-Create wenn Einladung auf ANGEMELDET gesetzt wird; Teilnahme wird manuell via POST erstellt (siehe Open Items) |
 | UC-006 Bestätigung verwalten | Partial | TC-013 – kein PATCH-Endpunkt; flag nur bei Creation setzbar |
 | UC-007 Allgemeinausgabe verwalten | Yes | TC-014..015 |
 | UC-008 Konsumationsangebot verwalten | Yes | TC-016..017 |
@@ -289,3 +289,4 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - [ ] **Kein Event-Filter auf Collections**: Kein `?eventId=` Query-Parameter auf `/api/konsumationsangebote`, `/api/teilnahmen` etc.
 - [ ] **Citrus 4.9.4 + Spring Boot 4.x Kompatibilität**: Prüfen ob Citrus 4.9.4 mit Spring Boot 4.0.x / Spring Framework 7.x kompatibel ist.
 - [ ] **pom.xml**: Citrus BOM fehlt (siehe Snippet unten).
+- [ ] **UC-005 Teilnahme-Erzeugungsmodell (neu, aus UC-Review 2026-03-27)**: TC-011 testet explizites `POST /api/teilnahmen`. Falls das Design auf Auto-Create beim Status-Wechsel ANGEMELDET umgestellt wird (UC-005 Open Item), wird TC-011 hinfällig und muss durch einen Test ersetzt werden, der prüft, dass nach `POST /api/einladungen` mit `status=ANGEMELDET` automatisch eine Teilnahme in `GET /api/teilnahmen` erscheint. Entscheid abwarten bevor TC-011 geändert wird.

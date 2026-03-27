@@ -2,7 +2,7 @@
 id: UC-005
 type: Use Case
 name: "Teilnahmen verwalten"
-completeness: Intermediate
+completeness: Minimum
 ---
 
 # UC-005 – Teilnahmen verwalten
@@ -109,6 +109,12 @@ Scenario: Teilnahmeübersicht ohne Anmeldungen ist leer
   When der Organisator die Teilnahmeübersicht öffnet
   Then zeigt das System eine leere Liste mit Hinweis
 ```
+
+---
+
+## Open Items
+
+- [ ] REVIEW: Der UC setzt voraus, dass Teilnahmen bereits existieren ("Das System zeigt alle Teilnahmen"), spezifiziert aber nicht, wann und durch wen sie erstellt werden. Klären ob das System automatisch eine Teilnahme anlegt, sobald eine Einladung auf ANGEMELDET gesetzt wird (UC-004 Schritt 6), oder ob der Organisator Teilnahmen explizit über einen eigenen Schritt erzeugen muss. Dies hat direkte Auswirkungen auf den API-Endpunkt `POST /api/teilnahmen` und dessen Aufrufzeitpunkt.
 
 ---
 

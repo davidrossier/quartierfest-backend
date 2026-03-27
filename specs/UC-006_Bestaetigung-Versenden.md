@@ -104,6 +104,8 @@ Scenario: Bestätigung ohne Konsumationsangebot zeigt Warnung
 - [ ] OPEN: Gibt es einen definierten Zeitpunkt (z.B. X Tage vor Event-Datum), ab dem die Bestätigung versendet werden soll, oder liegt der Zeitpunkt im freien Ermessen des Organisators?
 - [ ] OPEN: Wie wird die Bestätigung technisch erzeugt und versendet — generiert das System ein Dokument (PDF, E-Mail-Text) oder ist der Versand vollständig manuell?
 - [ ] OPEN: Soll die Bestätigung pro Partei individuell (mit deren spezifischem Buffetbeitrag) oder als einheitliches Rundschreiben verschickt werden?
+- [ ] REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, interagiert aber nie direkt mit dem System (analog UC-004 Open Item). Klären ob Partei als sekundärer Aktor oder als Stakeholder ausserhalb des UC-Scopes zu führen ist.
+- [ ] REVIEW: Schritt 4 verlangt das Setzen von `bestaetigungVersendet = true` per Einladung, aber das System besitzt keinen PATCH-Endpunkt. Klären ob ein PATCH-Endpunkt eingeführt oder ob das Markieren über einen alternativen Mechanismus (z.B. DELETE + neu anlegen) gelöst werden soll.
 
 ---
 

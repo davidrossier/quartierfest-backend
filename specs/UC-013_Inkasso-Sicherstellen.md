@@ -128,6 +128,7 @@ Scenario: Teilzahlung reduziert offenen Betrag korrekt
 ## Open Items
 
 - [ ] REVIEW: Schritt 6 erwähnt "abgeschrieben" als Abschlusszustand einer Abrechnung, aber das Datenmodell hat keinen entsprechenden Status oder kein Flag dafür. Klären ob Forderungsabschreibungen (z.B. bei Uneinbringlichkeit) im System erfasst werden sollen und welches Datenmodell dafür nötig ist.
+- [ ] REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, leistet die Zahlung aber ausserhalb des Systems — analog UC-004 Open Item. Klären ob Partei als sekundärer Aktor oder als Stakeholder ausserhalb des UC-Scopes zu führen ist.
 
 ---
 

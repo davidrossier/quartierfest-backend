@@ -115,6 +115,8 @@ Scenario: Zustellungskanal vor Versand ändern
 
 - [ ] OPEN: Soll das System eine Abrechnungsvorlage (PDF oder E-Mail-Text) automatisch generieren, oder erstellt der Organisator das Schreiben manuell?
 - [ ] OPEN: Sollen mehrere Abrechnungen gleichzeitig als zugestellt markiert werden können (Bulk-Aktion)?
+- [ ] REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, interagiert aber nie direkt mit dem System (analog UC-004 Open Item). Klären ob Partei als sekundärer Aktor oder als Stakeholder ausserhalb des UC-Scopes zu führen ist.
+- [ ] REVIEW: Schritt 4–5 verlangen das Setzen des `zustellungsDatum` und des Zustellungskanals, aber das System besitzt keinen PATCH-Endpunkt. Klären ob ein PATCH-Endpunkt eingeführt wird oder ob ein alternativer Mechanismus spezifiziert werden muss.
 
 ---
 
