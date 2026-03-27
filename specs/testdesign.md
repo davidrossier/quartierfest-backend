@@ -23,8 +23,8 @@
 - Spring Boot App läuft mit `DEFINED_PORT` (Standard: 8080)
 - PostgreSQL läuft auf `localhost:5432`, Datenbank `quartierfest`, User `qfuser/qfpass`
 - Keine externen Mocks; alle Tests treffen die echte Datenbank
-- Tests sind nicht isoliert gegenüber Fremddaten in der DB (keine automatische DB-Bereinigung)
-- Testdaten werden in `@BeforeEach` via `RestTemplate` angelegt und in `@AfterEach` bereinigt (Best-Effort)
+- Tests sind nicht isoliert gegenüber Fremddaten in der DB (keine automatische DB-Bereinigung zwischen Test-Runs)
+- Alle 13 IT-Klassen haben vollständige `@AfterEach`-Teardowns: im Test erstellte Datensätze werden via `toDelete`-Liste registriert und als erstes gelöscht, danach die `@BeforeEach`-Datensätze in umgekehrter FK-Reihenfolge — dadurch werden keine Testdaten in der DB hinterlassen
 
 ## Transport strategy
 
@@ -287,6 +287,5 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - [ ] **Keine Berechnungslogik-API**: UC-011 Abrechnungsberechnung ist nicht im API implementiert (TC-022, TC-023).
 - [ ] **Kein Konsumationslisten-Endpunkt**: UC-009 hat keinen dedizierten Endpunkt für die Listenansicht (TC-018, TC-019).
 - [ ] **Kein Event-Filter auf Collections**: Kein `?eventId=` Query-Parameter auf `/api/konsumationsangebote`, `/api/teilnahmen` etc.
-- [ ] **Citrus 4.9.4 + Spring Boot 4.x Kompatibilität**: Prüfen ob Citrus 4.9.4 mit Spring Boot 4.0.x / Spring Framework 7.x kompatibel ist.
-- [ ] **pom.xml**: Citrus BOM fehlt (siehe Snippet unten).
+- [x] **Citrus 4.9.4 + Spring Boot 4.x Kompatibilität**: Citrus ist inkompatibel (HttpHeaders implementiert MultiValueMap nicht mehr). Tests verwenden stattdessen `RestTemplate` direkt — kein Citrus-API im Einsatz.
 - [ ] **UC-005 Teilnahme-Erzeugungsmodell (neu, aus UC-Review 2026-03-27)**: TC-011 testet explizites `POST /api/teilnahmen`. Falls das Design auf Auto-Create beim Status-Wechsel ANGEMELDET umgestellt wird (UC-005 Open Item), wird TC-011 hinfällig und muss durch einen Test ersetzt werden, der prüft, dass nach `POST /api/einladungen` mit `status=ANGEMELDET` automatisch eine Teilnahme in `GET /api/teilnahmen` erscheint. Entscheid abwarten bevor TC-011 geändert wird.

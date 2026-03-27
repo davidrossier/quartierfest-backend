@@ -4,22 +4,38 @@
 
 ```mermaid
 graph LR
-    Client([Client])
+    Angular([Angular\nlocalhost:4200])
+    Other([Andere Clients])
 
     subgraph Spring Boot Backend
         direction TB
+        CORS[WebConfig\nCORS-Filter]
         Controller[Controller\nREST API]
         Service[Service\nGeschäftslogik]
         Repository[Repository\nJPA / Spring Data]
+        CORS --> Controller
+        Controller --> Service
+        Service --> Repository
     end
 
     DB[(PostgreSQL\nquartierfest)]
 
-    Client -->|HTTP| Controller
-    Controller --> Service
-    Service --> Repository
+    Angular -->|HTTP + CORS| CORS
+    Other -->|HTTP| CORS
     Repository -->|JDBC| DB
 ```
+
+### CORS-Konfiguration
+
+`WebConfig.java` konfiguriert CORS global für alle `/api/**`-Endpunkte:
+
+| Einstellung | Wert |
+|---|---|
+| Erlaubter Origin | `http://localhost:4200` (Angular-Dev-Server) |
+| Erlaubte Methoden | `GET`, `POST`, `DELETE` |
+| Erlaubte Headers | `*` |
+
+Andere Origins werden vom Browser blockiert. Server-seitige Clients (z.B. `RestTemplate` in Integrationstests) sind von CORS nicht betroffen.
 
 ---
 

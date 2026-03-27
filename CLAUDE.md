@@ -52,6 +52,12 @@ Test scope:
 
 ## Architecture
 
+### CORS
+
+`WebConfig.java` erlaubt Cross-Origin-Requests von `http://localhost:4200` (Angular-Dev-Server) auf alle `/api/**`-Endpunkte für die Methoden `GET`, `POST`, `DELETE`.
+
+### Domänen
+
 Code is organized by domain under `ch.quartierfest.backend`. Each domain is a package with exactly 4 files:
 
 - **Entity** (`@Entity`, `@Data`) — JPA-mapped table
@@ -101,6 +107,7 @@ class XxxIT {
     @LocalServerPort private int port;
     private RestTemplate setup;         // für @BeforeEach-Voraussetzungen
     private HttpHeaders json;
+    private final List<String> toDelete = new ArrayList<>();  // im Test erstellte Datensätze
 
     @BeforeEach void setUp() {
         setup = new RestTemplate();
@@ -114,15 +121,28 @@ class XxxIT {
         // Voraussetzungen via setup.postForObject("http://localhost:" + port + "/api/...", ...)
     }
 
+    @AfterEach void tearDown() {
+        toDelete.forEach(this::tryDelete);   // Kind-Datensätze zuerst
+        // dann @BeforeEach-Datensätze in umgekehrter FK-Reihenfolge
+        if (xyzId != null) tryDelete("http://localhost:" + port + "/api/xyz/" + xyzId);
+    }
+
+    private void tryDelete(String path) {
+        try { setup.delete(path); } catch (Exception ignored) {}
+    }
+
     @Test @DisplayName("TC-XXX – ...")
     void tcXxx_...() {
         ResponseEntity<Map> r = http.exchange(
             "http://localhost:" + port + "/api/...", HttpMethod.POST,
             new HttpEntity<>(Map.of(...), json), Map.class);
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
+        toDelete.add("http://localhost:" + port + "/api/.../" + r.getBody().get("id"));
     }
 }
 ```
+
+**Teardown-Strategie:** JUnit 5 erzeugt pro Testmethode eine neue Instanz, daher ist `toDelete` per Test leer. Im Test erstellte Datensätze werden via `toDelete.add(...)` registriert und in `@AfterEach` als erstes gelöscht (vor den `@BeforeEach`-Datensätzen), damit FK-Constraints nicht verletzt werden.
 
 Bekannte Einschränkungen (als TODO in den IT-Klassen markiert):
 - Kein `@Valid` auf Controllern → Pflichtfeldverletzungen liefern `500` statt `400`
