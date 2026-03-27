@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.citrus;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -13,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -24,9 +27,21 @@ class ParteiVerwaltenIT {
     private RestTemplate http;
     @LocalServerPort private int port;
     private HttpHeaders json;
+    private RestTemplate setup;
+    private final List<String> toDelete = new ArrayList<>();
+
+    @AfterEach
+    void tearDown() {
+        toDelete.forEach(this::tryDelete);
+    }
+
+    private void tryDelete(String path) {
+        try { setup.delete(path); } catch (Exception ignored) {}
+    }
 
     @BeforeEach
     void setUp() {
+        setup = new RestTemplate();
         http = new RestTemplate();
         http.setErrorHandler(new org.springframework.web.client.ResponseErrorHandler() {
             public boolean hasError(org.springframework.http.client.ClientHttpResponse r) { return false; }
@@ -46,6 +61,7 @@ class ParteiVerwaltenIT {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().get("id")).isNotNull();
+        toDelete.add("http://localhost:" + port + "/api/parteien/" + response.getBody().get("id"));
     }
 
     @Test

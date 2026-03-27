@@ -14,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -42,6 +44,7 @@ class AbrechnungZustellenIT {
     private Long einladungId2;
     private Long teilnahmeId;
     private Long teilnahmeId2;
+    private final List<String> toDelete = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -84,6 +87,7 @@ class AbrechnungZustellenIT {
 
     @AfterEach
     void tearDown() {
+        toDelete.forEach(this::tryDelete);
         for (Long id : new Long[]{teilnahmeId, teilnahmeId2}) {
             if (id != null) tryDelete("http://localhost:" + port + "/api/teilnahmen/" + id);
         }
@@ -124,6 +128,7 @@ class AbrechnungZustellenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("zustellungskanal")).isEqualTo("EMAIL");
+        toDelete.add("http://localhost:" + port + "/api/abrechnungen/" + response.getBody().get("id"));
     }
 
     @Test
@@ -141,5 +146,6 @@ class AbrechnungZustellenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("zustellungskanal")).isEqualTo("TWINT");
+        toDelete.add("http://localhost:" + port + "/api/abrechnungen/" + response.getBody().get("id"));
     }
 }

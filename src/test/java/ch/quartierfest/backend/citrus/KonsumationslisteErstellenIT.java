@@ -14,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -39,6 +41,7 @@ class KonsumationslisteErstellenIT {
     private Long parteiId;
     private Long einladungId;
     private Long angebotId;
+    private final List<String> toDelete = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -67,6 +70,7 @@ class KonsumationslisteErstellenIT {
 
     @AfterEach
     void tearDown() {
+        toDelete.forEach(this::tryDelete);
         if (angebotId != null) tryDelete("http://localhost:" + port + "/api/konsumationsangebote/" + angebotId);
         if (einladungId != null) tryDelete("http://localhost:" + port + "/api/einladungen/" + einladungId);
         if (parteiId != null) tryDelete("http://localhost:" + port + "/api/parteien/" + parteiId);
@@ -102,8 +106,9 @@ class KonsumationslisteErstellenIT {
         //       Returns all participations across all events.
 
         // Given: create a Teilnahme for the ANGEMELDET Einladung from setup
-        setupPost("http://localhost:" + port + "/api/teilnahmen",
+        Map<String, Object> teilnahme = setupPost("http://localhost:" + port + "/api/teilnahmen",
                 Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2));
+        toDelete.add("http://localhost:" + port + "/api/teilnahmen/" + teilnahme.get("id"));
 
         ResponseEntity<String> response = http.exchange(
                 "http://localhost:" + port + "/api/teilnahmen", HttpMethod.GET, null, String.class);

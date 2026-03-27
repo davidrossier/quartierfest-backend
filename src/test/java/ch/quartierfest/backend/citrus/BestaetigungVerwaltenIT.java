@@ -14,6 +14,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -36,6 +38,7 @@ class BestaetigungVerwaltenIT {
     private RestTemplate setup;
     private Long eventId;
     private Long parteiId;
+    private final List<String> toDelete = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -56,6 +59,7 @@ class BestaetigungVerwaltenIT {
 
     @AfterEach
     void tearDown() {
+        toDelete.forEach(this::tryDelete);
         if (parteiId != null) tryDelete("http://localhost:" + port + "/api/parteien/" + parteiId);
         if (eventId != null) tryDelete("http://localhost:" + port + "/api/events/" + eventId);
     }
@@ -89,5 +93,6 @@ class BestaetigungVerwaltenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("bestaetigungVersendet")).isEqualTo(true);
+        toDelete.add("http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id"));
     }
 }
