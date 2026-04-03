@@ -24,6 +24,7 @@ Gruppierung von Personen (typischerweise ein Haushalt). Erhält die Einladung.
 | Feld             | Typ     | Pflicht |
 |------------------|---------|---------|
 | id               | Long    | ja      |
+| bezeichnung      | String  | ja      |
 | adresse          | String  | ja      |
 | twintAktiv       | Boolean | ja      |
 | twintMobilenummer| String  | nein    |

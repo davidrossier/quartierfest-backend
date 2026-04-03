@@ -1,6 +1,7 @@
 package ch.quartierfest.backend.partei;
 
 import ch.quartierfest.backend.person.Person;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.util.List;
@@ -28,4 +29,8 @@ public class Partei {
     @OneToMany
     @JoinColumn(name = "partei_id")
     private List<Person> personen;
+
+    @Transient
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private List<Long> personenIds;
 }
