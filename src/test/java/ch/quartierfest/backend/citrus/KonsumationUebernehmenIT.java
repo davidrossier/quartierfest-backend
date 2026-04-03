@@ -53,7 +53,7 @@ class KonsumationUebernehmenIT {
         eventId = id(setupPost("http://localhost:" + port + "/api/events",
                 Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Konsumation-Test")));
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("adresse", "Konsumationsweg 1", "twintAktiv", false)));
+                Map.of("bezeichnung", "Konsumation-Partei", "adresse", "Konsumationsweg 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
                 "event", Map.of("id", eventId),
                 "partei", Map.of("id", parteiId),

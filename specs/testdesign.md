@@ -5,7 +5,7 @@
 | UC | Covered | Notes |
 |---|---|---|
 | UC-001 Person verwalten | Yes | TC-001..002, TC-029 |
-| UC-002 Parteien verwalten | Yes | TC-004..005 |
+| UC-002 Parteien verwalten | Yes | TC-004..005, TC-030 |
 | UC-003 Event anlegen | Yes | TC-006..007 |
 | UC-004 Einladung verwalten | Yes | TC-008..010 |
 | UC-005 Teilnahme verwalten | Partial | TC-011..012 – kein Auto-Create wenn Einladung auf ANGEMELDET gesetzt wird; Teilnahme wird manuell via POST erstellt (siehe Open Items) |
@@ -98,17 +98,26 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Source**: UC-002, Hauptfluss
 - **Type**: Happy path + Lösch-Test
 - **Given**: Keine Voraussetzung
-- **When**: POST `/api/parteien` mit `{adresse: "...", twintAktiv: false}`, dann DELETE `/api/parteien/{id}`
-- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **When**: POST `/api/parteien` mit `{bezeichnung: "Familie Müller", adresse: "...", twintAktiv: false}`, dann DELETE `/api/parteien/{id}`
+- **Then**: POST → HTTP 200 + id + `bezeichnung: "Familie Müller"`; DELETE → HTTP 200
 - **Citrus actions**: `send POST /api/parteien`, `receive 200`, `send DELETE /api/parteien/{id}`, `receive 200`
 
 ### TC-005 – UC-002 Partei anlegen: Pflichtfeld adresse fehlt
-- **Source**: UC-002, implizites Fehler-Szenario
+- **Source**: UC-002, Error Scenario E1
 - **Type**: Error scenario
 - **Given**: Keine Voraussetzung
 - **When**: POST `/api/parteien` ohne Feld `adresse`
 - **Then**: HTTP 500 (DB-Constraint)
 - **Citrus actions**: `send POST /api/parteien`, `receive 500`
+
+### TC-030 – UC-002 Partei anlegen: Pflichtfeld bezeichnung fehlt
+- **Source**: UC-002, Error Scenario E1
+- **Type**: Error scenario
+- **Given**: Keine Voraussetzung
+- **When**: POST `/api/parteien` ohne Feld `bezeichnung`
+- **Then**: HTTP 500 (DB-Constraint)
+- **Citrus actions**: `send POST /api/parteien`, `receive 500`
+- **TODO**: Sollte HTTP 400 sein; erfordert `@Valid` + `@NotBlank` auf `Partei.bezeichnung`
 
 ### TC-006 – UC-003 Event anlegen und löschen
 - **Source**: UC-003, Hauptfluss

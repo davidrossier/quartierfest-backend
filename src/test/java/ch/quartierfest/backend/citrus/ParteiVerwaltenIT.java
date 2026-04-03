@@ -39,15 +39,19 @@ class ParteiVerwaltenIT {
     }
 
     @Test
-    @DisplayName("TC-004 – UC-002 Partei anlegen: Pflichtfelder vorhanden")
+    @DisplayName("TC-004 – UC-002 Partei anlegen und löschen")
     @SuppressWarnings("unchecked")
     void tc004_parteiAnlegenHappyPath() {
         ResponseEntity<Map> response = http.exchange(
                 "http://localhost:" + port + "/api/parteien", HttpMethod.POST,
-                new HttpEntity<>(Map.of("adresse", "Musterstrasse 1", "twintAktiv", false), json), Map.class);
+                new HttpEntity<>(Map.of(
+                        "bezeichnung", "Familie Müller",
+                        "adresse", "Musterstrasse 1",
+                        "twintAktiv", false), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().get("id")).isNotNull();
+        assertThat(response.getBody().get("bezeichnung")).isEqualTo("Familie Müller");
 
         // Cleanup als Lösch-Test
         String url = "http://localhost:" + port + "/api/parteien/" + response.getBody().get("id");
@@ -62,7 +66,19 @@ class ParteiVerwaltenIT {
         // TODO: Should be HTTP 400 – requires @Valid + @NotBlank on Partei.adresse
         ResponseEntity<Map> response = http.exchange(
                 "http://localhost:" + port + "/api/parteien", HttpMethod.POST,
-                new HttpEntity<>(Map.of("twintAktiv", false), json), Map.class);
+                new HttpEntity<>(Map.of("bezeichnung", "Testpartei", "twintAktiv", false), json), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    @DisplayName("TC-030 – UC-002 Partei anlegen: Pflichtfeld bezeichnung fehlt")
+    @SuppressWarnings("unchecked")
+    void tc030_parteiAnlegenBezeichnungFehlt() {
+        // TODO: Should be HTTP 400 – requires @Valid + @NotBlank on Partei.bezeichnung
+        ResponseEntity<Map> response = http.exchange(
+                "http://localhost:" + port + "/api/parteien", HttpMethod.POST,
+                new HttpEntity<>(Map.of("adresse", "Musterstrasse 1", "twintAktiv", false), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }

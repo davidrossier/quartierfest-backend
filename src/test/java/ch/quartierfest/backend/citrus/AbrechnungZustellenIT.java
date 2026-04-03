@@ -59,7 +59,7 @@ class AbrechnungZustellenIT {
 
         // Partei 1 – EMAIL delivery
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("adresse", "Zustellgasse 1", "twintAktiv", false)));
+                Map.of("bezeichnung", "Zustell-Partei-1", "adresse", "Zustellgasse 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
                 "event", Map.of("id", eventId),
                 "partei", Map.of("id", parteiId),
@@ -71,7 +71,7 @@ class AbrechnungZustellenIT {
 
         // Partei 2 – TWINT delivery
         parteiId2 = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("adresse", "Zustellgasse 2", "twintAktiv", true, "twintMobilenummer", "+41791234567")));
+                Map.of("bezeichnung", "Zustell-Partei-2", "adresse", "Zustellgasse 2", "twintAktiv", true, "twintMobilenummer", "+41791234567")));
         einladungId2 = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
                 "event", Map.of("id", eventId),
                 "partei", Map.of("id", parteiId2),

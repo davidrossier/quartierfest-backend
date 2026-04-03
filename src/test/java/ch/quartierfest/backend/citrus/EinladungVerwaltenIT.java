@@ -43,7 +43,7 @@ class EinladungVerwaltenIT {
         eventId = id(setupPost("http://localhost:" + port + "/api/events",
                 Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Einladung-Test")));
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("adresse", "Testgasse 1", "twintAktiv", false)));
+                Map.of("bezeichnung", "Einladung-Partei", "adresse", "Testgasse 1", "twintAktiv", false)));
     }
 
     @AfterEach

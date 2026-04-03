@@ -51,7 +51,7 @@ class BestaetigungVerwaltenIT {
         eventId = id(setupPost("http://localhost:" + port + "/api/events",
                 Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Bestaetigung-Test")));
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("adresse", "Bestaetigungsstrasse 1", "twintAktiv", false)));
+                Map.of("bezeichnung", "Bestaetigung-Partei", "adresse", "Bestaetigungsstrasse 1", "twintAktiv", false)));
     }
 
     @AfterEach

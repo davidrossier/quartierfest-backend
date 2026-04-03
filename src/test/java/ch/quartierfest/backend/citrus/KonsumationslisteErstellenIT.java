@@ -54,7 +54,7 @@ class KonsumationslisteErstellenIT {
         eventId = id(setupPost("http://localhost:" + port + "/api/events",
                 Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Liste-Test")));
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("adresse", "Listenweg 1", "twintAktiv", false)));
+                Map.of("bezeichnung", "Liste-Partei", "adresse", "Listenweg 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
                 "event", Map.of("id", eventId),
                 "partei", Map.of("id", parteiId),

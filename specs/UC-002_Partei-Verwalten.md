@@ -11,7 +11,7 @@ completeness: Intermediate
 
 ## Brief Description
 
-> Der Organisator möchte Parteien (Haushalte) erfassen, aktualisieren oder löschen, um die Empfängereinheiten der Einladungen zu pflegen.
+> Der Organisator möchte Parteien (Haushalte) mit einem bezeichnenden Namen erfassen, aktualisieren, Personen zuordnen oder löschen, um die Empfängereinheiten der Einladungen zu pflegen.
 
 ---
 
@@ -25,7 +25,7 @@ completeness: Intermediate
 
 ## Context & Background
 
-> Eine Partei repräsentiert typischerweise einen Haushalt und ist die Einheit, die eine Einladung erhält und darauf antwortet. Eine Partei besteht aus einer oder mehreren Personen (UC-001). Für die Abrechnung via Twint wird die Mobilenummer der Partei benötigt. Parteien sind eventübergreifend und können bei jedem neuen Event wieder eingeladen werden.
+> Eine Partei repräsentiert typischerweise einen Haushalt und ist die Einheit, die eine Einladung erhält und darauf antwortet. Jede Partei trägt einen bezeichnenden Namen (z. B. „Familie Müller" oder „Meier/Huber"), der sie in Listen eindeutig identifizierbar macht. Eine Partei besteht aus einer oder mehreren Personen (UC-001), die über eine Tabelle zugeordnet werden. Für die Abrechnung via Twint wird die Mobilenummer der Partei benötigt. Parteien sind eventübergreifend und können bei jedem neuen Event wieder eingeladen werden.
 
 ---
 
@@ -45,9 +45,9 @@ completeness: Intermediate
 ## Description
 
 1. Der Organisator wählt die Aktion: Partei erfassen, bearbeiten oder löschen.
-2. **Erfassen:** Der Organisator gibt die Adresse ein (Pflicht), setzt das Flag `twintAktiv` und gibt bei aktivem Twint die Mobilenummer ein. Das System speichert die neue Partei. *(→ E1 bei fehlendem Pflichtfeld)*
-3. **Personenzuordnung:** Der Organisator weist der Partei eine oder mehrere bestehende Personen zu. Das System speichert die Zuordnung. *(→ E2 wenn keine Person ausgewählt)*
-4. **Bearbeiten:** Der Organisator wählt eine bestehende Partei, ändert die gewünschten Felder und speichert. Das System aktualisiert den Datensatz.
+2. **Erfassen:** Der Organisator gibt den bezeichnenden Namen (Pflicht) und die Adresse (Pflicht) ein, setzt das Flag `twintAktiv` und gibt bei aktivem Twint die Mobilenummer ein. Das System speichert die neue Partei. *(→ E1 bei fehlendem Pflichtfeld, → A1 wenn Twint nicht aktiv)*
+3. **Personenzuordnung:** Das System zeigt eine Tabelle aller im System erfassten Personen (Spalten: Vorname, Name, Mobilenummer). Der Organisator wählt eine oder mehrere Personen aus und bestätigt die Zuordnung. Das System speichert die Zuordnung. *(→ E2 wenn keine Person ausgewählt)*
+4. **Bearbeiten:** Der Organisator wählt eine bestehende Partei, ändert die gewünschten Felder (inkl. Bezeichnung, Adresse, Twint-Angabe, Personen) und speichert. Das System aktualisiert den Datensatz. *(→ E1 bei fehlendem Pflichtfeld)*
 5. **Löschen:** Der Organisator wählt eine bestehende Partei und bestätigt die Löschung. Das System entfernt die Partei. *(→ E3 wenn Partei bereits Einladungen hat)*
 6. Das System zeigt die aktualisierte Parteiliste an.
 
@@ -69,16 +69,16 @@ completeness: Intermediate
 
 ### E1 – Pflichtfeld fehlt
 
-> Entry point: step 2 of the main flow
+> Entry point: step 2 or 4 of the main flow
 
-1. E1.1: Das System stellt fest, dass die Adresse leer ist.
+1. E1.1: Das System stellt fest, dass Bezeichnung oder Adresse leer ist.
 2. E1.2: Das System zeigt eine Fehlermeldung und verhindert das Speichern.
 
 ### E2 – Keine Person zugeordnet
 
 > Entry point: step 3 of the main flow
 
-1. E2.1: Der Organisator versucht zu speichern ohne eine Person zuzuweisen.
+1. E2.1: Der Organisator versucht zu speichern ohne eine Person in der Tabelle auszuwählen.
 2. E2.2: Das System zeigt einen Warnhinweis (Partei ohne Personen ist für Einladungen nicht nutzbar).
 3. E2.3: Der Organisator kann trotzdem speichern oder die Zuordnung nachholen.
 
@@ -95,7 +95,8 @@ completeness: Intermediate
 
 ### Success
 
-- Die Partei ist mit Adresse, Twint-Angabe und zugeordneten Personen im System gespeichert, aktualisiert oder gelöscht.
+- Die Partei ist mit Bezeichnung, Adresse, Twint-Angabe und zugeordneten Personen im System gespeichert, aktualisiert oder gelöscht.
+- Die Parteiliste spiegelt den aktuellen Stand wider.
 
 ### Failure / Abort
 
@@ -106,10 +107,21 @@ completeness: Intermediate
 ## Acceptance Criteria
 
 ```gherkin
-Scenario: Partei mit Twint erfolgreich erfassen
+Scenario: Partei mit Bezeichnung und Twint erfolgreich erfassen
   Given der Organisator ist in der Parteiverwaltung
-  When er Adresse "Seestrasse 1, 3000 Bern", twintAktiv "true" und Mobilenummer "079 123 45 67" eingibt und speichert
-  Then ist die Partei in der Liste vorhanden und als Twint-fähig markiert
+  When er Bezeichnung "Familie Müller", Adresse "Seestrasse 1, 3000 Bern", twintAktiv "true" und Mobilenummer "+41791234567" eingibt und speichert
+  Then ist die Partei "Familie Müller" in der Liste vorhanden und als Twint-fähig markiert
+
+Scenario: Personen einer Partei über Tabelle zuordnen
+  Given die Partei "Familie Müller" ist im System vorhanden
+  And die Personen "Anna Müller" und "Beat Müller" sind im System vorhanden
+  When der Organisator in der Personentabelle "Anna Müller" und "Beat Müller" auswählt und speichert
+  Then sind "Anna Müller" und "Beat Müller" der Partei "Familie Müller" zugeordnet
+
+Scenario: Partei ohne Bezeichnung speichern schlägt fehl
+  Given der Organisator ist in der Parteiverwaltung
+  When er versucht eine Partei ohne Bezeichnung zu speichern
+  Then zeigt das System eine Fehlermeldung und speichert nicht
 
 Scenario: Partei ohne Adresse speichern schlägt fehl
   Given der Organisator ist in der Parteiverwaltung
@@ -117,7 +129,7 @@ Scenario: Partei ohne Adresse speichern schlägt fehl
   Then zeigt das System eine Fehlermeldung und speichert nicht
 
 Scenario: Partei mit bestehender Einladung löschen schlägt fehl
-  Given die Partei "Müller, Seestrasse 1" hat eine Einladung für Event 2025
+  Given die Partei "Familie Müller" hat eine Einladung für Event 2025
   When der Organisator versucht die Partei zu löschen
   Then zeigt das System einen Hinweis auf bestehende Einladungen und bricht ab
 ```
@@ -127,3 +139,10 @@ Scenario: Partei mit bestehender Einladung löschen schlägt fehl
 ## Dependencies & References
 
 - **Depends on**: UC-001 (Personendaten verwalten) — Personen müssen vor der Zuordnung existieren
+
+---
+
+## Open Items
+
+- [x] ~~OPEN: Ist das Feld `bezeichnung` in der Partei-Entity als neues Pflichtfeld zu ergänzen?~~ → Implementiert als `@Column(nullable = false)` in `Partei.java`.
+- [ ] OPEN: Zeigt die Personentabelle in der UI alle Personen im System (mit Auswahl-Checkbox), oder nur die bereits zugeordneten Personen? → UX-Entscheid erforderlich (Frontend-Scope).

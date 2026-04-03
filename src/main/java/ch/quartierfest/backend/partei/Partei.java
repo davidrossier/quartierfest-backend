@@ -15,6 +15,9 @@ public class Partei {
     private Long id;
 
     @Column(nullable = false)
+    private String bezeichnung;
+
+    @Column(nullable = false)
     private String adresse;
 
     @Column(nullable = false)

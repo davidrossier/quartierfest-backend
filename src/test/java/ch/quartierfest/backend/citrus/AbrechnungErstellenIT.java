@@ -53,7 +53,7 @@ class AbrechnungErstellenIT {
         eventId = id(setupPost("http://localhost:" + port + "/api/events",
                 Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Abrechnung-Test")));
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("adresse", "Abrechnungsstrasse 1", "twintAktiv", false)));
+                Map.of("bezeichnung", "Abrechnung-Partei", "adresse", "Abrechnungsstrasse 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
                 "event", Map.of("id", eventId),
                 "partei", Map.of("id", parteiId),
