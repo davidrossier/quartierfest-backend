@@ -54,7 +54,7 @@ Test scope:
 
 ### CORS
 
-`WebConfig.java` erlaubt Cross-Origin-Requests von `http://localhost:4200` (Angular-Dev-Server) auf alle `/api/**`-Endpunkte für die Methoden `GET`, `POST`, `DELETE`.
+`WebConfig.java` erlaubt Cross-Origin-Requests von `http://localhost:4200` (Angular-Dev-Server) auf alle `/api/**`-Endpunkte für die Methoden `GET`, `POST`, `PUT`, `DELETE`.
 
 ### Domänen
 
