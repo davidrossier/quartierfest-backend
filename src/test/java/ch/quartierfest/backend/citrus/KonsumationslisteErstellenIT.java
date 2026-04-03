@@ -14,8 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -41,7 +39,6 @@ class KonsumationslisteErstellenIT {
     private Long parteiId;
     private Long einladungId;
     private Long angebotId;
-    private final List<String> toDelete = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -70,7 +67,6 @@ class KonsumationslisteErstellenIT {
 
     @AfterEach
     void tearDown() {
-        toDelete.forEach(this::tryDelete);
         if (angebotId != null) tryDelete("http://localhost:" + port + "/api/konsumationsangebote/" + angebotId);
         if (einladungId != null) tryDelete("http://localhost:" + port + "/api/einladungen/" + einladungId);
         if (parteiId != null) tryDelete("http://localhost:" + port + "/api/parteien/" + parteiId);
@@ -97,10 +93,12 @@ class KonsumationslisteErstellenIT {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotEmpty();
+        // Kein Cleanup notwendig – kein Datensatz im Test angelegt
     }
 
     @Test
     @DisplayName("TC-019 – UC-009 Teilnahmen für Event abrufbar (Y-Achse)")
+    @SuppressWarnings("unchecked")
     void tc019_teilnahmenAbrufbar() {
         // TODO: No event-scoped filter on GET /api/teilnahmen.
         //       Returns all participations across all events.
@@ -108,12 +106,16 @@ class KonsumationslisteErstellenIT {
         // Given: create a Teilnahme for the ANGEMELDET Einladung from setup
         Map<String, Object> teilnahme = setupPost("http://localhost:" + port + "/api/teilnahmen",
                 Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2));
-        toDelete.add("http://localhost:" + port + "/api/teilnahmen/" + teilnahme.get("id"));
 
         ResponseEntity<String> response = http.exchange(
                 "http://localhost:" + port + "/api/teilnahmen", HttpMethod.GET, null, String.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotEmpty();
+
+        // Cleanup als Lösch-Test (vor @AfterEach-Einladungs-Cleanup)
+        String url = "http://localhost:" + port + "/api/teilnahmen/" + teilnahme.get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

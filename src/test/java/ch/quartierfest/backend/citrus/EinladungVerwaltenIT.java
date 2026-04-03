@@ -14,8 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +28,6 @@ class EinladungVerwaltenIT {
     private HttpHeaders json;
     private RestTemplate setup;
     private Long eventId, parteiId;
-    private final List<String> toDelete = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -51,7 +48,6 @@ class EinladungVerwaltenIT {
 
     @AfterEach
     void tearDown() {
-        toDelete.forEach(this::tryDelete);
         if (parteiId != null) tryDelete("http://localhost:" + port + "/api/parteien/" + parteiId);
         if (eventId != null) tryDelete("http://localhost:" + port + "/api/events/" + eventId);
     }
@@ -67,6 +63,7 @@ class EinladungVerwaltenIT {
 
     @Test
     @DisplayName("TC-008 – UC-004 Einladung erstellen (Status OFFEN)")
+    @SuppressWarnings("unchecked")
     void tc008_einladungErstellenStatusOffen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
@@ -77,11 +74,16 @@ class EinladungVerwaltenIT {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().get("id")).isNotNull();
-        toDelete.add("http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id"));
+
+        // Cleanup als Lösch-Test
+        String url = "http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     @DisplayName("TC-009 – UC-004 Rückmeldung ANGEMELDET erfassen")
+    @SuppressWarnings("unchecked")
     void tc009_rueckmeldungAngemeldetErfassen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
@@ -95,11 +97,16 @@ class EinladungVerwaltenIT {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().get("status")).isEqualTo("ANGEMELDET");
-        toDelete.add("http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id"));
+
+        // Cleanup als Lösch-Test
+        String url = "http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
     @DisplayName("TC-010 – UC-004 Rückmeldung ABGEMELDET erfassen (A1)")
+    @SuppressWarnings("unchecked")
     void tc010_rueckmeldungAbgemeldetErfassen() {
         // TODO: UC-004 E1 (Duplikat-Prüfung) fehlt – kein Unique-Constraint auf (event, partei)
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
@@ -111,6 +118,10 @@ class EinladungVerwaltenIT {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().get("status")).isEqualTo("ABGEMELDET");
-        toDelete.add("http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id"));
+
+        // Cleanup als Lösch-Test
+        String url = "http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

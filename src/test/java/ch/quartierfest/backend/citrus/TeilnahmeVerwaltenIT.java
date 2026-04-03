@@ -14,8 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +28,6 @@ class TeilnahmeVerwaltenIT {
     private HttpHeaders json;
     private RestTemplate setup;
     private Long eventId, parteiId, einladungId;
-    private final List<String> toDelete = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -57,7 +54,6 @@ class TeilnahmeVerwaltenIT {
 
     @AfterEach
     void tearDown() {
-        toDelete.forEach(this::tryDelete);
         if (einladungId != null) tryDelete("http://localhost:" + port + "/api/einladungen/" + einladungId);
         if (parteiId != null) tryDelete("http://localhost:" + port + "/api/parteien/" + parteiId);
         if (eventId != null) tryDelete("http://localhost:" + port + "/api/events/" + eventId);
@@ -74,6 +70,7 @@ class TeilnahmeVerwaltenIT {
 
     @Test
     @DisplayName("TC-011 – UC-005 Teilnahme erstellen: happy path")
+    @SuppressWarnings("unchecked")
     void tc011_teilnahmeErstellenHappyPath() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
@@ -83,7 +80,11 @@ class TeilnahmeVerwaltenIT {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().get("id")).isNotNull();
-        toDelete.add("http://localhost:" + port + "/api/teilnahmen/" + response.getBody().get("id"));
+
+        // Cleanup als Lösch-Test (vor @AfterEach-Einladungs-Cleanup)
+        String url = "http://localhost:" + port + "/api/teilnahmen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

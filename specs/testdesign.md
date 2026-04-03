@@ -4,19 +4,21 @@
 
 | UC | Covered | Notes |
 |---|---|---|
-| UC-001 Person verwalten | Yes | TC-001..003 |
+| UC-001 Person verwalten | Yes | TC-001..002 |
 | UC-002 Parteien verwalten | Yes | TC-004..005 |
 | UC-003 Event anlegen | Yes | TC-006..007 |
 | UC-004 Einladung verwalten | Yes | TC-008..010 |
 | UC-005 Teilnahme verwalten | Partial | TC-011..012 – kein Auto-Create wenn Einladung auf ANGEMELDET gesetzt wird; Teilnahme wird manuell via POST erstellt (siehe Open Items) |
 | UC-006 Bestätigung verwalten | Partial | TC-013 – kein PATCH-Endpunkt; flag nur bei Creation setzbar |
 | UC-007 Allgemeinausgabe verwalten | Yes | TC-014..015 |
-| UC-008 Konsumationsangebot verwalten | Yes | TC-016..017 |
+| UC-008 Konsumationsangebot verwalten | Yes | TC-016 |
 | UC-009 Konsumationsliste erstellen | Partial | TC-018..019 – kein dedizierter Listengenerierungs-Endpunkt; nur Datenbasis testbar |
 | UC-010 Konsumation übernehmen | Yes | TC-020..021 |
 | UC-011 Abrechnung erstellen | Partial | TC-022..023 – keine Berechnungslogik im API; manuelle Eingabe aller Felder |
 | UC-012 Abrechnung zustellen | Partial | TC-024..025 – kein PATCH für zustellungsDatum/Kanal nach Creation |
 | UC-013 Inkasso sicherstellen | Yes | TC-026..028 |
+
+**Hinweis:** TC-003 (Person löschen) ist in TC-001 integriert. TC-017 (Konsumationsangebot löschen) ist in TC-016 integriert. Die Löschung erfolgt als letzter Schritt des jeweiligen Happy-Path-Tests (Lösch-Test).
 
 ## Test environment assumptions
 
@@ -24,14 +26,34 @@
 - PostgreSQL läuft auf `localhost:5432`, Datenbank `quartierfest`, User `qfuser/qfpass`
 - Keine externen Mocks; alle Tests treffen die echte Datenbank
 - Tests sind nicht isoliert gegenüber Fremddaten in der DB (keine automatische DB-Bereinigung zwischen Test-Runs)
-- Alle 13 IT-Klassen haben vollständige `@AfterEach`-Teardowns: im Test erstellte Datensätze werden via `toDelete`-Liste registriert und als erstes gelöscht, danach die `@BeforeEach`-Datensätze in umgekehrter FK-Reihenfolge — dadurch werden keine Testdaten in der DB hinterlassen
+
+## Cleanup-Strategie
+
+Jeder Happy-Path-Test, der Testdaten anlegt, löscht diese **innerhalb des Tests** via expliziter DELETE-Assertion (Lösch-Test). Der Cleanup ist damit gleichzeitig ein Testfall für die DELETE-Funktionalität der jeweiligen Ressource.
+
+```
+POST /api/xxx            → assert 200 + id
+DELETE /api/xxx/{id}     → assert 200          ← Lösch-Test + Cleanup
+```
+
+`@BeforeEach`-Fixtures (Voraussetzungen) werden im `@AfterEach` in umgekehrter FK-Reihenfolge bereinigt — erst nachdem alle vom Test angelegten Datensätze bereits im Test selbst gelöscht wurden:
+
+```
+zahlung / mahnung / konsumation  →  abrechnung  →  konsumationsangebot / allgemeinausgabe
+→  teilnahme  →  einladung  →  person  →  partei  →  event
+```
+
+Für einen einmaligen DB-Reset nach Altdaten (z.B. aus früheren Test-Runs):
+```bash
+psql -U qfuser -d quartierfest -f src/test/resources/cleanup-testdata.sql
+```
 
 ## Transport strategy
 
 Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vorhanden.
 
-**Transport:** `http().client(baseUrl)` — Citrus HTTP REST Client
-**Correlation:** Citrus korreliert Send/Receive über dieselbe `baseUrl`-Instanz pro Testmethode.
+**Transport:** `RestTemplate` mit no-op `ResponseErrorHandler` (wirft nie bei 4xx/5xx)
+**Correlation:** `http` (Testaufruf) vs. `setup` (Voraussetzungen) — zwei separate RestTemplate-Instanzen pro Test.
 
 ## API-Verhalten (beobachtet)
 
@@ -47,13 +69,13 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 
 ## Test cases
 
-### TC-001 – UC-001 Person anlegen: Pflichtfelder vorhanden
-- **Source**: UC-001, Hauptfluss
-- **Type**: Happy path
+### TC-001 – UC-001 Person anlegen und löschen
+- **Source**: UC-001, Hauptfluss (inkl. ehem. TC-003 Person löschen)
+- **Type**: Happy path + Lösch-Test
 - **Given**: Keine Voraussetzung
-- **When**: POST `/api/persons` mit `{vorname: "Hans", name: "Müller"}`
-- **Then**: HTTP 200, Response-Body enthält `id`
-- **Citrus actions**: `send POST /api/persons`, `receive 200`
+- **When**: POST `/api/persons` mit `{vorname: "Hans", name: "Müller"}`, dann DELETE `/api/persons/{id}`
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/persons`, `receive 200`, `send DELETE /api/persons/{id}`, `receive 200`
 
 ### TC-002 – UC-001 Person anlegen: Pflichtfeld name fehlt
 - **Source**: UC-001, implizites Fehler-Szenario
@@ -64,21 +86,13 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Citrus actions**: `send POST /api/persons`, `receive 500`
 - **TODO**: Sollte HTTP 400 sein; erfordert `@Valid` + `@NotNull` in Entity/Controller
 
-### TC-003 – UC-001 Person löschen
-- **Source**: UC-001, Hauptfluss
-- **Type**: Happy path
-- **Given**: Eine Person wurde via Setup-RestTemplate angelegt
-- **When**: DELETE `/api/persons/{id}`
-- **Then**: HTTP 200
-- **Citrus actions**: `send DELETE /api/persons/{id}`, `receive 200`
-
-### TC-004 – UC-002 Partei anlegen: Pflichtfelder vorhanden
+### TC-004 – UC-002 Partei anlegen und löschen
 - **Source**: UC-002, Hauptfluss
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Keine Voraussetzung
-- **When**: POST `/api/parteien` mit `{adresse: "...", twintAktiv: false}`
-- **Then**: HTTP 200, Response-Body enthält `id`
-- **Citrus actions**: `send POST /api/parteien`, `receive 200`
+- **When**: POST `/api/parteien` mit `{adresse: "...", twintAktiv: false}`, dann DELETE `/api/parteien/{id}`
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/parteien`, `receive 200`, `send DELETE /api/parteien/{id}`, `receive 200`
 
 ### TC-005 – UC-002 Partei anlegen: Pflichtfeld adresse fehlt
 - **Source**: UC-002, implizites Fehler-Szenario
@@ -88,13 +102,13 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500 (DB-Constraint)
 - **Citrus actions**: `send POST /api/parteien`, `receive 500`
 
-### TC-006 – UC-003 Event anlegen: Pflichtfelder vorhanden
+### TC-006 – UC-003 Event anlegen und löschen
 - **Source**: UC-003, Hauptfluss
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Keine Voraussetzung
-- **When**: POST `/api/events` mit `{datum, startzeit, standort}`
-- **Then**: HTTP 200, Response-Body enthält `id`
-- **Citrus actions**: `send POST /api/events`, `receive 200`
+- **When**: POST `/api/events` mit `{datum, startzeit, standort}`, dann DELETE `/api/events/{id}`
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/events`, `receive 200`, `send DELETE /api/events/{id}`, `receive 200`
 
 ### TC-007 – UC-003 Event anlegen: Pflichtfeld datum fehlt
 - **Source**: UC-003, implizites Fehler-Szenario
@@ -104,38 +118,38 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500 (DB-Constraint)
 - **Citrus actions**: `send POST /api/events`, `receive 500`
 
-### TC-008 – UC-004 Einladung erstellen (Status OFFEN)
+### TC-008 – UC-004 Einladung erstellen (Status OFFEN) und löschen
 - **Source**: UC-004, Gherkin "Einladungen für alle Parteien erstellen"
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Event und Partei existieren (Setup)
-- **When**: POST `/api/einladungen` mit `{event: {id}, partei: {id}, status: "OFFEN", bestaetigungVersendet: false}`
-- **Then**: HTTP 200, Einladung mit Status OFFEN angelegt
-- **Citrus actions**: `send POST /api/einladungen`, `receive 200`
+- **When**: POST `/api/einladungen` mit `{event: {id}, partei: {id}, status: "OFFEN", bestaetigungVersendet: false}`, dann DELETE
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/einladungen`, `receive 200`, `send DELETE /api/einladungen/{id}`, `receive 200`
 
-### TC-009 – UC-004 Rückmeldung ANGEMELDET erfassen
+### TC-009 – UC-004 Rückmeldung ANGEMELDET erfassen und löschen
 - **Source**: UC-004, Gherkin "Rückmeldung Anmeldung erfassen"
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Event und Partei existieren (Setup)
-- **When**: POST `/api/einladungen` mit `status: "ANGEMELDET"`, `anzahlPersonen: 3`, `hilftAufstellen: true`, `buffetBeitrag: "SALAT"`
-- **Then**: HTTP 200, Response-Body enthält `status: "ANGEMELDET"`
-- **Citrus actions**: `send POST /api/einladungen`, `receive 200`
+- **When**: POST `/api/einladungen` mit `status: "ANGEMELDET"`, `anzahlPersonen: 3`, `hilftAufstellen: true`, `buffetBeitrag: "SALAT"`, dann DELETE
+- **Then**: POST → HTTP 200, `status: "ANGEMELDET"` in Response; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/einladungen`, `receive 200`, `send DELETE /api/einladungen/{id}`, `receive 200`
 
-### TC-010 – UC-004 Rückmeldung ABGEMELDET erfassen (A1)
+### TC-010 – UC-004 Rückmeldung ABGEMELDET erfassen und löschen (A1)
 - **Source**: UC-004, Alternative Flow A1
-- **Type**: Alternative flow
+- **Type**: Alternative flow + Lösch-Test
 - **Given**: Event und Partei existieren (Setup)
-- **When**: POST `/api/einladungen` mit `status: "ABGEMELDET"`
-- **Then**: HTTP 200, Response-Body enthält `status: "ABGEMELDET"`
-- **Citrus actions**: `send POST /api/einladungen`, `receive 200`
+- **When**: POST `/api/einladungen` mit `status: "ABGEMELDET"`, dann DELETE
+- **Then**: POST → HTTP 200, `status: "ABGEMELDET"`; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/einladungen`, `receive 200`, `send DELETE /api/einladungen/{id}`, `receive 200`
 - **TODO**: UC-004 E1 (Duplikat-Prüfung) ist nicht implementiert; DB hat keinen Unique-Constraint auf `(event, partei)`
 
-### TC-011 – UC-005 Teilnahme erstellen: happy path
+### TC-011 – UC-005 Teilnahme erstellen und löschen: happy path
 - **Source**: UC-005, Hauptfluss
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Einladung mit Status ANGEMELDET existiert (Setup)
-- **When**: POST `/api/teilnahmen` mit `{einladung: {id}, anzahlPersonenEffektiv: 2}`
-- **Then**: HTTP 200, Response-Body enthält `id`
-- **Citrus actions**: `send POST /api/teilnahmen`, `receive 200`
+- **When**: POST `/api/teilnahmen` mit `{einladung: {id}, anzahlPersonenEffektiv: 2}`, dann DELETE
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/teilnahmen`, `receive 200`, `send DELETE /api/teilnahmen/{id}`, `receive 200`
 
 ### TC-012 – UC-005 Teilnahme erstellen: Einladung fehlt
 - **Source**: UC-005, implizites Fehler-Szenario
@@ -145,22 +159,22 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500
 - **Citrus actions**: `send POST /api/teilnahmen`, `receive 500`
 
-### TC-013 – UC-006 Bestätigung versendet Flag setzen
+### TC-013 – UC-006 Bestätigung versendet Flag setzen und löschen
 - **Source**: UC-006, Gherkin "Bestätigung erfolgreich versenden"
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Event und Partei existieren (Setup)
-- **When**: POST `/api/einladungen` mit `bestaetigungVersendet: true`
-- **Then**: HTTP 200, Response-Body enthält `bestaetigungVersendet: true`
-- **Citrus actions**: `send POST /api/einladungen`, `receive 200`
+- **When**: POST `/api/einladungen` mit `bestaetigungVersendet: true`, dann DELETE
+- **Then**: POST → HTTP 200, `bestaetigungVersendet: true` in Response; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/einladungen`, `receive 200`, `send DELETE /api/einladungen/{id}`, `receive 200`
 - **TODO**: UC-006 erfordert Aktualisierung des Flags nach Creation. Kein PATCH-Endpunkt vorhanden. Test prüft nur, dass das Flag bei Creation gespeichert wird.
 
-### TC-014 – UC-007 Allgemeinausgabe anlegen: happy path
+### TC-014 – UC-007 Allgemeinausgabe anlegen und löschen: happy path
 - **Source**: UC-007, Hauptfluss
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Event existiert (Setup)
-- **When**: POST `/api/allgemeinausgaben` mit `{event: {id}, beschreibung: "...", betrag: "50.00"}`
-- **Then**: HTTP 200
-- **Citrus actions**: `send POST /api/allgemeinausgaben`, `receive 200`
+- **When**: POST `/api/allgemeinausgaben` mit `{event: {id}, beschreibung: "...", betrag: "50.00"}`, dann DELETE
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/allgemeinausgaben`, `receive 200`, `send DELETE /api/allgemeinausgaben/{id}`, `receive 200`
 
 ### TC-015 – UC-007 Allgemeinausgabe anlegen: Pflichtfeld betrag fehlt
 - **Source**: UC-007, Error Scenario E2
@@ -170,23 +184,15 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500
 - **Citrus actions**: `send POST /api/allgemeinausgaben`, `receive 500`
 
-### TC-016 – UC-008 Konsumationsangebot anlegen: happy path
-- **Source**: UC-008, Hauptfluss
-- **Type**: Happy path
+### TC-016 – UC-008 Konsumationsangebot anlegen und löschen
+- **Source**: UC-008, Hauptfluss (inkl. ehem. TC-017 Konsumationsangebot löschen)
+- **Type**: Happy path + Lösch-Test
 - **Given**: Event existiert (Setup)
-- **When**: POST `/api/konsumationsangebote` mit `{event: {id}, bezeichnung: "Bier 5dl", preis: "3.00"}`
-- **Then**: HTTP 200
-- **Citrus actions**: `send POST /api/konsumationsangebote`, `receive 200`
+- **When**: POST `/api/konsumationsangebote` mit `{event: {id}, bezeichnung: "Bier 5dl", preis: "3.00"}`, dann DELETE
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/konsumationsangebote`, `receive 200`, `send DELETE /api/konsumationsangebote/{id}`, `receive 200`
 
-### TC-017 – UC-008 Konsumationsangebot löschen
-- **Source**: UC-008, Hauptfluss
-- **Type**: Happy path
-- **Given**: Konsumationsangebot existiert (Setup)
-- **When**: DELETE `/api/konsumationsangebote/{id}`
-- **Then**: HTTP 200
-- **Citrus actions**: `send DELETE /api/konsumationsangebote/{id}`, `receive 200`
-
-### TC-018 – UC-009 Konsumationsangebote für Event abrufbar
+### TC-018 – UC-009 Konsumationsangebote für Event abrufbar (X-Achse)
 - **Source**: UC-009, Hauptfluss Step 2 (X-Achse der Liste)
 - **Type**: Happy path
 - **Given**: Event mit Konsumationsangeboten existiert (Setup)
@@ -195,22 +201,22 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Citrus actions**: `send GET /api/konsumationsangebote`, `receive 200`
 - **TODO**: Kein Endpunkt `/api/konsumationsangebote?eventId={id}` – GET gibt alle zurück, kein Event-Filter
 
-### TC-019 – UC-009 Teilnahmen für Event abrufbar
+### TC-019 – UC-009 Teilnahmen für Event abrufbar und löschen (Y-Achse)
 - **Source**: UC-009, Hauptfluss Step 2 (Y-Achse der Liste)
-- **Type**: Happy path
-- **Given**: Event mit Teilnahmen existiert (Setup)
-- **When**: GET `/api/teilnahmen`
-- **Then**: HTTP 200, Response-Array nicht leer
-- **Citrus actions**: `send GET /api/teilnahmen`, `receive 200`
+- **Type**: Happy path + Lösch-Test
+- **Given**: Event mit Einladung (ANGEMELDET) existiert (Setup)
+- **When**: POST `/api/teilnahmen`, dann GET `/api/teilnahmen`, dann DELETE `/api/teilnahmen/{id}`
+- **Then**: GET → HTTP 200, nicht leer; DELETE → HTTP 200
+- **Citrus actions**: `send GET /api/teilnahmen`, `receive 200`, `send DELETE /api/teilnahmen/{id}`, `receive 200`
 - **TODO**: Kein dedizierter Konsumationslisten-Endpunkt (z.B. GET `/api/events/{id}/konsumationsliste`)
 
-### TC-020 – UC-010 Konsumation erfassen: happy path
+### TC-020 – UC-010 Konsumation erfassen und löschen: happy path
 - **Source**: UC-010, Gherkin "Konsumation korrekt erfassen"
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Teilnahme und Konsumationsangebot existieren (Setup)
-- **When**: POST `/api/konsumationen` mit `{teilnahme: {id}, konsumationsangebot: {id}, anzahl: 3}`
-- **Then**: HTTP 200
-- **Citrus actions**: `send POST /api/konsumationen`, `receive 200`
+- **When**: POST `/api/konsumationen` mit `{teilnahme: {id}, konsumationsangebot: {id}, anzahl: 3}`, dann DELETE
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/konsumationen`, `receive 200`, `send DELETE /api/konsumationen/{id}`, `receive 200`
 
 ### TC-021 – UC-010 Konsumation erfassen: anzahl fehlt
 - **Source**: UC-010, Error Scenario E1
@@ -220,13 +226,13 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500
 - **Citrus actions**: `send POST /api/konsumationen`, `receive 500`
 
-### TC-022 – UC-011 Abrechnung erstellen: happy path
+### TC-022 – UC-011 Abrechnung erstellen und löschen: happy path
 - **Source**: UC-011, Hauptfluss
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Teilnahme existiert (Setup)
-- **When**: POST `/api/abrechnungen` mit `{teilnahme: {id}, anteilAllgemeinkosten: "40.00", totalKonsumation: "17.00", totalBetrag: "57.00", zustellungskanal: "EMAIL"}`
-- **Then**: HTTP 200, `totalBetrag: "57.00"` in Response
-- **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`
+- **When**: POST `/api/abrechnungen` mit `{teilnahme: {id}, anteilAllgemeinkosten: "40.00", totalKonsumation: "17.00", totalBetrag: "57.00", zustellungskanal: "EMAIL"}`, dann DELETE
+- **Then**: POST → HTTP 200, `totalBetrag: "57.00"` in Response; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`, `send DELETE /api/abrechnungen/{id}`, `receive 200`
 - **TODO**: Keine Berechnungslogik im API; Beträge werden manuell übergeben
 
 ### TC-023 – UC-011 Abrechnung erstellen: Teilnahme fehlt
@@ -237,30 +243,30 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500
 - **Citrus actions**: `send POST /api/abrechnungen`, `receive 500`
 
-### TC-024 – UC-012 Abrechnung zustellen: Kanal EMAIL
+### TC-024 – UC-012 Abrechnung zustellen und löschen: Kanal EMAIL
 - **Source**: UC-012, Gherkin "Abrechnung via E-Mail zustellen"
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Teilnahme existiert (Setup)
-- **When**: POST `/api/abrechnungen` mit `zustellungskanal: "EMAIL"` und `zustellungsDatum: "2025-07-10"`
-- **Then**: HTTP 200, `zustellungskanal: "EMAIL"` in Response
-- **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`
+- **When**: POST `/api/abrechnungen` mit `zustellungskanal: "EMAIL"` und `zustellungsDatum: "2025-07-10"`, dann DELETE
+- **Then**: POST → HTTP 200, `zustellungskanal: "EMAIL"` in Response; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`, `send DELETE /api/abrechnungen/{id}`, `receive 200`
 - **TODO**: UC-012 erfordert nachträgliches Setzen von `zustellungsDatum`. Kein PATCH vorhanden.
 
-### TC-025 – UC-012 Abrechnung zustellen: Kanal TWINT
+### TC-025 – UC-012 Abrechnung zustellen und löschen: Kanal TWINT
 - **Source**: UC-012, Gherkin "Abrechnung via Twint-Link zustellen"
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Teilnahme existiert (Setup)
-- **When**: POST `/api/abrechnungen` mit `zustellungskanal: "TWINT"`
-- **Then**: HTTP 200, `zustellungskanal: "TWINT"` in Response
-- **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`
+- **When**: POST `/api/abrechnungen` mit `zustellungskanal: "TWINT"`, dann DELETE
+- **Then**: POST → HTTP 200, `zustellungskanal: "TWINT"` in Response; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`, `send DELETE /api/abrechnungen/{id}`, `receive 200`
 
-### TC-026 – UC-013 TWINT-Zahlung erfassen
+### TC-026 – UC-013 TWINT-Zahlung erfassen und löschen
 - **Source**: UC-013, Gherkin "Twint-Zahlung erfolgreich erfassen"
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Abrechnung existiert (Setup)
-- **When**: POST `/api/zahlungen` mit `{abrechnung: {id}, zahlungskanal: "TWINT", datum: "2025-07-15", betrag: "57.00"}`
-- **Then**: HTTP 200
-- **Citrus actions**: `send POST /api/zahlungen`, `receive 200`
+- **When**: POST `/api/zahlungen` mit `{abrechnung: {id}, zahlungskanal: "TWINT", datum: "2025-07-15", betrag: "57.00"}`, dann DELETE
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/zahlungen`, `receive 200`, `send DELETE /api/zahlungen/{id}`, `receive 200`
 
 ### TC-027 – UC-013 Zahlung ohne Datum
 - **Source**: UC-013, Error Scenario E1 (Pflichtfeld fehlt)
@@ -270,13 +276,13 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500
 - **Citrus actions**: `send POST /api/zahlungen`, `receive 500`
 
-### TC-028 – UC-013 Mahnung erfassen
+### TC-028 – UC-013 Mahnung erfassen und löschen
 - **Source**: UC-013, Gherkin "Mahnung erfassen"
-- **Type**: Happy path
+- **Type**: Happy path + Lösch-Test
 - **Given**: Abrechnung existiert (Setup)
-- **When**: POST `/api/mahnungen` mit `{abrechnung: {id}, datum: "2025-07-20"}`
-- **Then**: HTTP 200
-- **Citrus actions**: `send POST /api/mahnungen`, `receive 200`
+- **When**: POST `/api/mahnungen` mit `{abrechnung: {id}, datum: "2025-07-20"}`, dann DELETE
+- **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/mahnungen`, `receive 200`, `send DELETE /api/mahnungen/{id}`, `receive 200`
 
 ---
 

@@ -1,6 +1,5 @@
 package ch.quartierfest.backend.citrus;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,8 +13,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -28,16 +25,6 @@ class EventAnlegenIT {
     @LocalServerPort private int port;
     private HttpHeaders json;
     private RestTemplate setup;
-    private final List<String> toDelete = new ArrayList<>();
-
-    @AfterEach
-    void tearDown() {
-        toDelete.forEach(this::tryDelete);
-    }
-
-    private void tryDelete(String path) {
-        try { setup.delete(path); } catch (Exception ignored) {}
-    }
 
     @BeforeEach
     void setUp() {
@@ -62,7 +49,11 @@ class EventAnlegenIT {
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody().get("id")).isNotNull();
-        toDelete.add("http://localhost:" + port + "/api/events/" + response.getBody().get("id"));
+
+        // Cleanup als Lösch-Test
+        String url = "http://localhost:" + port + "/api/events/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test

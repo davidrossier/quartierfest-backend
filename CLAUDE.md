@@ -97,7 +97,7 @@ Enums sind als innere Klassen in der jeweiligen Entity definiert:
 ### Integration tests
 13 `*IT.java` Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`.
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
-**28 Testfälle (TC-001..TC-028), alle grün.**
+**26 Testmethoden (TC-001..TC-028, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Verwendetes Muster:
 ```java
@@ -132,17 +132,22 @@ class XxxIT {
     }
 
     @Test @DisplayName("TC-XXX – ...")
+    @SuppressWarnings("unchecked")
     void tcXxx_...() {
         ResponseEntity<Map> r = http.exchange(
             "http://localhost:" + port + "/api/...", HttpMethod.POST,
             new HttpEntity<>(Map.of(...), json), Map.class);
         assertThat(r.getStatusCode()).isEqualTo(HttpStatus.OK);
-        toDelete.add("http://localhost:" + port + "/api/.../" + r.getBody().get("id"));
+
+        // Cleanup als Lösch-Test
+        String url = "http://localhost:" + port + "/api/.../" + r.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }
 ```
 
-**Teardown-Strategie:** JUnit 5 erzeugt pro Testmethode eine neue Instanz, daher ist `toDelete` per Test leer. Im Test erstellte Datensätze werden via `toDelete.add(...)` registriert und in `@AfterEach` als erstes gelöscht (vor den `@BeforeEach`-Datensätzen), damit FK-Constraints nicht verletzt werden.
+**Cleanup-Strategie:** Im Test erstellte Datensätze werden **innerhalb des Tests** via expliziter `DELETE`-Assertion gelöscht — der Lösch-Test dient gleichzeitig als Cleanup. `@BeforeEach`-Fixtures werden im `@AfterEach` in umgekehrter FK-Reihenfolge bereinigt (abhängige Tabellen zuerst). Es gibt keine `toDelete`-Liste mehr.
 
 Bekannte Einschränkungen (als TODO in den IT-Klassen markiert):
 - Kein `@Valid` auf Controllern → Pflichtfeldverletzungen liefern `500` statt `400`

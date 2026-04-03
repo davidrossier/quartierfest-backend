@@ -14,8 +14,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -40,7 +38,6 @@ class InkassoSicherstellenIT {
     private Long einladungId;
     private Long teilnahmeId;
     private Long abrechnungId;
-    private final List<String> toDelete = new ArrayList<>();
 
     @BeforeEach
     void setUp() {
@@ -75,7 +72,7 @@ class InkassoSicherstellenIT {
 
     @AfterEach
     void tearDown() {
-        toDelete.forEach(this::tryDelete);
+        // Zahlungen/Mahnungen werden im Test gelöscht; dann Abrechnung, dann Kette aufwärts
         if (abrechnungId != null) tryDelete("http://localhost:" + port + "/api/abrechnungen/" + abrechnungId);
         if (teilnahmeId != null) tryDelete("http://localhost:" + port + "/api/teilnahmen/" + teilnahmeId);
         if (einladungId != null) tryDelete("http://localhost:" + port + "/api/einladungen/" + einladungId);
@@ -94,7 +91,7 @@ class InkassoSicherstellenIT {
     }
 
     @Test
-    @DisplayName("TC-026 – UC-013 TWINT-Zahlung erfassen")
+    @DisplayName("TC-026 – UC-013 TWINT-Zahlung erfassen und löschen")
     @SuppressWarnings("unchecked")
     void tc026_twintZahlungErfassen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/zahlungen", HttpMethod.POST,
@@ -107,7 +104,11 @@ class InkassoSicherstellenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("id")).isNotNull();
-        toDelete.add("http://localhost:" + port + "/api/zahlungen/" + response.getBody().get("id"));
+
+        // Cleanup als Lösch-Test (vor @AfterEach-Abrechnung-Cleanup: Zahlung referenziert Abrechnung)
+        String url = "http://localhost:" + port + "/api/zahlungen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -125,7 +126,7 @@ class InkassoSicherstellenIT {
     }
 
     @Test
-    @DisplayName("TC-028 – UC-013 Mahnung erfassen")
+    @DisplayName("TC-028 – UC-013 Mahnung erfassen und löschen")
     @SuppressWarnings("unchecked")
     void tc028_mahnungErfassen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/mahnungen", HttpMethod.POST,
@@ -137,6 +138,10 @@ class InkassoSicherstellenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("id")).isNotNull();
-        toDelete.add("http://localhost:" + port + "/api/mahnungen/" + response.getBody().get("id"));
+
+        // Cleanup als Lösch-Test (vor @AfterEach-Abrechnung-Cleanup: Mahnung referenziert Abrechnung)
+        String url = "http://localhost:" + port + "/api/mahnungen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

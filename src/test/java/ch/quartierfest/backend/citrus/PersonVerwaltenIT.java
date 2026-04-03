@@ -1,6 +1,5 @@
 package ch.quartierfest.backend.citrus;
 
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -14,8 +13,6 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.client.RestTemplate;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -29,16 +26,6 @@ class PersonVerwaltenIT {
 
     private HttpHeaders json;
     private RestTemplate setup;
-    private final List<String> toDelete = new ArrayList<>();
-
-    @AfterEach
-    void tearDown() {
-        toDelete.forEach(this::tryDelete);
-    }
-
-    private void tryDelete(String path) {
-        try { setup.delete(path); } catch (Exception ignored) {}
-    }
 
     @BeforeEach
     void setUp() {
@@ -59,7 +46,8 @@ class PersonVerwaltenIT {
     }
 
     @Test
-    @DisplayName("TC-001 – UC-001 Person anlegen: Pflichtfelder vorhanden")
+    @DisplayName("TC-001 – UC-001 Person anlegen und löschen")
+    @SuppressWarnings("unchecked")
     void tc001_personAnlegenHappyPath() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/persons", HttpMethod.POST,
                 new HttpEntity<>(Map.of("vorname", "Hans", "name", "Müller"), json), Map.class);
@@ -67,7 +55,11 @@ class PersonVerwaltenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("id")).isNotNull();
-        toDelete.add("http://localhost:" + port + "/api/persons/" + response.getBody().get("id"));
+
+        // TC-003: Person löschen – Cleanup als Lösch-Test
+        String url = "http://localhost:" + port + "/api/persons/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
@@ -78,18 +70,5 @@ class PersonVerwaltenIT {
                 new HttpEntity<>(Map.of("vorname", "Hans"), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
-    }
-
-    @Test
-    @DisplayName("TC-003 – UC-001 Person löschen")
-    void tc003_personLoeschen() {
-        Map<String, Object> created = setupPost("http://localhost:" + port + "/api/persons",
-                Map.of("vorname", "Delete", "name", "Me"));
-        long personId = ((Number) created.get("id")).longValue();
-
-        ResponseEntity<Void> response = http.exchange(
-                "http://localhost:" + port + "/api/persons/" + personId, HttpMethod.DELETE, null, Void.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }
