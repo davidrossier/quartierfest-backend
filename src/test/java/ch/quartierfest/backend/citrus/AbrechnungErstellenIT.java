@@ -1,5 +1,12 @@
 package ch.quartierfest.backend.citrus;
 
+/**
+ * Traceability:
+ *   UC: UC-011 (Abrechnung erstellen)
+ *   TCs: TC-022, TC-023
+ *   Last traced: 2026-04-03
+ */
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

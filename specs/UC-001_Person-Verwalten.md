@@ -3,6 +3,20 @@ id: UC-001
 type: Use Case
 name: "Personendaten verwalten"
 completeness: Intermediate
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/persons"
+    - "POST /api/persons"
+    - "PUT /api/persons/{id}"
+    - "DELETE /api/persons/{id}"
+  test_ids:
+    - TC-001
+    - TC-002
+    - TC-029
+  it_classes:
+    - PersonVerwaltenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-001 – Personendaten verwalten

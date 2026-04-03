@@ -303,6 +303,47 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 
 ---
 
+## Traceability-Status
+
+> Automatisch generiert durch Traceability-Manager — Stand: 2026-04-03
+
+### TC × IT-Implementierung
+
+| TC-ID | DisplayName | IT-Klasse | Methode | Vorhanden |
+|-------|-------------|-----------|---------|-----------|
+| TC-001 | UC-001 Person anlegen und löschen | PersonVerwaltenIT | tc001_personAnlegen | ✅ |
+| TC-002 | UC-001 Person ohne Name wird abgelehnt | PersonVerwaltenIT | tc002_personOhneName | ✅ |
+| TC-004 | UC-002 Partei anlegen und löschen | ParteiVerwaltenIT | tc004_parteiAnlegen | ✅ |
+| TC-005 | UC-002 Partei ohne Adresse wird abgelehnt | ParteiVerwaltenIT | tc005_parteiOhneAdresse | ✅ |
+| TC-006 | UC-003 Event anlegen und löschen | EventAnlegenIT | tc006_eventAnlegen | ✅ |
+| TC-007 | UC-003 Event ohne Standort wird abgelehnt | EventAnlegenIT | tc007_eventOhneStandort | ✅ |
+| TC-008 | UC-004 Einladung anlegen und löschen | EinladungVerwaltenIT | tc008_einladungAnlegen | ✅ |
+| TC-009 | UC-004 Einladung ohne Event wird abgelehnt | EinladungVerwaltenIT | tc009_einladungOhneEvent | ✅ |
+| TC-010 | UC-004 Einladungsstatus ändern | EinladungVerwaltenIT | tc010_einladungsstatusAendern | ✅ |
+| TC-011 | UC-005 Teilnahme erfassen und löschen | TeilnahmeVerwaltenIT | tc011_teilnahmeErfassen | ✅ |
+| TC-012 | UC-005 Teilnahme ohne Einladung wird abgelehnt | TeilnahmeVerwaltenIT | tc012_teilnahmeOhneEinladung | ✅ |
+| TC-013 | UC-006 Bestätigung versenden | BestaetigungVerwaltenIT | tc013_bestaetigungVersenden | ✅ |
+| TC-014 | UC-007 Allgemeinausgabe anlegen und löschen | AllgemeinausgabeVerwaltenIT | tc014_allgemeinausgabeAnlegen | ✅ |
+| TC-015 | UC-007 Allgemeinausgabe ohne Beschreibung wird abgelehnt | AllgemeinausgabeVerwaltenIT | tc015_allgemeinausgabeOhneBeschreibung | ✅ |
+| TC-016 | UC-008 Konsumationsangebot anlegen und löschen | KonsumationsangebotVerwaltenIT | tc016_konsumationsangebotAnlegen | ✅ |
+| TC-018 | UC-009 Konsumationsliste lesen | KonsumationslisteErstellenIT | tc018_konsumationslisteLesenAngebote | ✅ |
+| TC-019 | UC-009 Teilnahmen für Konsumation lesen | KonsumationslisteErstellenIT | tc019_konsumationslisteTeilnahmen | ✅ |
+| TC-020 | UC-010 Konsumation erfassen und löschen | KonsumationUebernehmenIT | tc020_konsumationErfassen | ✅ |
+| TC-021 | UC-010 Konsumation ohne Anzahl wird abgelehnt | KonsumationUebernehmenIT | tc021_konsumationOhneAnzahl | ✅ |
+| TC-022 | UC-011 Abrechnung erstellen und löschen | AbrechnungErstellenIT | tc022_abrechnungErstellen | ✅ |
+| TC-023 | UC-011 Abrechnung ohne Betrag wird abgelehnt | AbrechnungErstellenIT | tc023_abrechnungOhneBetrag | ✅ |
+| TC-024 | UC-012 Abrechnung zustellen: Kanal EMAIL | AbrechnungZustellenIT | tc024_abrechnungZustellenEmail | ✅ |
+| TC-025 | UC-012 Abrechnung zustellen: Kanal TWINT | AbrechnungZustellenIT | tc025_abrechnungZustellenTwint | ✅ |
+| TC-026 | UC-013 TWINT-Zahlung erfassen und löschen | InkassoSicherstellenIT | tc026_twintZahlungErfassen | ✅ |
+| TC-027 | UC-013 Zahlung ohne Datum wird abgelehnt | InkassoSicherstellenIT | tc027_zahlungOhneDatum | ✅ |
+| TC-028 | UC-013 Mahnung erfassen und löschen | InkassoSicherstellenIT | tc028_mahnungErfassen | ✅ |
+| TC-029 | UC-001 Person bearbeiten | PersonVerwaltenIT | tc029_personBearbeiten | ✅ |
+| TC-030 | UC-002 Partei ohne Bezeichnung wird abgelehnt | ParteiVerwaltenIT | tc030_parteiOhneBezeichnung | ✅ |
+
+**Alle 28 TCs sind implementiert. Keine fehlenden IT-Methoden.**
+
+---
+
 ## Open items
 
 - [ ] **Keine Controller-Validierung**: Alle POST-Fehlerszenarien liefern HTTP 500 statt 400. Für korrekte Fehlerbehandlung müssen `@Valid` + Bean-Validation-Annotationen ergänzt werden (TC-002, TC-005, TC-007, TC-012, TC-015, TC-021, TC-023, TC-027).

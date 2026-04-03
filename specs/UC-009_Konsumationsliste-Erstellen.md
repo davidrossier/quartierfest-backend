@@ -3,6 +3,17 @@ id: UC-009
 type: Use Case
 name: "Konsumationsliste erstellen"
 completeness: Minimum
+traceability:
+  impl_status: teilweise
+  endpoints:
+    - "GET /api/konsumationsangebote"
+    - "GET /api/teilnahmen"
+  test_ids:
+    - TC-018
+    - TC-019
+  it_classes:
+    - KonsumationslisteErstellenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-009 – Konsumationsliste erstellen

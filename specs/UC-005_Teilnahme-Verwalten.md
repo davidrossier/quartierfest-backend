@@ -3,6 +3,18 @@ id: UC-005
 type: Use Case
 name: "Teilnahmen verwalten"
 completeness: Minimum
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/teilnahmen"
+    - "POST /api/teilnahmen"
+    - "DELETE /api/teilnahmen/{id}"
+  test_ids:
+    - TC-011
+    - TC-012
+  it_classes:
+    - TeilnahmeVerwaltenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-005 – Teilnahmen verwalten

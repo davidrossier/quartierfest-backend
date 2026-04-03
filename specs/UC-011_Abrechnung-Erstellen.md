@@ -3,6 +3,18 @@ id: UC-011
 type: Use Case
 name: "Abrechnung erstellen"
 completeness: Minimum
+traceability:
+  impl_status: teilweise
+  endpoints:
+    - "GET /api/abrechnungen"
+    - "POST /api/abrechnungen"
+    - "DELETE /api/abrechnungen/{id}"
+  test_ids:
+    - TC-022
+    - TC-023
+  it_classes:
+    - AbrechnungErstellenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-011 – Abrechnung erstellen

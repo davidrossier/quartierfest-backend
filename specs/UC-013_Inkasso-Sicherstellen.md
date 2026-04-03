@@ -3,6 +3,22 @@ id: UC-013
 type: Use Case
 name: "Inkasso sicherstellen"
 completeness: Minimum
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/zahlungen"
+    - "POST /api/zahlungen"
+    - "DELETE /api/zahlungen/{id}"
+    - "GET /api/mahnungen"
+    - "POST /api/mahnungen"
+    - "DELETE /api/mahnungen/{id}"
+  test_ids:
+    - TC-026
+    - TC-027
+    - TC-028
+  it_classes:
+    - InkassoSicherstellenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-013 – Inkasso sicherstellen

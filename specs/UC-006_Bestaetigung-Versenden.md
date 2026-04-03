@@ -3,6 +3,15 @@ id: UC-006
 type: Use Case
 name: "Bestätigung erstellen und versenden"
 completeness: Minimum
+traceability:
+  impl_status: teilweise
+  endpoints:
+    - "POST /api/einladungen"
+  test_ids:
+    - TC-013
+  it_classes:
+    - BestaetigungVerwaltenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-006 – Bestätigung erstellen und versenden

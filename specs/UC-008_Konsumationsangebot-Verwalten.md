@@ -3,6 +3,17 @@ id: UC-008
 type: Use Case
 name: "Konsumationsangebot verwalten"
 completeness: Intermediate
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/konsumationsangebote"
+    - "POST /api/konsumationsangebote"
+    - "DELETE /api/konsumationsangebote/{id}"
+  test_ids:
+    - TC-016
+  it_classes:
+    - KonsumationsangebotVerwaltenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-008 – Konsumationsangebot verwalten

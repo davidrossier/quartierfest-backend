@@ -3,6 +3,20 @@ id: UC-002
 type: Use Case
 name: "Parteien verwalten"
 completeness: Intermediate
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/parteien"
+    - "POST /api/parteien"
+    - "PUT /api/parteien/{id}"
+    - "DELETE /api/parteien/{id}"
+  test_ids:
+    - TC-004
+    - TC-005
+    - TC-030
+  it_classes:
+    - ParteiVerwaltenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-002 – Parteien verwalten

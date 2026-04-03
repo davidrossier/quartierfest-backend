@@ -5,7 +5,9 @@
       "Bash(do echo:*)",
       "Read(//c/Users/david/Repo/quartierfest-backend/**)",
       "Bash(done)",
-      "Bash(./mvnw verify:*)"
+      "Bash(./mvnw verify:*)",
+      "Bash(grep -n \"@DisplayName\\\\|class.*IT\" src/test/java/ch/quartierfest/backend/citrus/*.java)",
+      "Bash(grep:*)"
     ]
   }
 }

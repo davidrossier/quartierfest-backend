@@ -1,5 +1,12 @@
 package ch.quartierfest.backend.citrus;
 
+/**
+ * Traceability:
+ *   UC: UC-007 (Allgemeinausgaben verwalten)
+ *   TCs: TC-014, TC-015
+ *   Last traced: 2026-04-03
+ */
+
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

@@ -3,6 +3,16 @@ id: UC-012
 type: Use Case
 name: "Abrechnung zustellen"
 completeness: Minimum
+traceability:
+  impl_status: teilweise
+  endpoints:
+    - "POST /api/abrechnungen"
+  test_ids:
+    - TC-024
+    - TC-025
+  it_classes:
+    - AbrechnungZustellenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-012 – Abrechnung zustellen

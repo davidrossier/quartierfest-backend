@@ -3,6 +3,18 @@ id: UC-010
 type: Use Case
 name: "Konsumation übernehmen"
 completeness: Intermediate
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/konsumationen"
+    - "POST /api/konsumationen"
+    - "DELETE /api/konsumationen/{id}"
+  test_ids:
+    - TC-020
+    - TC-021
+  it_classes:
+    - KonsumationUebernehmenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-010 – Konsumation übernehmen

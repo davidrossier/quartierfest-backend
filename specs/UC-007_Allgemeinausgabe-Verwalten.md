@@ -3,6 +3,18 @@ id: UC-007
 type: Use Case
 name: "Allgemeinausgaben verwalten"
 completeness: Intermediate
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/allgemeinausgaben"
+    - "POST /api/allgemeinausgaben"
+    - "DELETE /api/allgemeinausgaben/{id}"
+  test_ids:
+    - TC-014
+    - TC-015
+  it_classes:
+    - AllgemeinausgabeVerwaltenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-007 – Allgemeinausgaben verwalten

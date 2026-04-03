@@ -3,6 +3,19 @@ id: UC-004
 type: Use Case
 name: "Einladung erstellen und verwalten"
 completeness: Minimum
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/einladungen"
+    - "POST /api/einladungen"
+    - "DELETE /api/einladungen/{id}"
+  test_ids:
+    - TC-008
+    - TC-009
+    - TC-010
+  it_classes:
+    - EinladungVerwaltenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-004 – Einladung erstellen und verwalten

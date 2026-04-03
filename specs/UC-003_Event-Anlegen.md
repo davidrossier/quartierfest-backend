@@ -3,6 +3,18 @@ id: UC-003
 type: Use Case
 name: "Event anlegen"
 completeness: Intermediate
+traceability:
+  impl_status: vollständig
+  endpoints:
+    - "GET /api/events"
+    - "POST /api/events"
+    - "DELETE /api/events/{id}"
+  test_ids:
+    - TC-006
+    - TC-007
+  it_classes:
+    - EventAnlegenIT
+  last_traced: "2026-04-03"
 ---
 
 # UC-003 – Event anlegen
