@@ -21,6 +21,12 @@ public class ParteiController {
         return parteiService.save(partei);
     }
 
+    @PutMapping("/{id}")
+    public Partei update(@PathVariable Long id, @RequestBody Partei partei) {
+        partei.setId(id);
+        return parteiService.save(partei);
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         parteiService.delete(id);
