@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(for f:*)",
+      "Bash(do echo:*)",
+      "Read(//c/Users/david/Repo/quartierfest-backend/**)",
+      "Bash(done)",
+      "Bash(./mvnw verify:*)"
+    ]
+  }
+}
