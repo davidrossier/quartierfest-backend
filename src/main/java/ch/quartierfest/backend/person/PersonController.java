@@ -21,6 +21,12 @@ public class PersonController {
         return personService.save(person);
     }
 
+    @PutMapping("/{id}")
+    public Person update(@PathVariable Long id, @RequestBody Person person) {
+        person.setId(id);
+        return personService.save(person);
+    }
+
     @DeleteMapping("/{id}")
     public void delete(@PathVariable Long id) {
         personService.delete(id);

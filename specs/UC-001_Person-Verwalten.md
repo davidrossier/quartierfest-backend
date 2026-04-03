@@ -92,6 +92,11 @@ Scenario: Person erfolgreich erfassen
   When er Vorname "Anna" und Name "Müller" eingibt und speichert
   Then ist die Person "Anna Müller" in der Personenliste vorhanden
 
+Scenario: Person erfolgreich bearbeiten
+  Given die Person "Anna Müller" ist im System vorhanden
+  When der Organisator die Mobilenummer auf "+41791234567" setzt und speichert
+  Then enthält der Datensatz "Anna Müller" die Mobilenummer "+41791234567"
+
 Scenario: Person ohne Pflichtfeld speichern schlägt fehl
   Given der Organisator ist in der Personenverwaltung
   When er nur einen Vornamen eingibt und versucht zu speichern

@@ -63,6 +63,30 @@ class PersonVerwaltenIT {
     }
 
     @Test
+    @DisplayName("TC-029 – UC-001 Person bearbeiten")
+    @SuppressWarnings("unchecked")
+    void tc029_personBearbeiten() {
+        // Given: Person anlegen
+        Map<String, Object> created = setupPost("http://localhost:" + port + "/api/persons",
+                Map.of("vorname", "Anna", "name", "Müller"));
+        long id = ((Number) created.get("id")).longValue();
+        String url = "http://localhost:" + port + "/api/persons/" + id;
+
+        // When: Person bearbeiten (PUT)
+        ResponseEntity<Map> response = http.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(Map.of("vorname", "Anna", "name", "Müller", "mobilenummer", "+41791234567"), json),
+                Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("mobilenummer")).isEqualTo("+41791234567");
+        assertThat(response.getBody().get("id")).isEqualTo((int) id);
+
+        // Cleanup als Lösch-Test
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
     @DisplayName("TC-002 – UC-001 Person anlegen: Pflichtfeld name fehlt")
     void tc002_personAnlegenNameFehlt() {
         // TODO: Should be HTTP 400 – requires @Valid + @NotBlank on Person.name

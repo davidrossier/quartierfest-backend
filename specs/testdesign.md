@@ -4,7 +4,7 @@
 
 | UC | Covered | Notes |
 |---|---|---|
-| UC-001 Person verwalten | Yes | TC-001..002 |
+| UC-001 Person verwalten | Yes | TC-001..002, TC-029 |
 | UC-002 Parteien verwalten | Yes | TC-004..005 |
 | UC-003 Event anlegen | Yes | TC-006..007 |
 | UC-004 Einladung verwalten | Yes | TC-008..010 |
@@ -76,6 +76,14 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **When**: POST `/api/persons` mit `{vorname: "Hans", name: "Müller"}`, dann DELETE `/api/persons/{id}`
 - **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
 - **Citrus actions**: `send POST /api/persons`, `receive 200`, `send DELETE /api/persons/{id}`, `receive 200`
+
+### TC-029 – UC-001 Person bearbeiten
+- **Source**: UC-001, Hauptfluss Schritt 3 (Bearbeiten)
+- **Type**: Happy path + Lösch-Test
+- **Given**: Keine Voraussetzung
+- **When**: POST `/api/persons` (Setup), dann PUT `/api/persons/{id}` mit `{vorname: "Anna", name: "Müller", mobilenummer: "+41791234567"}`, dann DELETE
+- **Then**: PUT → HTTP 200, `mobilenummer: "+41791234567"` in Response; DELETE → HTTP 200
+- **Citrus actions**: `send PUT /api/persons/{id}`, `receive 200`, `send DELETE /api/persons/{id}`, `receive 200`
 
 ### TC-002 – UC-001 Person anlegen: Pflichtfeld name fehlt
 - **Source**: UC-001, implizites Fehler-Szenario

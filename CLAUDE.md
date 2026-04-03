@@ -70,7 +70,7 @@ All controllers expose the same three operations:
 - `POST /api/{resource}` — create, returns `200 OK` + saved entity
 - `DELETE /api/{resource}/{id}` — delete, returns `200 OK`
 
-No PUT/PATCH endpoints exist.
+Ausnahme: `PersonController` hat zusätzlich `PUT /api/persons/{id}` — update, returns `200 OK` + updated entity. Alle anderen Domänen haben kein PUT/PATCH.
 
 | Domain | Endpoint | Beziehungen |
 |---|---|---|
