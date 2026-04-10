@@ -4,7 +4,7 @@ package ch.quartierfest.backend.citrus;
  * Traceability:
  *   UC: UC-006 (Bestätigung erstellen und versenden)
  *   TCs: TC-013
- *   Last traced: 2026-04-03
+ *   Last traced: 2026-04-10
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -29,9 +29,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for UC-006 – Bestätigung erstellen und versenden.
  * Covers TC-013.
  *
- * NOTE: UC-006 requires updating bestaetigungVersendet on an existing ANGEMELDET Einladung.
- * The API has no PATCH endpoint. TC-013 tests only that the flag is persisted at creation time.
- * TODO: Implement PATCH /api/einladungen/{id} to fully cover UC-006.
+ * UC-006 main flow: bestaetigungVersendet wird via POST/Upsert nachträglich auf true gesetzt.
+ * POST /api/einladungen mit id im Body agiert als Upsert (JPA save() mit vorhandener ID).
+ * Kein PATCH-Endpunkt notwendig.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class BestaetigungVerwaltenIT {
@@ -78,27 +78,40 @@ class BestaetigungVerwaltenIT {
     }
 
     @Test
-    @DisplayName("TC-013 – UC-006 Bestätigung versendet Flag setzen")
+    @DisplayName("TC-013 – UC-006 Bestätigung versendet via POST/Upsert nachträglich setzen")
     @SuppressWarnings("unchecked")
-    void tc013_bestaetigungVersendetFlagSetzen() {
-        // TODO: UC-006 main flow requires PATCH to update bestaetigungVersendet=true on an
-        //       existing ANGEMELDET Einladung. No PATCH endpoint exists. This test verifies
-        //       only that the flag is correctly stored when set at creation time.
-
-        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
+    void tc013_bestaetigungVersendetViаUpsert() {
+        // Given: Einladung mit bestaetigungVersendet=false anlegen
+        ResponseEntity<Map> created = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
+                        "event", Map.of("id", eventId),
+                        "partei", Map.of("id", parteiId),
+                        "status", "ANGEMELDET",
+                        "anzahlPersonen", 2,
+                        "bestaetigungVersendet", false), json), Map.class);
+
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(created.getBody().get("bestaetigungVersendet")).isEqualTo(false);
+        long einladungId = ((Number) created.getBody().get("id")).longValue();
+
+        // When: bestaetigungVersendet via POST/Upsert (id im Body) auf true setzen
+        ResponseEntity<Map> updated = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "id", einladungId,
                         "event", Map.of("id", eventId),
                         "partei", Map.of("id", parteiId),
                         "status", "ANGEMELDET",
                         "anzahlPersonen", 2,
                         "bestaetigungVersendet", true), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotNull();
-        assertThat(response.getBody().get("bestaetigungVersendet")).isEqualTo(true);
+        // Then: Flag ist auf true gesetzt
+        assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(updated.getBody()).isNotNull();
+        assertThat(updated.getBody().get("bestaetigungVersendet")).isEqualTo(true);
+        assertThat(updated.getBody().get("id")).isEqualTo((int) einladungId);
 
         // Cleanup als Lösch-Test (vor @AfterEach-Partei/Event-Cleanup)
-        String url = "http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id");
+        String url = "http://localhost:" + port + "/api/einladungen/" + einladungId;
         ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
         assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }

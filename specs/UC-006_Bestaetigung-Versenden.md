@@ -2,16 +2,16 @@
 id: UC-006
 type: Use Case
 name: "Bestätigung erstellen und versenden"
-completeness: Minimum
+completeness: Intermediate
 traceability:
-  impl_status: teilweise
+  impl_status: vollständig
   endpoints:
     - "POST /api/einladungen"
   test_ids:
     - TC-013
   it_classes:
     - BestaetigungVerwaltenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-006 – Bestätigung erstellen und versenden
@@ -29,13 +29,27 @@ traceability:
 | Actor | Type | Role |
 |---|---|---|
 | Organisator | `Human` | Erstellt und versendet die Bestätigung |
-| Partei | `Human` | Empfängt die Bestätigung |
+| Partei | `External` | Empfängt die Bestätigung ausserhalb des Systems |
 
 ---
 
 ## Context & Background
 
 > Die Bestätigung wird einige Tage vor dem Event-Datum an alle Parteien mit Status ANGEMELDET verschickt. Sie enthält den definitiven Standort (ggf. den alternativen Standort), die relevanten Zeiten, eine Zusammenstellung der zugesagten Buffetbeiträge sowie das Konsumationsangebot. Der Organisator markiert in der Einladung, ob die Bestätigung versendet wurde (`bestaetigungVersendet`). Der eigentliche Versand (E-Mail, Post) findet ausserhalb des Systems statt.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/planung/bestaetigung` — `BestaetigungUebersichtComponent` (Angular 21, Standalone)
+> Event-kontextabhängig; zeigt nur Einladungen mit Status ANGEMELDET für den gewählten Event.
+
+- **Ansichtsinhalt:** Buffet-Zusammenstellung (gruppiert nach Beitragstyp, mit Partei-Namen), Konsumationsangebot mit Preisen, Anzahl noch nicht versendeter Bestätigungen (`unversendeteAnzahl`).
+- **Warnung:** Wenn kein Konsumationsangebot für den Event erfasst ist, zeigt `keinAngebot`-Signal einen Warnhinweis.
+- **`bestaetigungVersendet` setzen:** Das Frontend setzt das Flag via erneuten `POST`-Aufruf (Upsert-Mechanismus) auf `true` — es wird kein PATCH-Endpunkt benötigt.
+- **Einzeln markieren:** `markiereVersendet(einladung)` — setzt `bestaetigungVersendet = true` für eine Einladung.
+- **Alle markieren:** `alleMarkieren()` — setzt via `forkJoin` alle noch nicht markierten Einladungen auf `bestaetigungVersendet = true`.
+- Es gibt keine PDF-Generierung; der Versand ist vollständig manuell ausserhalb des Systems.
 
 ---
 
@@ -110,11 +124,11 @@ Scenario: Bestätigung ohne Konsumationsangebot zeigt Warnung
 
 ## Open Items
 
-- [ ] OPEN: Gibt es einen definierten Zeitpunkt (z.B. X Tage vor Event-Datum), ab dem die Bestätigung versendet werden soll, oder liegt der Zeitpunkt im freien Ermessen des Organisators?
-- [ ] OPEN: Wie wird die Bestätigung technisch erzeugt und versendet — generiert das System ein Dokument (PDF, E-Mail-Text) oder ist der Versand vollständig manuell?
-- [ ] OPEN: Soll die Bestätigung pro Partei individuell (mit deren spezifischem Buffetbeitrag) oder als einheitliches Rundschreiben verschickt werden?
-- [ ] REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, interagiert aber nie direkt mit dem System (analog UC-004 Open Item). Klären ob Partei als sekundärer Aktor oder als Stakeholder ausserhalb des UC-Scopes zu führen ist.
-- [ ] REVIEW: Schritt 4 verlangt das Setzen von `bestaetigungVersendet = true` per Einladung, aber das System besitzt keinen PATCH-Endpunkt. Klären ob ein PATCH-Endpunkt eingeführt oder ob das Markieren über einen alternativen Mechanismus (z.B. DELETE + neu anlegen) gelöst werden soll.
+- [x] ~~OPEN: Gibt es einen definierten Zeitpunkt?~~ → **Beantwortet:** Kein fixer Zeitpunkt — liegt im Ermessen des Organisators.
+- [x] ~~OPEN: Wie wird die Bestätigung technisch erzeugt und versendet?~~ → **Beantwortet:** Das System generiert kein Dokument. Der Versand (E-Mail, Post) ist vollständig manuell; das System dient nur zur Ansicht der Bestätigungsinhalte und zum Setzen des `bestaetigungVersendet`-Flags.
+- [x] ~~OPEN: Individuell oder Rundschreiben?~~ → **Beantwortet:** Das Frontend markiert jede Einladung **individuell** (`markiereVersendet()`), bietet aber auch eine Bulk-Markierung aller unversendeten Bestätigungen (`alleMarkieren()`).
+- [x] ~~REVIEW: Partei als `Human`-Aktor?~~ → **Beantwortet (analog UC-004):** Partei ist externer Stakeholder, kein primärer Systemakteur. Typ auf `External` korrigiert.
+- [x] ~~REVIEW: `bestaetigungVersendet` ohne PATCH-Endpunkt?~~ → **Beantwortet:** Das Frontend nutzt den bestehenden `POST`-Endpunkt als Upsert (`einladungService.save({id: ..., bestaetigungVersendet: true, ...})`). Kein PATCH-Endpunkt benötigt.
 
 ---
 

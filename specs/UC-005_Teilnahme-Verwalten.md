@@ -2,7 +2,7 @@
 id: UC-005
 type: Use Case
 name: "Teilnahmen verwalten"
-completeness: Minimum
+completeness: Intermediate
 traceability:
   impl_status: vollständig
   endpoints:
@@ -14,7 +14,7 @@ traceability:
     - TC-012
   it_classes:
     - TeilnahmeVerwaltenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-005 – Teilnahmen verwalten
@@ -38,6 +38,18 @@ traceability:
 ## Context & Background
 
 > Eine Teilnahme ist die konsolidierte, editierbare Sicht der tatsächlichen Anwesenheit einer Partei. Sie wird aus einer ANGEMELDET-Einladung abgeleitet und kann vom Organisator bis zum Event und danach (für die Abrechnung) angepasst werden. Das Feld `anzahlPersonenEffektiv` kann von den ursprünglichen Einladungsangaben abweichen und ist massgebend für die Abrechnung. Teilnahmen sind Grundlage für Konsumationen (UC-010) und Abrechnungen (UC-011).
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/planung/teilnahmen` — `TeilnahmenVerwaltungComponent` (Angular 21, Standalone)
+> Event-kontextabhängig: die Liste wird nach dem gewählten Event gefiltert.
+
+- **"Teilnahmen aus Einladungen erstellen"** (`teilnahmenAusEinladungenErstellen()`): erstellt via `forkJoin` für alle ANGEMELDET-Einladungen des Events, die noch **keine Teilnahme** haben, einen Teilnahme-Datensatz. `anzahlPersonenEffektiv` wird dabei aus `einladung.anzahlPersonen` übernommen.
+- Das Formular erlaubt ausschliesslich das **Bearbeiten** bestehender Teilnahmen — eine manuelle Neuerstellung ohne Einladungsbasis ist über die UI nicht möglich.
+- Löschen öffnet `confirm()`-Dialog.
+- Liste sortierbar nach partei, anzahlPersonenEffektiv.
 
 ---
 
@@ -126,7 +138,7 @@ Scenario: Teilnahmeübersicht ohne Anmeldungen ist leer
 
 ## Open Items
 
-- [ ] REVIEW: Der UC setzt voraus, dass Teilnahmen bereits existieren ("Das System zeigt alle Teilnahmen"), spezifiziert aber nicht, wann und durch wen sie erstellt werden. Klären ob das System automatisch eine Teilnahme anlegt, sobald eine Einladung auf ANGEMELDET gesetzt wird (UC-004 Schritt 6), oder ob der Organisator Teilnahmen explizit über einen eigenen Schritt erzeugen muss. Dies hat direkte Auswirkungen auf den API-Endpunkt `POST /api/teilnahmen` und dessen Aufrufzeitpunkt.
+- [x] ~~REVIEW: Wann und durch wen werden Teilnahmen erstellt?~~ → **Beantwortet:** Teilnahmen werden **explizit** durch den Organisator über den Button "Teilnahmen aus Einladungen erstellen" erzeugt (`TeilnahmenVerwaltungComponent.teilnahmenAusEinladungenErstellen()`). Es gibt **keine automatische Erstellung** beim Setzen einer Einladung auf ANGEMELDET. `POST /api/teilnahmen` wird clientseitig via `forkJoin` für alle fehlenden Teilnahmen aufgerufen.
 
 ---
 

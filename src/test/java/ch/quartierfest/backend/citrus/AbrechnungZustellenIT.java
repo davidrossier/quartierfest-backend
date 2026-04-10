@@ -3,8 +3,8 @@ package ch.quartierfest.backend.citrus;
 /**
  * Traceability:
  *   UC: UC-012 (Abrechnung zustellen)
- *   TCs: TC-024, TC-025
- *   Last traced: 2026-04-03
+ *   TCs: TC-024, TC-025, TC-032
+ *   Last traced: 2026-04-10
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -27,12 +27,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for UC-012 – Abrechnung zustellen.
- * Covers TC-024, TC-025.
+ * Covers TC-024, TC-025, TC-032.
  *
- * NOTE: UC-012 requires updating zustellungsDatum and zustellungskanal after an
- * Abrechnung has been created. The API has no PATCH endpoint; zustellungsDatum
- * can only be set at creation time.
- * TODO: Implement PATCH /api/abrechnungen/{id} to set zustellungsDatum separately.
+ * UC-012: zustellungsDatum und Zustellungskanal werden via POST/Upsert gesetzt.
+ * POST /api/abrechnungen mit id im Body agiert als Upsert (JPA save() mit vorhandener ID).
+ * Kein PATCH-Endpunkt notwendig.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class AbrechnungZustellenIT {
@@ -118,8 +117,6 @@ class AbrechnungZustellenIT {
     @DisplayName("TC-024 – UC-012 Abrechnung zustellen: Kanal EMAIL mit Zustellungsdatum")
     @SuppressWarnings("unchecked")
     void tc024_abrechnungZustellenKanalEmail() {
-        // TODO: UC-012 requires setting zustellungsDatum after creation via PATCH.
-        //       No PATCH endpoint exists; zustellungsDatum is set at creation time here.
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
                         "teilnahme", Map.of("id", teilnahmeId),
@@ -157,6 +154,46 @@ class AbrechnungZustellenIT {
 
         // Cleanup als Lösch-Test (vor @AfterEach-Teilnahme-Cleanup)
         String url = "http://localhost:" + port + "/api/abrechnungen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("TC-032 – UC-012 Zustellungsdatum nachträglich via POST/Upsert setzen")
+    @SuppressWarnings("unchecked")
+    void tc032_zustellungsDatumViаUpsert() {
+        // Given: Abrechnung ohne zustellungsDatum anlegen
+        ResponseEntity<Map> created = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "teilnahme", Map.of("id", teilnahmeId),
+                        "anteilAllgemeinkosten", 40.00,
+                        "totalKonsumation", 17.00,
+                        "totalBetrag", 57.00,
+                        "zustellungskanal", "EMAIL"), json), Map.class);
+
+        assertThat(created.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(created.getBody().get("zustellungsDatum")).isNull();
+        long abrechnungId = ((Number) created.getBody().get("id")).longValue();
+
+        // When: zustellungsDatum via POST/Upsert (id im Body) nachträglich setzen
+        ResponseEntity<Map> updated = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "id", abrechnungId,
+                        "teilnahme", Map.of("id", teilnahmeId),
+                        "anteilAllgemeinkosten", 40.00,
+                        "totalKonsumation", 17.00,
+                        "totalBetrag", 57.00,
+                        "zustellungskanal", "EMAIL",
+                        "zustellungsDatum", "2025-07-10"), json), Map.class);
+
+        // Then: Zustellungsdatum ist gesetzt
+        assertThat(updated.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(updated.getBody()).isNotNull();
+        assertThat(updated.getBody().get("zustellungsDatum")).isEqualTo("2025-07-10");
+        assertThat(updated.getBody().get("id")).isEqualTo((int) abrechnungId);
+
+        // Cleanup als Lösch-Test
+        String url = "http://localhost:" + port + "/api/abrechnungen/" + abrechnungId;
         ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
         assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }

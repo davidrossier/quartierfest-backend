@@ -21,13 +21,14 @@ Empfänger einer Einladung. Wiederverwendbar über mehrere Events.
 ### Partei
 Gruppierung von Personen (typischerweise ein Haushalt). Erhält die Einladung.
 
-| Feld             | Typ     | Pflicht |
-|------------------|---------|---------|
-| id               | Long    | ja      |
-| bezeichnung      | String  | ja      |
-| adresse          | String  | ja      |
-| twintAktiv       | Boolean | ja      |
-| twintMobilenummer| String  | nein    |
+| Feld             | Typ          | Pflicht | Hinweis |
+|------------------|--------------|---------|---------|
+| id               | Long         | ja      | — |
+| bezeichnung      | String       | ja      | — |
+| adresse          | String       | ja      | — |
+| twintAktiv       | Boolean      | ja      | — |
+| twintMobilenummer| String       | nein    | — |
+| personenIds      | List\<Long\> | nein    | `@Transient` — write-only beim POST; IDs der zugeordneten Personen (werden via `PersonRepository` aufgelöst und gespeichert) |
 
 **Beziehungen:**
 - `Partei` → `Person`: 1:n (eine Partei hat eine oder mehrere Personen)
@@ -198,3 +199,32 @@ Teilnahme       ──── 1:1 ──→ Abrechnung
 Abrechnung      ←── n:1 ──── Zahlung
 Abrechnung      ←── n:1 ──── Mahnung
 ```
+
+---
+
+## API-Verhalten
+
+### POST als Upsert
+
+`POST /api/einladungen` und `POST /api/abrechnungen` verhalten sich als Upsert:
+- Enthält der Request-Body kein `id`-Feld → **INSERT** (neue Entität)
+- Enthält der Request-Body ein `id`-Feld → **UPDATE** (JPA `save()` mit vorhandener ID)
+
+Dieses Muster wird genutzt, um Felder nachträglich zu setzen:
+- `bestaetigungVersendet` auf `true` setzen (UC-006)
+- `zustellungsDatum` nachträglich ergänzen (UC-012)
+
+---
+
+## Frontend-Workflow-Phasen
+
+Das Angular-Frontend gliedert die Domänen in vier Phasen:
+
+| Phase | Route-Präfix | Domänen |
+|-------|-------------|---------|
+| Stammdaten | `/personen`, `/parteien`, `/events` | Person, Partei, Event |
+| Planung | `/planung/...` | Einladung, Teilnahme, Allgemeinausgabe, Konsumationsangebot, Bestätigung |
+| Durchführung | `/durchfuehrung/...` | Konsumationsliste, Konsumation |
+| Nachbearbeitung | `/nachbearbeitung/...` | Abrechnung, Zahlung, Mahnung |
+
+Event-abhängige Routen nutzen den `EventKontextService` (Angular Signals), der den aktuell gewählten Event-Kontext über alle Routing-Gruppen hinweg hält.

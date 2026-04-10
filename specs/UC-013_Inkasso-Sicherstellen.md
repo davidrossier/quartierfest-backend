@@ -2,7 +2,7 @@
 id: UC-013
 type: Use Case
 name: "Inkasso sicherstellen"
-completeness: Minimum
+completeness: Intermediate
 traceability:
   impl_status: vollständig
   endpoints:
@@ -18,7 +18,7 @@ traceability:
     - TC-028
   it_classes:
     - InkassoSicherstellenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-013 – Inkasso sicherstellen
@@ -36,13 +36,27 @@ traceability:
 | Actor | Type | Role |
 |---|---|---|
 | Organisator | `Human` | Erfasst Zahlungen und versendet Mahnungen |
-| Partei | `Human` | Leistet die Zahlung |
+| Partei | `External` | Leistet die Zahlung ausserhalb des Systems |
 
 ---
 
 ## Context & Background
 
 > Nach der Zustellung der Abrechnungen (UC-012) erwartet der Organisator Zahlungseingänge. Zahlungen können via Twint, Banküberweisung oder bar erfolgen. Der Organisator kontrolliert regelmässig, ob Zahlungen eingegangen sind, und erfasst diese im System. Parteien, die trotz Zustellung nicht bezahlt haben, erhalten eine Mahnung, die ebenfalls im System festgehalten wird. Eine Abrechnung kann mehrere Teilzahlungen haben.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/nachbearbeitung/inkasso` — `InkassoVerwaltungComponent` (Angular 21, Standalone)
+> Event-kontextabhängig; zeigt alle Abrechnungen des gewählten Events.
+
+- **Expand-Row-Pattern:** Jede Zeile kann per Klick expandiert werden (`expandierteId`). In der Detailansicht werden Zahlungen, Mahnungen und die dazugehörigen Erfassungsformulare angezeigt.
+- **Zahlungsformular:** zahlungskanal (TWINT default), datum (heute), betrag (required, `min: 0.01`). Formular öffnet sich via `zahlungFormOeffnen()`.
+- **Mahnungsformular:** datum (heute), bemerkung (optional). Formular öffnet sich via `mahnungFormOeffnen()`.
+- **Offener Betrag:** wird clientseitig berechnet: `abrechnung.totalBetrag − Σ(zahlung.betrag)`.
+- Zahlungen und Mahnungen können einzeln gelöscht werden (`confirm()`-Dialog).
+- Liste sortierbar nach partei, totalBetrag.
 
 ---
 
@@ -143,8 +157,8 @@ Scenario: Teilzahlung reduziert offenen Betrag korrekt
 
 ## Open Items
 
-- [ ] REVIEW: Schritt 6 erwähnt "abgeschrieben" als Abschlusszustand einer Abrechnung, aber das Datenmodell hat keinen entsprechenden Status oder kein Flag dafür. Klären ob Forderungsabschreibungen (z.B. bei Uneinbringlichkeit) im System erfasst werden sollen und welches Datenmodell dafür nötig ist.
-- [ ] REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, leistet die Zahlung aber ausserhalb des Systems — analog UC-004 Open Item. Klären ob Partei als sekundärer Aktor oder als Stakeholder ausserhalb des UC-Scopes zu führen ist.
+- [x] ~~REVIEW: "Abgeschrieben" als Abschlusszustand?~~ → **Beantwortet:** Das Frontend und Datenmodell kennen keinen Abschreibungs-Status. Der Abschluss einer Abrechnung erfolgt implizit, wenn der offene Betrag CHF 0.00 erreicht. Forderungsabschreibungen sind nicht implementiert.
+- [x] ~~REVIEW: Partei als `Human`-Aktor?~~ → **Beantwortet (analog UC-004):** Partei ist externer Stakeholder. Typ auf `External` korrigiert.
 
 ---
 

@@ -16,7 +16,7 @@ traceability:
     - TC-030
   it_classes:
     - ParteiVerwaltenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-002 – Parteien verwalten
@@ -40,6 +40,17 @@ traceability:
 ## Context & Background
 
 > Eine Partei repräsentiert typischerweise einen Haushalt und ist die Einheit, die eine Einladung erhält und darauf antwortet. Jede Partei trägt einen bezeichnenden Namen (z. B. „Familie Müller" oder „Meier/Huber"), der sie in Listen eindeutig identifizierbar macht. Eine Partei besteht aus einer oder mehreren Personen (UC-001), die über eine Tabelle zugeordnet werden. Für die Abrechnung via Twint wird die Mobilenummer der Partei benötigt. Parteien sind eventübergreifend und können bei jedem neuen Event wieder eingeladen werden.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/parteien` — `ParteienVerwaltungComponent` (Angular 21, Standalone)
+
+- Formularvalidierung clientseitig: `bezeichnung` und `adresse` sind `Validators.required`. `twintMobilenummer` wird nur übermittelt, wenn `twintAktiv = true`; das Feld wird im Payload weggelassen, sobald Twint inaktiv ist.
+- Die Personenauswahl zeigt **alle im System erfassten Personen** als Toggle-Liste (`togglePerson()` via `Set<number>`). Beim Bearbeiten einer bestehenden Partei werden die aktuell zugeordneten Personen vorausgewählt. Die ausgewählten IDs werden als `personenIds`-Array übermittelt.
+- Löschen öffnet einen Browser-`confirm()`-Dialog.
+- Liste ist sortierbar nach bezeichnung, adresse, twintAktiv, twintMobilenummer.
 
 ---
 
@@ -159,4 +170,4 @@ Scenario: Partei mit bestehender Einladung löschen schlägt fehl
 ## Open Items
 
 - [x] ~~OPEN: Ist das Feld `bezeichnung` in der Partei-Entity als neues Pflichtfeld zu ergänzen?~~ → Implementiert als `@Column(nullable = false)` in `Partei.java`.
-- [ ] OPEN: Zeigt die Personentabelle in der UI alle Personen im System (mit Auswahl-Checkbox), oder nur die bereits zugeordneten Personen? → UX-Entscheid erforderlich (Frontend-Scope).
+- [x] ~~OPEN: Zeigt die Personentabelle in der UI alle Personen im System (mit Auswahl-Checkbox), oder nur die bereits zugeordneten Personen?~~ → **Beantwortet:** Die Tabelle zeigt alle Personen im System. Beim Bearbeiten einer Partei werden die zugeordneten Personen vorausgewählt (`selectedPersonenIds = new Set(partei.personen.map(p => p.id))`); beim Neuanlegen ist keine Person vorausgewählt.

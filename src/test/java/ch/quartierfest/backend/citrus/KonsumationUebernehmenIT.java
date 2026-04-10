@@ -4,7 +4,7 @@ package ch.quartierfest.backend.citrus;
  * Traceability:
  *   UC: UC-010 (Konsumation übernehmen)
  *   TCs: TC-020, TC-021
- *   Last traced: 2026-04-03
+ *   Last traced: 2026-04-10
  */
 
 import org.junit.jupiter.api.AfterEach;

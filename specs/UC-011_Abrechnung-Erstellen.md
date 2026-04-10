@@ -2,7 +2,7 @@
 id: UC-011
 type: Use Case
 name: "Abrechnung erstellen"
-completeness: Minimum
+completeness: Intermediate
 traceability:
   impl_status: teilweise
   endpoints:
@@ -14,7 +14,7 @@ traceability:
     - TC-023
   it_classes:
     - AbrechnungErstellenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-011 – Abrechnung erstellen
@@ -39,6 +39,19 @@ traceability:
 ## Context & Background
 
 > Die Abrechnung je Partei setzt sich aus zwei Komponenten zusammen: (1) dem Anteil an den Allgemeinausgaben (UC-007), aufgeteilt nach effektiver Personenzahl aller Teilnehmenden, und (2) dem Total der persönlichen Konsumation (UC-010). Das System berechnet diese Werte automatisch und speichert sie als Abrechnung, die dann an die Parteien zugestellt wird (UC-012).
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/nachbearbeitung/abrechnungen` — `AbrechnungenVerwaltungComponent` (Angular 21, Standalone)
+> UC-011 und UC-012 sind in **derselben Komponente** implementiert.
+
+- **Clientseitige Berechnung:** `abrechnungenErstellen()` berechnet alle Werte vollständig im Frontend via `forkJoin` über Teilnahmen, Allgemeinausgaben, Konsumationen und Parteien. Die berechneten Payloads werden dann via `POST /api/abrechnungen` gespeichert.
+- **Neuberechnung:** `neuBerechnen()` löscht zuerst alle bestehenden Abrechnungen des Events (`forkJoin(delete)`) und ruft danach `abrechnungenErstellen()` auf. Damit wird die Erstellung einer zweiten Abrechnung für dieselbe Teilnahme verhindert.
+- **Kanalanpassung:** Zustellungskanal kann pro Abrechnung inline geändert und via `kanalSpeichern()` (erneuter POST) persistiert werden.
+- Zustellungsdatum (`alsZugestelltMarkieren()`): setzt `zustellungsDatum` auf das heutige Datum via POST.
+- Liste sortierbar nach partei, anteilAllgemeinkosten, totalKonsumation, totalBetrag.
 
 ---
 
@@ -135,7 +148,7 @@ Scenario: Zustellungskanal automatisch setzen
 
 ## Open Items
 
-- [ ] REVIEW: Das Datenmodell definiert eine 1:1-Beziehung zwischen Teilnahme und Abrechnung. Verhindert das System die Erstellung einer zweiten Abrechnung für dieselbe Teilnahme (Unique-Constraint), oder liegt es am Organisator, zuerst zu löschen (A1)? Fehlverhalten bei Duplikat muss spezifiziert werden.
+- [x] ~~REVIEW: Verhindert das System die Erstellung einer zweiten Abrechnung für dieselbe Teilnahme?~~ → **Beantwortet:** Das Frontend verhindert dies durch `neuBerechnen()`: alle bestehenden Abrechnungen des Events werden vor der Neuerstellung gelöscht. Ein Backend-Unique-Constraint ist nicht vorhanden; die Verhinderung von Duplikaten liegt in der UI-Logik.
 
 ---
 

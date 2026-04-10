@@ -26,7 +26,7 @@ public class Partei {
 
     private String twintMobilenummer;
 
-    @OneToMany
+    @OneToMany(fetch = FetchType.EAGER)
     @JoinColumn(name = "partei_id")
     private List<Person> personen;
 

@@ -2,19 +2,20 @@
 id: UC-003
 type: Use Case
 name: "Event anlegen"
-completeness: Intermediate
+completeness: Minimum
 traceability:
   impl_status: vollständig
   endpoints:
     - "GET /api/events"
     - "POST /api/events"
+    - "PUT /api/events/{id}"
     - "DELETE /api/events/{id}"
   test_ids:
     - TC-006
     - TC-007
   it_classes:
     - EventAnlegenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-003 – Event anlegen
@@ -38,6 +39,18 @@ traceability:
 ## Context & Background
 
 > Ein Event repräsentiert eine konkrete Durchführung des Quartierfests (z.B. Buchlenfest). Alle weiteren Objekte — Einladungen, Konsumationsangebot, Allgemeinausgaben und Abrechnungen — sind einem Event zugeordnet. Das Datum und der Standort sind zentrale Angaben, die in den Einladungen und Bestätigungen kommuniziert werden. Bei schlechtem Wetter kann auf den alternativen Standort ausgewichen werden.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/events` — `EventsVerwaltungComponent` (Angular 21, Standalone)
+
+- Formularvalidierung clientseitig: `datum`, `startzeit` und `standort` sind `Validators.required`. `alternativerStandort`, `zeitAufstellen` und `zeitAufraumen` sind optional und werden als `undefined` übermittelt, wenn leer.
+- Bearbeiten öffnet das Formular inline (kein separater Dialog); alle Felder sind editierbar.
+- Löschen öffnet `confirm('Event „{standort}, {datum}" wirklich löschen?')`.
+- Liste ist sortierbar nach datum, startzeit, standort.
+- Events werden in allen event-kontextabhängigen Routen (Planung, Durchführung, Nachbearbeitung) als Auswahlobjekt im `EventKontextService` verwendet.
 
 ---
 
@@ -109,4 +122,8 @@ Scenario: Event nachträglich bearbeiten
 ```
 
 ---
+
+## Open Items
+
+- [x] RESOLVED: `PUT /api/events/{id}` wurde in `EventController` ergänzt (analog `ParteiController`).
 

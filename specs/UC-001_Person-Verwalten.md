@@ -16,7 +16,7 @@ traceability:
     - TC-029
   it_classes:
     - PersonVerwaltenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-001 – Personendaten verwalten
@@ -40,6 +40,16 @@ traceability:
 ## Context & Background
 
 > Personen sind die physischen Empfänger von Einladungen. Da dieselben Personen an mehreren Quartierfest-Ausgaben teilnehmen können, werden sie eventübergreifend im System geführt. Personen sind immer einer Partei zugeordnet (UC-002); die Partei erhält die eigentliche Einladung. Eine Person kann ohne Partei-Zuordnung existieren, ist jedoch für die Einladungslogik erst relevant, wenn sie einer Partei angehört.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/personen` — `PersonenVerwaltungComponent` (Angular 21, Standalone)
+
+- Formularvalidierung erfolgt clientseitig via Angular Reactive Forms: `vorname` und `name` sind als `Validators.required` markiert; `email` wird via `Validators.email` geprüft. Das Speichern ist clientseitig blockiert, solange das Formular invalide ist — Pflichtfeldverletzungen erreichen den Backend-Endpunkt daher nicht.
+- Die Personenliste ist nach allen Spalten sortierbar (vorname, name, telefonnummer, mobilenummer, email) via `sortiereItems()`.
+- Löschen öffnet einen Browser-`confirm()`-Dialog. Bei FK-Constraint-Fehler zeigt das Frontend: *"Person konnte nicht gelöscht werden. Möglicherweise ist sie einer Partei zugeordnet."*
 
 ---
 

@@ -13,7 +13,7 @@ traceability:
     - TC-016
   it_classes:
     - KonsumationsangebotVerwaltenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-008 – Konsumationsangebot verwalten
@@ -37,6 +37,16 @@ traceability:
 ## Context & Background
 
 > Das Konsumationsangebot besteht aus einer Liste von Getränken oder Produkten mit Einzelpreisen, die an einem Event individuell konsumiert und später verrechnet werden. Es ist einem Event zugeordnet und bildet die X-Achse der Konsumationsliste (UC-009). Das Angebot wird in der Bestätigung an die Parteien kommuniziert (UC-006). Konsumationsangebote können von Event zu Event variieren.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/planung/konsumationsangebote` — `KonsumationsangeboteVerwaltungComponent` (Angular 21, Standalone)
+> Event-kontextabhängig; die Liste wird nach dem gewählten Event gefiltert.
+
+- Formularvalidierung clientseitig: `bezeichnung` und `preis` sind Pflichtfelder.
+- Löschen öffnet `confirm()`-Dialog; FK-Constraint-Fehler bei bestehenden Konsumationen wird als Fehlermeldung angezeigt.
 
 ---
 

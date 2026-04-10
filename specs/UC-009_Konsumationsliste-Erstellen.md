@@ -13,7 +13,7 @@ traceability:
     - TC-019
   it_classes:
     - KonsumationslisteErstellenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-009 – Konsumationsliste erstellen
@@ -37,6 +37,16 @@ traceability:
 ## Context & Background
 
 > Die Konsumationsliste ist ein physisches Dokument, das am Event am Kühlschrank montiert wird. Sie hat eine Matrixstruktur: auf der X-Achse das Konsumationsangebot (Getränke mit Preisen), auf der Y-Achse die teilnehmenden Parteien. Parteien tragen ihre Konsumationen handschriftlich mit Strichen ein. Zusätzlich enthält die Liste je Partei eine Zeile zur Erfassung der definitiven Teilnehmerzahl. Nach dem Event wird diese Liste für die digitale Erfassung (UC-010) verwendet.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/durchfuehrung/konsumationsliste` — `KonsumationslisteComponent` (Angular 21, Standalone)
+> Event-kontextabhängig; Matrix aus Teilnahmen × Konsumationsangebote des gewählten Events.
+
+- **Drucken:** `drucken()` ruft `window.print()` auf — der Browser-Druckdialog öffnet sich. Es gibt keinen PDF-Export; Layout und Papierformat werden via CSS (@media print) gesteuert.
+- Bei fehlendem Konsumationsangebot zeigt `keinAngebot`-Signal einen Warnhinweis. Bei fehlenden Teilnahmen zeigt `keineTeilnahmen`-Signal einen Hinweis.
 
 ---
 
@@ -115,9 +125,9 @@ Scenario: Konsumationsliste ohne Angebot zeigt Fehler
 
 ## Open Items
 
-- [ ] OPEN: Welches Format soll die ausgedruckte Liste haben (A3, A4 Querformat)? Die Anforderung "gross ausgedruckt" deutet auf A3 oder A4 Querformat hin.
-- [ ] OPEN: Soll das System die Druckfunktion direkt anbieten (z.B. PDF-Export) oder nur eine Bildschirmansicht zur Verfügung stellen?
-- [ ] REVIEW: Soll die Spalte "definitive Teilnehmerzahl" mit dem aktuellen `anzahlPersonenEffektiv`-Wert aus der Teilnahme vorausgefüllt werden, oder soll sie für handschriftliche Eintragung am Event leer bleiben?
+- [x] ~~OPEN: Format A3/A4 Querformat?~~ → **Beantwortet:** Kein fixes Format vorgegeben. Das Layout wird via CSS (@media print) gesteuert; der Organisator wählt Papierformat im Browser-Druckdialog.
+- [x] ~~OPEN: PDF-Export oder Bildschirmansicht?~~ → **Beantwortet:** Nur Bildschirmansicht mit "Drucken"-Button (`window.print()`). Kein PDF-Export.
+- [ ] OPEN: Wird die Spalte "definitive Teilnehmerzahl" in der Druckansicht mit dem `anzahlPersonenEffektiv`-Wert vorausgefüllt (zur Kontrolle) oder leer gelassen (für handschriftliche Eintragung)? → Entscheid abhängig vom HTML-Template der Komponente.
 
 ---
 

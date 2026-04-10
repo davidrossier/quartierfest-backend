@@ -14,7 +14,7 @@ traceability:
     - TC-021
   it_classes:
     - KonsumationUebernehmenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-010 – Konsumation übernehmen
@@ -38,6 +38,18 @@ traceability:
 ## Context & Background
 
 > Nach dem Event liegt die ausgefüllte Konsumationsliste (UC-009) vor. Der Organisator überträgt die Strichlisten-Einträge je Partei und Getränk ins System. Je Kombination aus Teilnahme und Konsumationsangebot wird ein Konsumations-Datensatz mit der Anzahl gespeichert. Diese Daten sind Grundlage für die individuelle Kostenberechnung in der Abrechnung (UC-011).
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/durchfuehrung/konsumationen` — `KonsumationenVerwaltungComponent` (Angular 21, Standalone)
+> Event-kontextabhängig; Matrix aus Teilnahmen × Konsumationsangebote des gewählten Events.
+
+- **Matrixeingabe:** Jede Zelle ist ein editierbares Zahlenfeld (`matrixWerte` Signal mit Key `teilnahmeId-angebotId`). Alle Werte werden in einem einzigen "Speichern"-Button-Klick per `forkJoin` persistiert.
+- **Upsert-Logik:** Einträge mit Anzahl > 0 werden erstellt oder aktualisiert (anhand der `konsumationIds`-Map). Einträge mit Anzahl = 0 werden gelöscht, wenn ein bestehender Datensatz vorhanden ist.
+- **Clientseitige Validierung:** `hatUngueltigeWerte()` prüft auf negative Zahlen; das Speichern wird blockiert.
+- **Totals:** `totalFuerTeilnahme()` berechnet den Konsumationstotal pro Partei clientseitig (Anzahl × Preis).
 
 ---
 

@@ -15,7 +15,7 @@ traceability:
     - TC-010
   it_classes:
     - EinladungVerwaltenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-004 – Einladung erstellen und verwalten
@@ -33,13 +33,26 @@ traceability:
 | Actor | Type | Role |
 |---|---|---|
 | Organisator | `Human` | Erstellt Einladungen und erfasst Rückmeldungen der Parteien |
-| Partei | `Human` | Empfängt die Einladung und meldet sich an oder ab |
+| Partei | `External` | Empfängt die Einladung ausserhalb des Systems und meldet sich ab oder an |
 
 ---
 
 ## Context & Background
 
 > Eine Einladung verbindet eine Partei mit einem Event und enthält alle relevanten Event-Angaben sowie die Rückmeldung der Partei. Der initiale Status ist OFFEN. Meldet sich eine Partei an, wechselt der Status zu ANGEMELDET und die Partei gibt die Anzahl Personen, Hilfsbereitschaft und Buffetbeitrag an. Der Organisator erfasst diese Rückmeldungen im System — die Einladung selbst wird ausserhalb des Systems (z.B. per Post, E-Mail) versendet. Aus ANGEMELDET-Einladungen werden Teilnahmen (UC-005) abgeleitet.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/planung/einladungen` — `EinladungenVerwaltungComponent` (Angular 21, Standalone)
+> Event-kontextabhängig: die Liste wird nach dem im `EventKontextService` gewählten Event gefiltert.
+
+- **"Einladungen für alle erstellen"** (`einladungenFuerAlleErstellen()`): erstellt via `forkJoin` für alle Parteien, die **noch keine Einladung** für den gewählten Event haben, eine Einladung mit Status OFFEN. Parteien mit bestehender Einladung werden übersprungen — E1 ist damit sicher implizit verhindert.
+- **Rückmeldung erfassen:** das Formular enthält status, anzahlPersonen, hilftAufstellen, hilftAufraumen, buffetBeitrag, buffetBeitragBeschreibung. Felder für Personenzahl und Hilfsbereitschaft werden nur übermittelt, wenn status = ANGEMELDET.
+- **Einzelne Einladung neu:** Dropdown zur Parteiauswahl zeigt nur Parteien ohne bestehende Einladung für den Event (`nichtEingeladeneParteien`).
+- **`buffetBeitragBeschreibung`** wird nur übermittelt, wenn buffetBeitrag = WEITERE.
+- Löschen öffnet `confirm()`-Dialog.
 
 ---
 
@@ -145,7 +158,7 @@ Scenario: Einladungen erstellen überspringt bereits vorhandene Einladung
 
 ## Open Items
 
-- [ ] REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, interagiert aber nie direkt mit dem System — die Rückmeldung wird stets vom Organisator erfasst. Klären ob Partei als sekundärer Aktor (externer Auslöser) oder nur als Stakeholder (ausserhalb des UC-Scopes) zu behandeln ist.
+- [x] ~~REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, interagiert aber nie direkt mit dem System.~~ → **Beantwortet:** Die Partei interagiert in keinem UC direkt mit dem System. Sie ist als **externer Stakeholder / sekundärer Aktor** zu verstehen — der Organisator ist der einzige primäre Aktor. Partei bleibt in der Akteurstabelle als Kontextreferenz, erhält aber den Typ `External`.
 
 ---
 

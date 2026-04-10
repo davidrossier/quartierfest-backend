@@ -7,7 +7,8 @@
       "Bash(done)",
       "Bash(./mvnw verify:*)",
       "Bash(grep -n \"@DisplayName\\\\|class.*IT\" src/test/java/ch/quartierfest/backend/citrus/*.java)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(./mvnw clean:*)"
     ]
   }
 }

@@ -6,16 +6,16 @@
 |---|---|---|
 | UC-001 Person verwalten | Yes | TC-001..002, TC-029 |
 | UC-002 Parteien verwalten | Yes | TC-004..005, TC-030 |
-| UC-003 Event anlegen | Yes | TC-006..007 |
+| UC-003 Event anlegen | Partial | TC-006..007 — kein `PUT /api/events/{id}` im Backend; Frontend ruft PUT auf, erhält 405 |
 | UC-004 Einladung verwalten | Yes | TC-008..010 |
-| UC-005 Teilnahme verwalten | Partial | TC-011..012 – kein Auto-Create wenn Einladung auf ANGEMELDET gesetzt wird; Teilnahme wird manuell via POST erstellt (siehe Open Items) |
-| UC-006 Bestätigung verwalten | Partial | TC-013 – kein PATCH-Endpunkt; flag nur bei Creation setzbar |
+| UC-005 Teilnahme verwalten | Yes | TC-011..012 – explizite Erstellung via POST bestätigt; kein Auto-Create gewünscht |
+| UC-006 Bestätigung verwalten | Yes | TC-013 – `bestaetigungVersendet` via POST/Upsert nachträglich setzbar; kein PATCH benötigt |
 | UC-007 Allgemeinausgabe verwalten | Yes | TC-014..015 |
 | UC-008 Konsumationsangebot verwalten | Yes | TC-016 |
 | UC-009 Konsumationsliste erstellen | Partial | TC-018..019 – kein dedizierter Listengenerierungs-Endpunkt; nur Datenbasis testbar |
 | UC-010 Konsumation übernehmen | Yes | TC-020..021 |
 | UC-011 Abrechnung erstellen | Partial | TC-022..023 – keine Berechnungslogik im API; manuelle Eingabe aller Felder |
-| UC-012 Abrechnung zustellen | Partial | TC-024..025 – kein PATCH für zustellungsDatum/Kanal nach Creation |
+| UC-012 Abrechnung zustellen | Yes | TC-024..025, TC-032 – `zustellungsDatum` und Kanal via POST/Upsert nachträglich setzbar |
 | UC-013 Inkasso sicherstellen | Yes | TC-026..028 |
 
 **Hinweis:** TC-003 (Person löschen) ist in TC-001 integriert. TC-017 (Konsumationsangebot löschen) ist in TC-016 integriert. Die Löschung erfolgt als letzter Schritt des jeweiligen Happy-Path-Tests (Lösch-Test).
@@ -64,7 +64,8 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 | DELETE | `200 OK`, leerer Body |
 | GET | `200 OK` + JSON-Array |
 | Fehler-HTTP-Status | Pflichtfeld-Fehler resultieren in `500`, nicht `400` |
-| Update-Endpunkte | **Nicht vorhanden** – kein PUT/PATCH für irgendeinen Endpunkt |
+| Update-Endpunkte | `PUT /api/persons/{id}` und `PUT /api/parteien/{id}` vorhanden; `PUT /api/events/{id}` **fehlt** (Frontend ruft PUT auf → 405) |
+| Upsert via POST | `POST /api/einladungen` und `POST /api/abrechnungen` mit `id` im Body agieren als Upsert (JPA `save()`) |
 | Berechnungslogik | **Nicht vorhanden** – Abrechnung muss manuell mit berechneten Werten gespeichert werden |
 
 ## Test cases
@@ -176,14 +177,13 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500
 - **Citrus actions**: `send POST /api/teilnahmen`, `receive 500`
 
-### TC-013 – UC-006 Bestätigung versendet Flag setzen und löschen
+### TC-013 – UC-006 Bestätigung versendet via POST/Upsert nachträglich setzen
 - **Source**: UC-006, Gherkin "Bestätigung erfolgreich versenden"
-- **Type**: Happy path + Lösch-Test
+- **Type**: Happy path (vollständiger UC-Fluss) + Lösch-Test
 - **Given**: Event und Partei existieren (Setup)
-- **When**: POST `/api/einladungen` mit `bestaetigungVersendet: true`, dann DELETE
-- **Then**: POST → HTTP 200, `bestaetigungVersendet: true` in Response; DELETE → HTTP 200
-- **Citrus actions**: `send POST /api/einladungen`, `receive 200`, `send DELETE /api/einladungen/{id}`, `receive 200`
-- **TODO**: UC-006 erfordert Aktualisierung des Flags nach Creation. Kein PATCH-Endpunkt vorhanden. Test prüft nur, dass das Flag bei Creation gespeichert wird.
+- **When**: POST `/api/einladungen` mit `bestaetigungVersendet: false` (Initial), dann POST mit gleicher `id` und `bestaetigungVersendet: true` (Upsert), dann DELETE
+- **Then**: Initial → HTTP 200, `bestaetigungVersendet: false`; Upsert → HTTP 200, `bestaetigungVersendet: true`; DELETE → HTTP 200
+- **Citrus actions**: `send POST`, `receive 200`, `send POST (Upsert)`, `receive 200`, `send DELETE`, `receive 200`
 
 ### TC-014 – UC-007 Allgemeinausgabe anlegen und löschen: happy path
 - **Source**: UC-007, Hauptfluss
@@ -277,6 +277,14 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: POST → HTTP 200, `zustellungskanal: "TWINT"` in Response; DELETE → HTTP 200
 - **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`, `send DELETE /api/abrechnungen/{id}`, `receive 200`
 
+### TC-032 – UC-012 Zustellungsdatum nachträglich via POST/Upsert setzen
+- **Source**: UC-012, Hauptfluss Schritt 4–5 (Zustellungsdatum setzen)
+- **Type**: Happy path (vollständiger UC-Fluss) + Lösch-Test
+- **Given**: Teilnahme existiert (Setup)
+- **When**: POST `/api/abrechnungen` ohne `zustellungsDatum` (Initial), dann POST mit gleicher `id` und `zustellungsDatum: "2025-07-10"` (Upsert), dann DELETE
+- **Then**: Initial → HTTP 200, `zustellungsDatum: null`; Upsert → HTTP 200, `zustellungsDatum: "2025-07-10"`; DELETE → HTTP 200
+- **Citrus actions**: `send POST`, `receive 200`, `send POST (Upsert)`, `receive 200`, `send DELETE`, `receive 200`
+
 ### TC-026 – UC-013 TWINT-Zahlung erfassen und löschen
 - **Source**: UC-013, Gherkin "Twint-Zahlung erfolgreich erfassen"
 - **Type**: Happy path + Lösch-Test
@@ -322,7 +330,7 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 | TC-010 | UC-004 Einladungsstatus ändern | EinladungVerwaltenIT | tc010_einladungsstatusAendern | ✅ |
 | TC-011 | UC-005 Teilnahme erfassen und löschen | TeilnahmeVerwaltenIT | tc011_teilnahmeErfassen | ✅ |
 | TC-012 | UC-005 Teilnahme ohne Einladung wird abgelehnt | TeilnahmeVerwaltenIT | tc012_teilnahmeOhneEinladung | ✅ |
-| TC-013 | UC-006 Bestätigung versenden | BestaetigungVerwaltenIT | tc013_bestaetigungVersenden | ✅ |
+| TC-013 | UC-006 Bestätigung versendet via POST/Upsert | BestaetigungVerwaltenIT | tc013_bestaetigungVersendetViаUpsert | ✅ |
 | TC-014 | UC-007 Allgemeinausgabe anlegen und löschen | AllgemeinausgabeVerwaltenIT | tc014_allgemeinausgabeAnlegen | ✅ |
 | TC-015 | UC-007 Allgemeinausgabe ohne Beschreibung wird abgelehnt | AllgemeinausgabeVerwaltenIT | tc015_allgemeinausgabeOhneBeschreibung | ✅ |
 | TC-016 | UC-008 Konsumationsangebot anlegen und löschen | KonsumationsangebotVerwaltenIT | tc016_konsumationsangebotAnlegen | ✅ |
@@ -340,16 +348,20 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 | TC-029 | UC-001 Person bearbeiten | PersonVerwaltenIT | tc029_personBearbeiten | ✅ |
 | TC-030 | UC-002 Partei ohne Bezeichnung wird abgelehnt | ParteiVerwaltenIT | tc030_parteiOhneBezeichnung | ✅ |
 
-**Alle 28 TCs sind implementiert. Keine fehlenden IT-Methoden.**
+| TC-032 | UC-012 Zustellungsdatum via POST/Upsert | AbrechnungZustellenIT | tc032_zustellungsDatumViаUpsert | ✅ |
+
+**29 TCs implementiert (TC-001..TC-032, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
 
 ---
 
 ## Open items
 
 - [ ] **Keine Controller-Validierung**: Alle POST-Fehlerszenarien liefern HTTP 500 statt 400. Für korrekte Fehlerbehandlung müssen `@Valid` + Bean-Validation-Annotationen ergänzt werden (TC-002, TC-005, TC-007, TC-012, TC-015, TC-021, TC-023, TC-027).
-- [ ] **Kein PATCH**: UC-006 (bestaetigungVersendet), UC-012 (zustellungsDatum) und UC-005 (anzahlPersonenEffektiv nachträglich setzen) erfordern PATCH-Endpunkte (TC-013, TC-024, TC-025).
+- [ ] **`PUT /api/events/{id}` fehlt im Backend**: Das Frontend ruft `PUT /api/events/{id}` auf (`EventService.update()`), aber `EventController` hat keinen `@PutMapping`. Beim Bearbeiten eines Events im UI → HTTP 405. Gegenmassnahme: `@PutMapping("/{id}")` analog `ParteiController` in `EventController` ergänzen; danach TC für Event-Bearbeiten hinzufügen.
 - [ ] **Keine Berechnungslogik-API**: UC-011 Abrechnungsberechnung ist nicht im API implementiert (TC-022, TC-023).
 - [ ] **Kein Konsumationslisten-Endpunkt**: UC-009 hat keinen dedizierten Endpunkt für die Listenansicht (TC-018, TC-019).
 - [ ] **Kein Event-Filter auf Collections**: Kein `?eventId=` Query-Parameter auf `/api/konsumationsangebote`, `/api/teilnahmen` etc.
 - [x] **Citrus 4.9.4 + Spring Boot 4.x Kompatibilität**: Citrus ist inkompatibel (HttpHeaders implementiert MultiValueMap nicht mehr). Tests verwenden stattdessen `RestTemplate` direkt — kein Citrus-API im Einsatz.
-- [ ] **UC-005 Teilnahme-Erzeugungsmodell (neu, aus UC-Review 2026-03-27)**: TC-011 testet explizites `POST /api/teilnahmen`. Falls das Design auf Auto-Create beim Status-Wechsel ANGEMELDET umgestellt wird (UC-005 Open Item), wird TC-011 hinfällig und muss durch einen Test ersetzt werden, der prüft, dass nach `POST /api/einladungen` mit `status=ANGEMELDET` automatisch eine Teilnahme in `GET /api/teilnahmen` erscheint. Entscheid abwarten bevor TC-011 geändert wird.
+- [x] **UC-005 Teilnahme-Erzeugungsmodell**: Bestätigt: Explizite Erstellung via Button (kein Auto-Create). TC-011 bleibt gültig.
+- [x] **UC-006 PATCH für `bestaetigungVersendet`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-013 aktualisiert.
+- [x] **UC-012 PATCH für `zustellungsDatum`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-032 ergänzt.

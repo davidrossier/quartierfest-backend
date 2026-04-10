@@ -2,17 +2,18 @@
 id: UC-012
 type: Use Case
 name: "Abrechnung zustellen"
-completeness: Minimum
+completeness: Intermediate
 traceability:
-  impl_status: teilweise
+  impl_status: vollständig
   endpoints:
     - "POST /api/abrechnungen"
   test_ids:
     - TC-024
     - TC-025
+    - TC-032
   it_classes:
     - AbrechnungZustellenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-012 – Abrechnung zustellen
@@ -30,13 +31,25 @@ traceability:
 | Actor | Type | Role |
 |---|---|---|
 | Organisator | `Human` | Stellt die Abrechnungen zu und markiert die Zustellung im System |
-| Partei | `Human` | Empfängt die Abrechnung und bezahlt den ausstehenden Betrag |
+| Partei | `External` | Empfängt die Abrechnung ausserhalb des Systems und bezahlt den ausstehenden Betrag |
 
 ---
 
 ## Context & Background
 
 > Nach der Abrechnungserstellung (UC-011) werden die Abrechnungen den Parteien über den festgelegten Kanal zugestellt. Der eigentliche Versand findet je nach Kanal ausserhalb des Systems statt: Twint-Zahlungsanforderungen werden direkt via Twint-App gesendet, E-Mail und Papier werden manuell versendet. Im System wird lediglich das Zustellungsdatum festgehalten. Zahlungseingänge werden in UC-013 erfasst.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/nachbearbeitung/abrechnungen` — `AbrechnungenVerwaltungComponent` (Angular 21, Standalone)
+> UC-012 ist in derselben Komponente wie UC-011 implementiert.
+
+- **Zustellungskanal ändern:** Dropdown-Selektion pro Zeile (`kanalAendern()`), wird mit "Speichern"-Button via erneuten POST-Upsert persistiert (`kanalSpeichern()`).
+- **Als zugestellt markieren:** `alsZugestelltMarkieren()` setzt `zustellungsDatum` auf `new Date().toISOString().substring(0, 10)` (heutiges Datum) via POST-Upsert.
+- Kein PATCH-Endpunkt benötigt; POST agiert als Upsert.
+- Es gibt keine automatische Vorlage oder Dokumentgenerierung; der Versand erfolgt manuell ausserhalb des Systems.
 
 ---
 
@@ -123,10 +136,10 @@ Scenario: Zustellungskanal vor Versand ändern
 
 ## Open Items
 
-- [ ] OPEN: Soll das System eine Abrechnungsvorlage (PDF oder E-Mail-Text) automatisch generieren, oder erstellt der Organisator das Schreiben manuell?
-- [ ] OPEN: Sollen mehrere Abrechnungen gleichzeitig als zugestellt markiert werden können (Bulk-Aktion)?
-- [ ] REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, interagiert aber nie direkt mit dem System (analog UC-004 Open Item). Klären ob Partei als sekundärer Aktor oder als Stakeholder ausserhalb des UC-Scopes zu führen ist.
-- [ ] REVIEW: Schritt 4–5 verlangen das Setzen des `zustellungsDatum` und des Zustellungskanals, aber das System besitzt keinen PATCH-Endpunkt. Klären ob ein PATCH-Endpunkt eingeführt wird oder ob ein alternativer Mechanismus spezifiziert werden muss.
+- [x] ~~OPEN: PDF-Vorlage oder manuell?~~ → **Beantwortet:** Kein Dokument generiert; der Organisator erstellt das Schreiben manuell ausserhalb des Systems.
+- [x] ~~OPEN: Bulk-Markierung?~~ → **Beantwortet:** Keine Bulk-Markierung für Zustellung implementiert (Einzelaktion via `alsZugestelltMarkieren()`). Bulk existiert nur für `bestaetigungVersendet` in UC-006.
+- [x] ~~REVIEW: Partei als `Human`-Aktor?~~ → **Beantwortet (analog UC-004):** Partei ist externer Stakeholder. Typ auf `External` korrigiert.
+- [x] ~~REVIEW: `zustellungsDatum` und Kanalanpassung ohne PATCH-Endpunkt?~~ → **Beantwortet:** Frontend nutzt POST als Upsert für beide Felder. Kein PATCH-Endpunkt benötigt.
 
 ---
 

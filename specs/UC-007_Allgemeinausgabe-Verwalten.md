@@ -14,7 +14,7 @@ traceability:
     - TC-015
   it_classes:
     - AllgemeinausgabeVerwaltenIT
-  last_traced: "2026-04-03"
+  last_traced: "2026-04-10"
 ---
 
 # UC-007 – Allgemeinausgaben verwalten
@@ -38,6 +38,16 @@ traceability:
 ## Context & Background
 
 > Allgemeinausgaben sind Kosten, die für die Gesamtheit der Teilnehmenden anfallen und nicht einer einzelnen Partei zugeordnet werden können (z.B. Kühlschrankmiete, Festbankgarnituren, Servietten, Tischtücher). Sie sind einem Event zugeordnet und werden bei der Abrechnung (UC-011) proportional nach Personenanzahl aufgeteilt.
+
+---
+
+## Frontend-Kontext
+
+> **Route:** `/planung/allgemeinausgaben` — `AllgemeinausgabenVerwaltungComponent` (Angular 21, Standalone)
+> Event-kontextabhängig; die Liste wird nach dem gewählten Event gefiltert.
+
+- Formularvalidierung clientseitig: `beschreibung` und `betrag` sind Pflichtfelder; `herkunft` ist optional.
+- Löschen öffnet `confirm()`-Dialog.
 
 ---
 
