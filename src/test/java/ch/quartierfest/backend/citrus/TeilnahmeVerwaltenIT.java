@@ -3,7 +3,7 @@ package ch.quartierfest.backend.citrus;
 /**
  * Traceability:
  *   UC: UC-005 (Teilnahmen verwalten)
- *   TCs: TC-011, TC-012
+ *   TCs: TC-011, TC-012, TC-033
  *   Last traced: 2026-04-10
  */
 
@@ -103,5 +103,30 @@ class TeilnahmeVerwaltenIT {
                         "anzahlPersonenEffektiv", 2), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    @DisplayName("TC-033 – UC-005 Teilnahme mit mehreren Buffet-Beiträgen erstellen")
+    @SuppressWarnings("unchecked")
+    void tc033_teilnahmeErstellenMehrereBeitraege() {
+        var beitraege = java.util.List.of(
+                Map.of("art", "SALAT", "beschreibung", "Grüner Salat"),
+                Map.of("art", "DESSERT", "beschreibung", "Mousse au chocolat"),
+                Map.of("art", "WEITERE", "beschreibung", "Baguette"));
+
+        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "einladung", Map.of("id", einladungId),
+                        "anzahlPersonenEffektiv", 3,
+                        "buffetBeitraege", beitraege), json), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        var body = response.getBody();
+        assertThat(body.get("id")).isNotNull();
+        var returnedBeitraege = (java.util.List<?>) body.get("buffetBeitraege");
+        assertThat(returnedBeitraege).hasSize(3);
+
+        String url = "http://localhost:" + port + "/api/teilnahmen/" + body.get("id");
+        http.exchange(url, HttpMethod.DELETE, null, Void.class);
     }
 }

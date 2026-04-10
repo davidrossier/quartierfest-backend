@@ -1,9 +1,11 @@
 package ch.quartierfest.backend.teilnahme;
 
-import ch.quartierfest.backend.einladung.Einladung.BuffetBeitrag;
 import ch.quartierfest.backend.einladung.Einladung;
 import jakarta.persistence.*;
 import lombok.Data;
+
+import java.util.ArrayList;
+import java.util.List;
 
 @Data
 @Entity
@@ -23,8 +25,7 @@ public class Teilnahme {
 
     private Boolean hilftAufraumen;
 
-    @Enumerated(EnumType.STRING)
-    private BuffetBeitrag buffetBeitrag;
-
-    private String buffetBeitragBeschreibung;
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "teilnahme_buffet_beitrag", joinColumns = @JoinColumn(name = "teilnahme_id"))
+    private List<TeilnahmeBuffetBeitrag> buffetBeitraege = new ArrayList<>();
 }

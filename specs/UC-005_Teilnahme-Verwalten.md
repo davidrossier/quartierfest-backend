@@ -12,6 +12,7 @@ traceability:
   test_ids:
     - TC-011
     - TC-012
+    - TC-033
   it_classes:
     - TeilnahmeVerwaltenIT
   last_traced: "2026-04-10"
@@ -48,6 +49,8 @@ traceability:
 
 - **"Teilnahmen aus Einladungen erstellen"** (`teilnahmenAusEinladungenErstellen()`): erstellt via `forkJoin` für alle ANGEMELDET-Einladungen des Events, die noch **keine Teilnahme** haben, einen Teilnahme-Datensatz. `anzahlPersonenEffektiv` wird dabei aus `einladung.anzahlPersonen` übernommen.
 - Das Formular erlaubt ausschliesslich das **Bearbeiten** bestehender Teilnahmen — eine manuelle Neuerstellung ohne Einladungsbasis ist über die UI nicht möglich.
+- Buffet-Beiträge (`buffetBeitraege`) sind als Liste gespeichert: eine Partei kann **mehrere Beiträge** anbieten, jeder mit einer Art (SALAT, BROT_ZOPF, DESSERT, WEITERE) und einer optionalen Beschreibung. Im Formular können Beiträge dynamisch hinzugefügt und entfernt werden.
+- Beim Erstellen aus Einladungen wird ein vorhandener Einladungs-Buffetbeitrag (sofern nicht KEINER) als einzelner Listeneintrag übernommen.
 - Löschen öffnet `confirm()`-Dialog.
 - Liste sortierbar nach partei, anzahlPersonenEffektiv.
 
@@ -73,7 +76,7 @@ traceability:
    - Effektive Anzahl Personen (`anzahlPersonenEffektiv`)
    - Hilft beim Aufstellen
    - Hilft beim Aufräumen
-   - Buffetbeitrag und Beschreibung
+   - Buffet-Beiträge: beliebig viele Einträge, jeder mit Art (SALAT, BROT_ZOPF, DESSERT, WEITERE) und optionaler Beschreibung
 3. Das System speichert die Änderungen.
 4. Der Organisator erhält eine konsolidierte Übersicht aller Teilnehmenden (Anzahl Personen, Buffetbeiträge, Helfende).
 
@@ -132,6 +135,11 @@ Scenario: Teilnahmeübersicht ohne Anmeldungen ist leer
   Given kein Event hat Einladungen mit Status ANGEMELDET
   When der Organisator die Teilnahmeübersicht öffnet
   Then zeigt das System eine leere Liste mit Hinweis
+
+Scenario: Mehrere Buffet-Beiträge erfassen
+  Given die Teilnahme der Partei "Müller" hat keine Buffet-Beiträge
+  When der Organisator zwei Beiträge hinzufügt (Salat mit "Rüebli-Salat" und Dessert mit "Tiramisu") und speichert
+  Then hat die Teilnahme der Partei "Müller" zwei Buffet-Beiträge mit den entsprechenden Beschreibungen
 ```
 
 ---

@@ -8,7 +8,7 @@
 | UC-002 Parteien verwalten | Yes | TC-004..005, TC-030 |
 | UC-003 Event anlegen | Partial | TC-006..007 — kein `PUT /api/events/{id}` im Backend; Frontend ruft PUT auf, erhält 405 |
 | UC-004 Einladung verwalten | Yes | TC-008..010 |
-| UC-005 Teilnahme verwalten | Yes | TC-011..012 – explizite Erstellung via POST bestätigt; kein Auto-Create gewünscht |
+| UC-005 Teilnahme verwalten | Yes | TC-011..012, TC-033 – explizite Erstellung via POST bestätigt; kein Auto-Create gewünscht; mehrere Buffet-Beiträge je Teilnahme |
 | UC-006 Bestätigung verwalten | Yes | TC-013 – `bestaetigungVersendet` via POST/Upsert nachträglich setzbar; kein PATCH benötigt |
 | UC-007 Allgemeinausgabe verwalten | Yes | TC-014..015 |
 | UC-008 Konsumationsangebot verwalten | Yes | TC-016 |
@@ -177,6 +177,14 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: HTTP 500
 - **Citrus actions**: `send POST /api/teilnahmen`, `receive 500`
 
+### TC-033 – UC-005 Teilnahme mit mehreren Buffet-Beiträgen erstellen
+- **Source**: UC-005, neues Acceptance Criterion "Mehrere Buffet-Beiträge erfassen"
+- **Type**: Happy path + Lösch-Test
+- **Given**: Einladung mit Status ANGEMELDET existiert (Setup)
+- **When**: POST `/api/teilnahmen` mit `buffetBeitraege: [{art: "SALAT", beschreibung: "Grüner Salat"}, {art: "DESSERT", beschreibung: "Mousse au chocolat"}, {art: "WEITERE", beschreibung: "Baguette"}]`, dann DELETE
+- **Then**: POST → HTTP 200 + id + `buffetBeitraege` hat 3 Einträge; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/teilnahmen`, `receive 200`, verify `buffetBeitraege.size == 3`, `send DELETE /api/teilnahmen/{id}`, `receive 200`
+
 ### TC-013 – UC-006 Bestätigung versendet via POST/Upsert nachträglich setzen
 - **Source**: UC-006, Gherkin "Bestätigung erfolgreich versenden"
 - **Type**: Happy path (vollständiger UC-Fluss) + Lösch-Test
@@ -328,8 +336,9 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 | TC-008 | UC-004 Einladung anlegen und löschen | EinladungVerwaltenIT | tc008_einladungAnlegen | ✅ |
 | TC-009 | UC-004 Einladung ohne Event wird abgelehnt | EinladungVerwaltenIT | tc009_einladungOhneEvent | ✅ |
 | TC-010 | UC-004 Einladungsstatus ändern | EinladungVerwaltenIT | tc010_einladungsstatusAendern | ✅ |
-| TC-011 | UC-005 Teilnahme erfassen und löschen | TeilnahmeVerwaltenIT | tc011_teilnahmeErfassen | ✅ |
-| TC-012 | UC-005 Teilnahme ohne Einladung wird abgelehnt | TeilnahmeVerwaltenIT | tc012_teilnahmeOhneEinladung | ✅ |
+| TC-011 | UC-005 Teilnahme erfassen und löschen | TeilnahmeVerwaltenIT | tc011_teilnahmeErstellenHappyPath | ✅ |
+| TC-012 | UC-005 Teilnahme ohne Einladung wird abgelehnt | TeilnahmeVerwaltenIT | tc012_teilnahmeErstellenEinladungFehlt | ✅ |
+| TC-033 | UC-005 Teilnahme mit mehreren Buffet-Beiträgen | TeilnahmeVerwaltenIT | tc033_teilnahmeErstellenMehrereBeitraege | ✅ |
 | TC-013 | UC-006 Bestätigung versendet via POST/Upsert | BestaetigungVerwaltenIT | tc013_bestaetigungVersendetViаUpsert | ✅ |
 | TC-014 | UC-007 Allgemeinausgabe anlegen und löschen | AllgemeinausgabeVerwaltenIT | tc014_allgemeinausgabeAnlegen | ✅ |
 | TC-015 | UC-007 Allgemeinausgabe ohne Beschreibung wird abgelehnt | AllgemeinausgabeVerwaltenIT | tc015_allgemeinausgabeOhneBeschreibung | ✅ |
@@ -350,7 +359,7 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 
 | TC-032 | UC-012 Zustellungsdatum via POST/Upsert | AbrechnungZustellenIT | tc032_zustellungsDatumViаUpsert | ✅ |
 
-**29 TCs implementiert (TC-001..TC-032, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
+**30 TCs implementiert (TC-001..TC-033, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
 
 ---
 
@@ -363,5 +372,6 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - [ ] **Kein Event-Filter auf Collections**: Kein `?eventId=` Query-Parameter auf `/api/konsumationsangebote`, `/api/teilnahmen` etc.
 - [x] **Citrus 4.9.4 + Spring Boot 4.x Kompatibilität**: Citrus ist inkompatibel (HttpHeaders implementiert MultiValueMap nicht mehr). Tests verwenden stattdessen `RestTemplate` direkt — kein Citrus-API im Einsatz.
 - [x] **UC-005 Teilnahme-Erzeugungsmodell**: Bestätigt: Explizite Erstellung via Button (kein Auto-Create). TC-011 bleibt gültig.
+- [x] **UC-005 Mehrere Buffet-Beiträge**: `buffetBeitrag`/`buffetBeitragBeschreibung` durch `buffetBeitraege: List<TeilnahmeBuffetBeitrag>` ersetzt (`@ElementCollection`, Tabelle `teilnahme_buffet_beitrag`). TC-033 neu ergänzt.
 - [x] **UC-006 PATCH für `bestaetigungVersendet`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-013 aktualisiert.
 - [x] **UC-012 PATCH für `zustellungsDatum`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-032 ergänzt.

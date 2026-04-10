@@ -35,7 +35,7 @@ traceability:
 
 ## Context & Background
 
-> Die Bestätigung wird einige Tage vor dem Event-Datum an alle Parteien mit Status ANGEMELDET verschickt. Sie enthält den definitiven Standort (ggf. den alternativen Standort), die relevanten Zeiten, eine Zusammenstellung der zugesagten Buffetbeiträge sowie das Konsumationsangebot. Der Organisator markiert in der Einladung, ob die Bestätigung versendet wurde (`bestaetigungVersendet`). Der eigentliche Versand (E-Mail, Post) findet ausserhalb des Systems statt.
+> Die Bestätigung wird einige Tage vor dem Event-Datum an alle Parteien mit Status ANGEMELDET verschickt. Sie enthält den definitiven Standort (ggf. den alternativen Standort), die relevanten Zeiten, eine Zusammenstellung der Buffetbeiträge sowie das Konsumationsangebot. Die Buffet-Zusammenstellung stammt aus den **Teilnahmen** (UC-005) — nicht aus den Einladungen — da nur dort mehrere Beiträge je Partei erfasst werden können. Der Organisator markiert in der Einladung, ob die Bestätigung versendet wurde (`bestaetigungVersendet`). Der eigentliche Versand (E-Mail, Post) findet ausserhalb des Systems statt.
 
 ---
 
@@ -44,7 +44,7 @@ traceability:
 > **Route:** `/planung/bestaetigung` — `BestaetigungUebersichtComponent` (Angular 21, Standalone)
 > Event-kontextabhängig; zeigt nur Einladungen mit Status ANGEMELDET für den gewählten Event.
 
-- **Ansichtsinhalt:** Buffet-Zusammenstellung (gruppiert nach Beitragstyp, mit Partei-Namen), Konsumationsangebot mit Preisen, Anzahl noch nicht versendeter Bestätigungen (`unversendeteAnzahl`).
+- **Ansichtsinhalt:** Buffet-Zusammenstellung (gruppiert nach Beitragstyp, mit Partei-Namen und Beschreibung), Konsumationsangebot mit Preisen, Anzahl noch nicht versendeter Bestätigungen (`unversendeteAnzahl`). Die Buffet-Daten werden aus `GET /api/teilnahmen` gelesen (`buffetBeitraege`-Liste je Teilnahme), **nicht** aus den Einladungen.
 - **Warnung:** Wenn kein Konsumationsangebot für den Event erfasst ist, zeigt `keinAngebot`-Signal einen Warnhinweis.
 - **`bestaetigungVersendet` setzen:** Das Frontend setzt das Flag via erneuten `POST`-Aufruf (Upsert-Mechanismus) auf `true` — es wird kein PATCH-Endpunkt benötigt.
 - **Einzeln markieren:** `markiereVersendet(einladung)` — setzt `bestaetigungVersendet = true` für eine Einladung.
@@ -134,4 +134,4 @@ Scenario: Bestätigung ohne Konsumationsangebot zeigt Warnung
 
 ## Dependencies & References
 
-- **Depends on**: UC-004 (Einladung erstellen und verwalten), UC-008 (Konsumationsangebot verwalten)
+- **Depends on**: UC-004 (Einladung erstellen und verwalten), UC-005 (Teilnahmen verwalten), UC-008 (Konsumationsangebot verwalten)
