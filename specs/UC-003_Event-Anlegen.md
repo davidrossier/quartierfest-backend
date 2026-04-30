@@ -13,6 +13,7 @@ traceability:
   test_ids:
     - TC-006
     - TC-007
+    - TC-031
   it_classes:
     - EventAnlegenIT
   last_traced: "2026-05-01"

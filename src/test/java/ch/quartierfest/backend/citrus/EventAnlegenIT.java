@@ -3,7 +3,7 @@ package ch.quartierfest.backend.citrus;
 /**
  * Traceability:
  *   UC: UC-003 (Event anlegen)
- *   TCs: TC-006, TC-007
+ *   TCs: TC-006, TC-007, TC-031
  *   Last traced: 2026-05-01
  */
 
@@ -25,11 +25,7 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for UC-003 – Event anlegen. TC-006, TC-007.
- *
- * TODO [UC-003]: PUT /api/events/{id} ist implementiert, aber TC-031 (Event bearbeiten)
- *   fehlt noch. Analog TC-029 (Person bearbeiten) in PersonVerwaltenIT ergänzen.
- *   Siehe specs/testdesign.md open items.
+ * Integration tests for UC-003 – Event anlegen. TC-006, TC-007, TC-031.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class EventAnlegenIT {
@@ -51,6 +47,11 @@ class EventAnlegenIT {
         json.setContentType(MediaType.APPLICATION_JSON);
     }
 
+    @SuppressWarnings("unchecked")
+    private Map<String, Object> setupPost(String path, Map<String, Object> body) {
+        return setup.postForObject(path, new HttpEntity<>(body, json), Map.class);
+    }
+
     @Test
     @DisplayName("TC-006 – UC-003 Event anlegen: Pflichtfelder vorhanden")
     @SuppressWarnings("unchecked")
@@ -65,6 +66,31 @@ class EventAnlegenIT {
 
         // Cleanup als Lösch-Test
         String url = "http://localhost:" + port + "/api/events/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("TC-031 – UC-003 Event bearbeiten")
+    @SuppressWarnings("unchecked")
+    void tc031_eventBearbeiten() {
+        // Given: Event anlegen
+        Map<String, Object> created = setupPost("http://localhost:" + port + "/api/events",
+                Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Buchlenwiese"));
+        long id = ((Number) created.get("id")).longValue();
+        String url = "http://localhost:" + port + "/api/events/" + id;
+
+        // When: Event bearbeiten (PUT)
+        ResponseEntity<Map> response = http.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(Map.of("datum", "2025-08-10", "startzeit", "14:00:00", "standort", "Neufeld"), json),
+                Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("standort")).isEqualTo("Neufeld");
+        assertThat(response.getBody().get("datum")).isEqualTo("2025-08-10");
+        assertThat(response.getBody().get("id")).isEqualTo((int) id);
+
+        // Cleanup als Lösch-Test
         ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
         assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
