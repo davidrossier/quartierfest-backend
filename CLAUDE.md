@@ -169,10 +169,11 @@ Alle Spezifikationen liegen unter `specs/`:
 
 ## Claude Code Skills
 
-Drei projektspezifische Skills in `.claude/commands/`:
+Vier projektspezifische Skills in `.claude/commands/`:
 
 | Slash-Befehl | Zweck |
 |---|---|
 | `/refine-use-case` | Rohe Use Cases in das Standard-Format (`_template_use-case.md`) umschreiben |
 | `/review-use-case` | Alle `UC-*.md` in `specs/` prüfen, kleine Fehler beheben, Open Items anlegen |
 | `/design-citrus-tests` | Testdesign erstellen und IT-Klassen generieren |
+| `/clean-code-review` | Code + Tests nach Clean-Code-Prinzipien prüfen, Spec-Konformität sicherstellen, UC-Referenzen als Kommentare setzen |

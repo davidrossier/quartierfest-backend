@@ -24,7 +24,13 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-003 – Event anlegen. TC-006, TC-007. */
+/**
+ * Integration tests for UC-003 – Event anlegen. TC-006, TC-007.
+ *
+ * TODO [UC-003]: PUT /api/events/{id} ist implementiert, aber TC-031 (Event bearbeiten)
+ *   fehlt noch. Analog TC-029 (Person bearbeiten) in PersonVerwaltenIT ergänzen.
+ *   Siehe specs/testdesign.md open items.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class EventAnlegenIT {
 

@@ -75,15 +75,21 @@ Verbindet eine Partei mit einem Event. Enthält die Rückmeldung der Partei.
 ### Teilnahme
 Konsolidierte, editierbare Sicht der tatsächlichen Teilnahme einer Partei an einem Event (nach Rückmeldung).
 
-| Feld                    | Typ      | Pflicht |
-|-------------------------|----------|---------|
-| id                      | Long     | ja      |
-| einladung               | Einladung| ja      |
-| anzahlPersonenEffektiv  | Integer  | nein    |
-| hilftAufstellen         | Boolean  | nein    |
-| hilftAufraumen          | Boolean  | nein    |
-| buffetBeitrag           | Enum (KEINER, SALAT, BROT_ZOPF, DESSERT, WEITERE) | nein |
-| buffetBeitragBeschreibung | String  | nein    |
+| Feld                    | Typ                            | Pflicht | Hinweis |
+|-------------------------|--------------------------------|---------|---------|
+| id                      | Long                           | ja      | — |
+| einladung               | Einladung                      | ja      | — |
+| anzahlPersonenEffektiv  | Integer                        | nein    | — |
+| hilftAufstellen         | Boolean                        | nein    | — |
+| hilftAufraumen          | Boolean                        | nein    | — |
+| buffetBeitraege         | List\<TeilnahmeBuffetBeitrag\> | nein    | `@ElementCollection`, Tabelle `teilnahme_buffet_beitrag`; ermöglicht mehrere Beiträge je Teilnahme (UC-005, TC-033) |
+
+**TeilnahmeBuffetBeitrag** (`@Embeddable`):
+
+| Feld        | Typ                                            | Pflicht |
+|-------------|------------------------------------------------|---------|
+| art         | Enum (KEINER, SALAT, BROT_ZOPF, DESSERT, WEITERE) | ja  |
+| beschreibung| String                                         | nein    |
 
 **Beziehungen:**
 - `Teilnahme` → `Einladung`: 1:1

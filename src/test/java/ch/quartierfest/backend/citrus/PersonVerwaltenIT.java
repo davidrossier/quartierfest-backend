@@ -24,7 +24,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-001 – Personendaten verwalten. TC-001, TC-002, TC-003. */
+/** Integration tests for UC-001 – Personendaten verwalten. TC-001, TC-002, TC-029. (TC-003 integriert in TC-001) */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class PersonVerwaltenIT {
 
@@ -95,6 +95,7 @@ class PersonVerwaltenIT {
 
     @Test
     @DisplayName("TC-002 – UC-001 Person anlegen: Pflichtfeld name fehlt")
+    @SuppressWarnings("unchecked")
     void tc002_personAnlegenNameFehlt() {
         // TODO: Should be HTTP 400 – requires @Valid + @NotBlank on Person.name
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/persons", HttpMethod.POST,

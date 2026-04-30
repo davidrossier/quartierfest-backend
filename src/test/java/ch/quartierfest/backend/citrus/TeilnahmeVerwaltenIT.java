@@ -127,6 +127,7 @@ class TeilnahmeVerwaltenIT {
         assertThat(returnedBeitraege).hasSize(3);
 
         String url = "http://localhost:" + port + "/api/teilnahmen/" + body.get("id");
-        http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }
