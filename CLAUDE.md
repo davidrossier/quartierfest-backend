@@ -130,7 +130,7 @@ class PersonControllerTest {
 ### Integration tests
 13 `*IT.java` Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`.
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
-**26 Testmethoden (TC-001..TC-028, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
+**31 Testmethoden (TC-001..TC-033, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Verwendetes Muster:
 ```java
@@ -186,6 +186,8 @@ Bekannte Einschränkungen (als TODO in den IT-Klassen markiert):
 - Kein `GET /api/events/{id}/konsumationsliste` (UC-009 nur teilweise abgedeckt)
 - Kein Auto-Kalkulationsendpunkt für Abrechnungen (UC-011 manuell)
 
+Vollständige technische Schulden → `specs/TODO.md`
+
 ## Specifications
 
 Alle Spezifikationen liegen unter `specs/`:
@@ -194,9 +196,10 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 13 Use Cases |
 | `UC-001` .. `UC-013` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme) |
-| `testdesign.md` | Testdesign mit TC-001..TC-028, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign mit TC-001..TC-033, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
-| `architecture.md` | Architekturdiagramm |
+| `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
+| `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |
 
 ## Claude Code Skills
 

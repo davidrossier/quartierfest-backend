@@ -73,7 +73,7 @@ npm start        # http://localhost:4200
 - 11 `*ControllerTest`-Klassen mit `@WebMvcTest` (39 Tests) — decken GET, POST, DELETE und PUT-Endpunkte für alle Domänen ab
 - `ParteiServiceTest` mit Mockito (4 Tests) — testet `personenIds`-Auflösung
 
-**Integrationstests** (`./mvnw verify`): 26 Testmethoden (TC-001..TC-028, ohne TC-003 und TC-017) in 13 `*IT`-Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`, laufen gegen echte PostgreSQL.
+**Integrationstests** (`./mvnw verify`): 31 Testmethoden (TC-001..TC-033, ohne TC-003 und TC-017) in 13 `*IT`-Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`, laufen gegen echte PostgreSQL.
 
 ---
 
@@ -166,6 +166,7 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 13 Use Cases |
 | `UC-001` .. `UC-013` | Einzelne Use Cases |
-| `testdesign.md` | Testdesign TC-001..TC-028, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign TC-001..TC-033, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
-| `architecture.md` | Architekturdiagramm |
+| `architecture.md` | Architekturdiagramm, Traceability-Matrix, technische Schulden |
+| `TODO.md` | Technische Schulden und Refactoring-Backlog |

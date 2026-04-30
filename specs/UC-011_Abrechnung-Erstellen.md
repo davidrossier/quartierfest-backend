@@ -149,6 +149,8 @@ Scenario: Zustellungskanal automatisch setzen
 ## Open Items
 
 - [x] ~~REVIEW: Verhindert das System die Erstellung einer zweiten Abrechnung für dieselbe Teilnahme?~~ → **Beantwortet:** Das Frontend verhindert dies durch `neuBerechnen()`: alle bestehenden Abrechnungen des Events werden vor der Neuerstellung gelöscht. Ein Backend-Unique-Constraint ist nicht vorhanden; die Verhinderung von Duplikaten liegt in der UI-Logik.
+- [ ] **OPEN (impl_status: teilweise):** Berechnungslogik liegt vollständig im Frontend (`abrechnungenErstellen()` in `AbrechnungenVerwaltungComponent`). Das Backend validiert nicht, ob `totalBetrag == anteilAllgemeinkosten + totalKonsumation`. Inkonsistente Beträge können direkt via `POST /api/abrechnungen` gespeichert werden. Empfehlung: Validierung oder Berechnung in den `AbrechnungService` verlagern.
+- [ ] **OPEN:** Kein Backend-seitiger Unique-Constraint auf `(teilnahme_id)` in `Abrechnung` — eine Teilnahme könnte mehrfach abgerechnet werden, wenn die UI-Logik umgangen wird.
 
 ---
 

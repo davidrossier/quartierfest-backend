@@ -159,6 +159,7 @@ Scenario: Einladungen erstellen überspringt bereits vorhandene Einladung
 ## Open Items
 
 - [x] ~~REVIEW: Die Partei ist in der Akteurstabelle als `Human`-Aktor geführt, interagiert aber nie direkt mit dem System.~~ → **Beantwortet:** Die Partei interagiert in keinem UC direkt mit dem System. Sie ist als **externer Stakeholder / sekundärer Aktor** zu verstehen — der Organisator ist der einzige primäre Aktor. Partei bleibt in der Akteurstabelle als Kontextreferenz, erhält aber den Typ `External`.
+- [ ] **OPEN (E1):** Kein DB-seitiger Unique-Constraint auf `(event, partei)` — Duplikat-Schutz ist ausschliesslich durch die Angular-Frontend-Logik (`nichtEingeladeneParteien`-Filter, `forkJoin`-Überspringen bestehender Einladungen) sichergestellt, nicht durch Backend oder Datenbank. Ein `@UniqueConstraint(columnNames = {"event_id", "partei_id"})` auf der `Einladung`-Entity würde E1 auch API-seitig absichern.
 
 ---
 

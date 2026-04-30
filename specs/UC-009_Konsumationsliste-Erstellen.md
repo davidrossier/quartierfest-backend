@@ -128,6 +128,7 @@ Scenario: Konsumationsliste ohne Angebot zeigt Fehler
 - [x] ~~OPEN: Format A3/A4 Querformat?~~ → **Beantwortet:** Kein fixes Format vorgegeben. Das Layout wird via CSS (@media print) gesteuert; der Organisator wählt Papierformat im Browser-Druckdialog.
 - [x] ~~OPEN: PDF-Export oder Bildschirmansicht?~~ → **Beantwortet:** Nur Bildschirmansicht mit "Drucken"-Button (`window.print()`). Kein PDF-Export.
 - [ ] OPEN: Wird die Spalte "definitive Teilnehmerzahl" in der Druckansicht mit dem `anzahlPersonenEffektiv`-Wert vorausgefüllt (zur Kontrolle) oder leer gelassen (für handschriftliche Eintragung)? → Entscheid abhängig vom HTML-Template der Komponente.
+- [ ] **OPEN (impl_status: teilweise):** Kein dedizierter API-Endpunkt für die Konsumationsliste — das Frontend kombiniert `GET /api/konsumationsangebote` und `GET /api/teilnahmen` clientseitig ohne Event-Filter. Beide Endpunkte geben alle Datensätze zurück (über alle Events). Ein Endpunkt `GET /api/events/{id}/konsumationsliste` oder Query-Parameter `?eventId={id}` wäre für korrekte Event-Isolation notwendig.
 
 ---
 
