@@ -15,7 +15,7 @@ traceability:
     - TC-010
   it_classes:
     - EinladungVerwaltenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-004 – Einladung erstellen und verwalten

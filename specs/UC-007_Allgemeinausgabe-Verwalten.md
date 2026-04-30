@@ -14,7 +14,7 @@ traceability:
     - TC-015
   it_classes:
     - AllgemeinausgabeVerwaltenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-007 – Allgemeinausgaben verwalten

@@ -64,7 +64,7 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 | DELETE | `200 OK`, leerer Body |
 | GET | `200 OK` + JSON-Array |
 | Fehler-HTTP-Status | Pflichtfeld-Fehler resultieren in `500`, nicht `400` |
-| Update-Endpunkte | `PUT /api/persons/{id}` und `PUT /api/parteien/{id}` vorhanden; `PUT /api/events/{id}` **fehlt** (Frontend ruft PUT auf → 405) |
+| Update-Endpunkte | `PUT /api/persons/{id}`, `PUT /api/parteien/{id}` und `PUT /api/events/{id}` vorhanden; kein PUT auf anderen Ressourcen |
 | Upsert via POST | `POST /api/einladungen` und `POST /api/abrechnungen` mit `id` im Body agieren als Upsert (JPA `save()`) |
 | Berechnungslogik | **Nicht vorhanden** – Abrechnung muss manuell mit berechneten Werten gespeichert werden |
 
@@ -321,7 +321,7 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 
 ## Traceability-Status
 
-> Automatisch generiert durch Traceability-Manager — Stand: 2026-04-03
+> Automatisch generiert durch Traceability-Manager — Stand: 2026-05-01
 
 ### TC × IT-Implementierung
 

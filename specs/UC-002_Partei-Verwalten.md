@@ -16,7 +16,7 @@ traceability:
     - TC-030
   it_classes:
     - ParteiVerwaltenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-002 – Parteien verwalten

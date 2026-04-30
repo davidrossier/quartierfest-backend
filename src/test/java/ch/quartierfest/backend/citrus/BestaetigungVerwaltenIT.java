@@ -4,7 +4,7 @@ package ch.quartierfest.backend.citrus;
  * Traceability:
  *   UC: UC-006 (Bestätigung erstellen und versenden)
  *   TCs: TC-013
- *   Last traced: 2026-04-10
+ *   Last traced: 2026-05-01
  */
 
 import org.junit.jupiter.api.AfterEach;

@@ -16,7 +16,7 @@ traceability:
     - TC-029
   it_classes:
     - PersonVerwaltenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-001 – Personendaten verwalten

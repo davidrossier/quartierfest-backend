@@ -13,7 +13,7 @@ traceability:
     - TC-016
   it_classes:
     - KonsumationsangebotVerwaltenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-008 – Konsumationsangebot verwalten

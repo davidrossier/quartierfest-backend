@@ -4,7 +4,7 @@ package ch.quartierfest.backend.citrus;
  * Traceability:
  *   UC: UC-004 (Einladung erstellen und verwalten)
  *   TCs: TC-008, TC-009, TC-010
- *   Last traced: 2026-04-10
+ *   Last traced: 2026-05-01
  */
 
 import org.junit.jupiter.api.AfterEach;

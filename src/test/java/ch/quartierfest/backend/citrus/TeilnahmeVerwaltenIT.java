@@ -4,7 +4,7 @@ package ch.quartierfest.backend.citrus;
  * Traceability:
  *   UC: UC-005 (Teilnahmen verwalten)
  *   TCs: TC-011, TC-012, TC-033
- *   Last traced: 2026-04-10
+ *   Last traced: 2026-05-01
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -25,7 +25,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-005 – Teilnahmen verwalten. TC-011, TC-012. */
+/** Integration tests for UC-005 – Teilnahmen verwalten. TC-011, TC-012, TC-033. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class TeilnahmeVerwaltenIT {
 

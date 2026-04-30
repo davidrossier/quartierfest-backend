@@ -4,7 +4,7 @@ package ch.quartierfest.backend.citrus;
  * Traceability:
  *   UC: UC-002 (Parteien verwalten)
  *   TCs: TC-004, TC-005, TC-030
- *   Last traced: 2026-04-10
+ *   Last traced: 2026-05-01
  */
 
 import org.junit.jupiter.api.BeforeEach;
@@ -24,7 +24,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-002 – Parteien verwalten. TC-004, TC-005. */
+/** Integration tests for UC-002 – Parteien verwalten. TC-004, TC-005, TC-030. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 class ParteiVerwaltenIT {
 

@@ -14,7 +14,7 @@ traceability:
     - TC-021
   it_classes:
     - KonsumationUebernehmenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-010 – Konsumation übernehmen

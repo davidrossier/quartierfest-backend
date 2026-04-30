@@ -15,7 +15,7 @@ traceability:
     - TC-033
   it_classes:
     - TeilnahmeVerwaltenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-005 – Teilnahmen verwalten

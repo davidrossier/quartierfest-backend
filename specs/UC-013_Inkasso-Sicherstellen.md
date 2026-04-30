@@ -18,7 +18,7 @@ traceability:
     - TC-028
   it_classes:
     - InkassoSicherstellenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-013 – Inkasso sicherstellen

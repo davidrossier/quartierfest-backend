@@ -11,7 +11,7 @@ traceability:
     - TC-013
   it_classes:
     - BestaetigungVerwaltenIT
-  last_traced: "2026-04-10"
+  last_traced: "2026-05-01"
 ---
 
 # UC-006 – Bestätigung erstellen und versenden

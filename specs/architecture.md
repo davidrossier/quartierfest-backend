@@ -86,8 +86,11 @@ erDiagram
         Integer anzahlPersonenEffektiv
         Boolean hilftAufstellen
         Boolean hilftAufraumen
-        BuffetBeitrag buffetBeitrag
-        String buffetBeitragBeschreibung
+    }
+
+    TEILNAHME_BUFFET_BEITRAG {
+        BuffetBeitrag art
+        String beschreibung
     }
 
     KONSUMATIONSANGEBOT {
@@ -138,6 +141,7 @@ erDiagram
     EVENT ||--o{ ALLGEMEINAUSGABE : "hat"
     TEILNAHME ||--o{ KONSUMATION : "konsumiert"
     KONSUMATIONSANGEBOT ||--o{ KONSUMATION : "wird konsumiert in"
+    TEILNAHME ||--o{ TEILNAHME_BUFFET_BEITRAG : "hat"
     TEILNAHME ||--|| ABRECHNUNG : "erhält"
     ABRECHNUNG ||--o{ ZAHLUNG : "wird bezahlt durch"
     ABRECHNUNG ||--o{ MAHNUNG : "wird gemahnt durch"
@@ -165,8 +169,8 @@ erDiagram
 
 ## Traceability
 
-> Automatisch generiert durch Traceability-Manager — Stand: 2026-04-10
-> UC-Abdeckung: 11/13 vollständig | 2 mit Lücken | 0 nicht implementiert
+> Automatisch generiert durch Traceability-Manager — Stand: 2026-05-01
+> UC-Abdeckung: 10/13 vollständig | 3 mit Lücken | 0 nicht implementiert
 
 ### UC × Implementierung × Test
 
@@ -174,19 +178,22 @@ erDiagram
 |-------|-------|-------------|----------|-----------|--------|
 | UC-001 | Personendaten verwalten | GET/POST/PUT/DELETE `/api/persons` | TC-001, TC-002, TC-029 | PersonVerwaltenIT | ✅ Vollständig |
 | UC-002 | Parteien verwalten | GET/POST/PUT/DELETE `/api/parteien` | TC-004, TC-005, TC-030 | ParteiVerwaltenIT | ✅ Vollständig |
-| UC-003 | Event anlegen | GET/POST/PUT/DELETE `/api/events` | TC-006, TC-007 | EventAnlegenIT | ✅ Vollständig |
+| UC-003 | Event anlegen | GET/POST/PUT/DELETE `/api/events` | TC-006, TC-007 | EventAnlegenIT | ⚠ Kein TC |
 | UC-004 | Einladung verwalten | GET/POST/DELETE `/api/einladungen` | TC-008, TC-009, TC-010 | EinladungVerwaltenIT | ✅ Vollständig |
-| UC-005 | Teilnahme erfassen | GET/POST/DELETE `/api/teilnahmen` | TC-011, TC-012 | TeilnahmeVerwaltenIT | ✅ Vollständig |
-| UC-006 | Bestätigung versenden | POST `/api/einladungen` (Upsert via id, Flag `bestaetigungVersendet`) | TC-013 | BestaetigungVerwaltenIT | ✅ Vollständig |
+| UC-005 | Teilnahme erfassen | GET/POST/DELETE `/api/teilnahmen` | TC-011, TC-012, TC-033 | TeilnahmeVerwaltenIT | ✅ Vollständig |
+| UC-006 | Bestätigung versenden | POST `/api/einladungen` (Upsert, Flag `bestaetigungVersendet`) | TC-013 | BestaetigungVerwaltenIT | ✅ Vollständig |
 | UC-007 | Allgemeinausgaben verwalten | GET/POST/DELETE `/api/allgemeinausgaben` | TC-014, TC-015 | AllgemeinausgabeVerwaltenIT | ✅ Vollständig |
 | UC-008 | Konsumationsangebot verwalten | GET/POST/DELETE `/api/konsumationsangebote` | TC-016 | KonsumationsangebotVerwaltenIT | ✅ Vollständig |
 | UC-009 | Konsumationsliste erstellen | GET `/api/konsumationsangebote`, GET `/api/teilnahmen` | TC-018, TC-019 | KonsumationslisteErstellenIT | ⚠ Teilimpl. |
 | UC-010 | Konsumation übernehmen | GET/POST/DELETE `/api/konsumationen` | TC-020, TC-021 | KonsumationUebernehmenIT | ✅ Vollständig |
 | UC-011 | Abrechnung erstellen | GET/POST/DELETE `/api/abrechnungen` | TC-022, TC-023 | AbrechnungErstellenIT | ⚠ Teilimpl. |
-| UC-012 | Abrechnung zustellen | POST `/api/abrechnungen` (Upsert via id, Felder `zustellungskanal`, `zustellungsDatum`) | TC-024, TC-025, TC-032 | AbrechnungZustellenIT | ✅ Vollständig |
+| UC-012 | Abrechnung zustellen | POST `/api/abrechnungen` (Upsert, Felder `zustellungskanal`, `zustellungsDatum`) | TC-024, TC-025, TC-032 | AbrechnungZustellenIT | ✅ Vollständig |
 | UC-013 | Inkasso sicherstellen | GET/POST/DELETE `/api/zahlungen`, `/api/mahnungen` | TC-026, TC-027, TC-028 | InkassoSicherstellenIT | ✅ Vollständig |
+
+> **Unit-Test-Abdeckung (zusätzlich):** 11 `*ControllerTest.java`-Klassen (`@WebMvcTest`) decken die HTTP-Schicht aller UC-Domänen ab. `ParteiServiceTest` testet die Geschäftslogik von UC-002 (Personenauflösung via `personenIds`). Diese Tests sind nicht TC-gebunden, referenzieren UCs aber via `@DisplayName("UC-XXX: ...")`.
 
 ### Offene Traceability-Lücken
 
+- **UC-003** (Event bearbeiten): `PUT /api/events/{id}` ist implementiert, aber TC-031 fehlt in `EventAnlegenIT`. → Empfehlung: Analog TC-029 in `PersonVerwaltenIT` implementieren
 - **UC-009** (Konsumationsliste erstellen): Kein dedizierter `GET /api/events/{id}/konsumationsliste`-Endpunkt; Frontend kombiniert Daten clientseitig. → Empfehlung: Endpunkt für Event-spezifische Konsumationsansicht implementieren
 - **UC-011** (Abrechnung erstellen): Keine automatische Berechnung von `anteilAllgemeinkosten` / `totalKonsumation`; Werte werden manuell übergeben. → Empfehlung: Berechnungslogik im Service kapseln
