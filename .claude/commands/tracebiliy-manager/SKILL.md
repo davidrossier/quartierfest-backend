@@ -19,6 +19,23 @@ implementiert und getestet ist — und Abweichungen sichtbar zu machen.
 
 ---
 
+## Grundregel – Prioritätskette
+
+**Specs → Tests → Implementierung**
+
+1. Alle Dateien unter `specs/` sind der Single Point of Truth — sie definieren, was das System tun muss.
+2. Tests (`testdesign.md` + `*IT.java`) stehen über der Implementierung — sie definieren, was das System nachweislich tut.
+3. Die Implementierung (Produktionscode) ist beiden untergeordnet.
+
+Konsequenzen:
+- Spec widerspricht Code → der Code ist falsch.
+- Spec widerspricht Test → der Test ist falsch.
+- Test widerspricht Code → der Code ist falsch.
+- Specs niemals an bestehende Tests oder Code anpassen.
+- Anforderungen niemals aus der Implementierung ableiten.
+
+---
+
 ## Schritt 1 – Quellen einlesen
 
 Lies in dieser Reihenfolge:

@@ -12,6 +12,23 @@ behaviour that is not specified there.
 
 ---
 
+## Ground Rule – Priority Chain
+
+**Specs → Tests → Implementation**
+
+1. `specs/` files are the single source of truth — they define what the system must do.
+2. Tests (`testdesign.md` + `*IT.java`) are authoritative over the implementation — they define what the system verifiably does.
+3. Implementation (production code) is subordinate to both.
+
+Consequences:
+- Spec contradicts code → code is wrong.
+- Spec contradicts test → test is wrong.
+- Test contradicts code → code is wrong.
+- Never adjust specs to match passing tests or existing code.
+- Never infer requirements from the implementation.
+
+---
+
 ## Step 1 – Understand the use cases
 
 Read all `UC-*.md` files in `specs/`. For each UC, extract:
