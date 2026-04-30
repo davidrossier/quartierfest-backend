@@ -56,7 +56,7 @@ npm start        # http://localhost:4200
 ## Tests
 
 ```bash
-# Unit-Test (Context-Load-Smoke-Test)
+# Unit-Tests (Controller-Tests + ParteiServiceTest, kein PostgreSQL nötig)
 ./mvnw test
 
 # Integrationstests (laufen gegen echte PostgreSQL)
@@ -69,7 +69,11 @@ npm start        # http://localhost:4200
 ./mvnw verify -Dit.test=PersonVerwaltenIT
 ```
 
-26 Testmethoden (TC-001..TC-028, ohne TC-003 und TC-017) in 13 `*IT`-Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`.
+**Unit-Tests** (`./mvnw test`): 43 Testmethoden ohne Datenbankabhängigkeit.
+- 11 `*ControllerTest`-Klassen mit `@WebMvcTest` (39 Tests) — decken GET, POST, DELETE und PUT-Endpunkte für alle Domänen ab
+- `ParteiServiceTest` mit Mockito (4 Tests) — testet `personenIds`-Auflösung
+
+**Integrationstests** (`./mvnw verify`): 26 Testmethoden (TC-001..TC-028, ohne TC-003 und TC-017) in 13 `*IT`-Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`, laufen gegen echte PostgreSQL.
 
 ---
 
@@ -129,12 +133,12 @@ Alle Endpunkte erreichbar unter `http://localhost:8080`.
 | Personen | `GET /api/persons` | `POST /api/persons` | `PUT /api/persons/{id}` | `DELETE /api/persons/{id}` |
 | Parteien | `GET /api/parteien` | `POST /api/parteien` | `PUT /api/parteien/{id}` | `DELETE /api/parteien/{id}` |
 | Events | `GET /api/events` | `POST /api/events` | `PUT /api/events/{id}` | `DELETE /api/events/{id}` |
-| Einladungen | `GET /api/einladungen` | `POST /api/einladungen` | — | `DELETE /api/einladungen/{id}` |
+| Einladungen | `GET /api/einladungen` | `POST /api/einladungen` (auch Upsert) | — | `DELETE /api/einladungen/{id}` |
 | Teilnahmen | `GET /api/teilnahmen` | `POST /api/teilnahmen` | — | `DELETE /api/teilnahmen/{id}` |
 | Allgemeinausgaben | `GET /api/allgemeinausgaben` | `POST /api/allgemeinausgaben` | — | `DELETE /api/allgemeinausgaben/{id}` |
 | Konsumationsangebote | `GET /api/konsumationsangebote` | `POST /api/konsumationsangebote` | — | `DELETE /api/konsumationsangebote/{id}` |
 | Konsumationen | `GET /api/konsumationen` | `POST /api/konsumationen` | — | `DELETE /api/konsumationen/{id}` |
-| Abrechnungen | `GET /api/abrechnungen` | `POST /api/abrechnungen` | — | `DELETE /api/abrechnungen/{id}` |
+| Abrechnungen | `GET /api/abrechnungen` | `POST /api/abrechnungen` (auch Upsert) | — | `DELETE /api/abrechnungen/{id}` |
 | Zahlungen | `GET /api/zahlungen` | `POST /api/zahlungen` | — | `DELETE /api/zahlungen/{id}` |
 | Mahnungen | `GET /api/mahnungen` | `POST /api/mahnungen` | — | `DELETE /api/mahnungen/{id}` |
 

@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Run application
 ./mvnw spring-boot:run
 
-# Unit tests only  (BackendApplicationTests – context load smoke test)
+# Unit tests (Controller-Tests + ParteiServiceTest + Smoke-Test)
 ./mvnw test
 
 # Integration tests only
@@ -70,7 +70,7 @@ All controllers expose the same three operations:
 - `POST /api/{resource}` — create, returns `200 OK` + saved entity
 - `DELETE /api/{resource}/{id}` — delete, returns `200 OK`
 
-Ausnahme: `PersonController` hat zusätzlich `PUT /api/persons/{id}` — update, returns `200 OK` + updated entity. Alle anderen Domänen haben kein PUT/PATCH.
+Ausnahme: `PersonController`, `ParteiController` und `EventController` haben zusätzlich `PUT /api/{resource}/{id}` — update, returns `200 OK` + updated entity. Alle anderen Domänen haben kein PUT/PATCH.
 
 | Domain | Endpoint | Beziehungen |
 |---|---|---|
@@ -92,7 +92,40 @@ Enums sind als innere Klassen in der jeweiligen Entity definiert:
 ## Tests
 
 ### Unit tests
-`src/test/java/ch/quartierfest/backend/BackendApplicationTests.java` — Spring context load smoke test.
+
+**Controller-Tests** (`*ControllerTest.java`, 11 Klassen unter `src/test/java/ch/quartierfest/backend/<domäne>/`):
+- Verwende `@WebMvcTest(<Controller>.class)` — lädt nur die Web-Schicht, kein PostgreSQL nötig
+- `@MockitoBean` für den Service; `@Autowired MockMvc` für Requests
+- **Jackson 3.x:** Spring Boot 4.x konfiguriert `tools.jackson.databind.ObjectMapper` als Bean — `@Autowired ObjectMapper` muss diesen Typ importieren, **nicht** `com.fasterxml.jackson.databind.ObjectMapper` (Jackson 2.x, nur im Test-Scope via Citrus vorhanden und nicht als Spring Bean registriert)
+- Traceability via `@DisplayName("UC-XXX: ...")`
+- 39 Testmethoden
+
+```java
+@WebMvcTest(PersonController.class)
+class PersonControllerTest {
+    @Autowired private MockMvc mockMvc;
+    @MockitoBean private PersonService personService;
+    @Autowired private tools.jackson.databind.ObjectMapper objectMapper;  // Jackson 3.x!
+
+    @Test
+    @DisplayName("UC-001: POST /api/persons legt eine Person an")
+    void create_returnsSavedPerson() throws Exception {
+        when(personService.save(any(Person.class))).thenReturn(buildPerson());
+        mockMvc.perform(post("/api/persons")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(buildPerson())))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.vorname").value("Hans"));
+    }
+}
+```
+
+**Service-Test** (`ParteiServiceTest.java` unter `src/test/java/ch/quartierfest/backend/partei/`):
+- `@ExtendWith(MockitoExtension.class)` — reiner Mockito-Test, kein Spring-Kontext
+- Testet `ParteiService.save()`: löst `personenIds` via `PersonRepository` auf
+- 4 Testmethoden
+
+**Smoke-Test**: `BackendApplicationTests.java` — Spring-Kontext-Ladetest (braucht PostgreSQL).
 
 ### Integration tests
 13 `*IT.java` Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`.
@@ -107,7 +140,6 @@ class XxxIT {
     @LocalServerPort private int port;
     private RestTemplate setup;         // für @BeforeEach-Voraussetzungen
     private HttpHeaders json;
-    private final List<String> toDelete = new ArrayList<>();  // im Test erstellte Datensätze
 
     @BeforeEach void setUp() {
         setup = new RestTemplate();
@@ -122,8 +154,7 @@ class XxxIT {
     }
 
     @AfterEach void tearDown() {
-        toDelete.forEach(this::tryDelete);   // Kind-Datensätze zuerst
-        // dann @BeforeEach-Datensätze in umgekehrter FK-Reihenfolge
+        // @BeforeEach-Fixtures in umgekehrter FK-Reihenfolge bereinigen
         if (xyzId != null) tryDelete("http://localhost:" + port + "/api/xyz/" + xyzId);
     }
 
