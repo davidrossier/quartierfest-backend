@@ -96,6 +96,7 @@ class TeilnahmeVerwaltenIT {
 
     @Test
     @DisplayName("TC-012 – UC-005 Teilnahme erstellen: Einladung existiert nicht")
+    @SuppressWarnings("unchecked")
     void tc012_teilnahmeErstellenEinladungFehlt() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(

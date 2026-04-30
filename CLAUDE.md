@@ -203,7 +203,7 @@ Alle Spezifikationen liegen unter `specs/`:
 
 ## Claude Code Skills
 
-Vier projektspezifische Skills in `.claude/commands/`:
+Fünf projektspezifische Skills in `.claude/commands/`:
 
 | Slash-Befehl | Zweck |
 |---|---|
@@ -211,3 +211,4 @@ Vier projektspezifische Skills in `.claude/commands/`:
 | `/review-use-case` | Alle `UC-*.md` in `specs/` prüfen, kleine Fehler beheben, Open Items anlegen |
 | `/design-citrus-tests` | Testdesign erstellen und IT-Klassen generieren |
 | `/clean-code-review` | Code + Tests nach Clean-Code-Prinzipien prüfen, Spec-Konformität sicherstellen, UC-Referenzen als Kommentare setzen |
+| `/traceability-manager` | UC → Implementierung → Test Traceability analysieren, Matrizen in `architecture.md` und `testdesign.md` aktualisieren, Lücken melden |

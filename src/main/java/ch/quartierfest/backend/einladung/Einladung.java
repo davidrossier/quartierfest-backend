@@ -14,6 +14,7 @@ public class Einladung {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // TODO [UC-004]: Kein @UniqueConstraint auf (event_id, partei_id) — Duplikat-Einladungen möglich – siehe specs/UC-004_Einladung-Verwalten.md
     @ManyToOne(optional = false)
     private Event event;
 

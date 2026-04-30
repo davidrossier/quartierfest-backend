@@ -15,6 +15,7 @@ public class Abrechnung {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // TODO [UC-011]: Kein @UniqueConstraint auf teilnahme_id — doppelte Abrechnung möglich wenn UI-Logik umgangen wird – siehe specs/UC-011_Abrechnung-Erstellen.md
     @OneToOne(optional = false)
     private Teilnahme teilnahme;
 
