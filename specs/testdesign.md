@@ -6,7 +6,7 @@
 |---|---|---|
 | UC-001 Person verwalten | Yes | TC-001..002, TC-029 |
 | UC-002 Parteien verwalten | Yes | TC-004..005, TC-030 |
-| UC-003 Event anlegen | Partial | TC-006..007 — `PUT /api/events/{id}` ist implementiert, aber TC für Event-bearbeiten fehlt noch (analog TC-029) |
+| UC-003 Event anlegen | Yes | TC-006..007, TC-031 — inkl. `PUT /api/events/{id}` bearbeiten |
 | UC-004 Einladung verwalten | Yes | TC-008..010 |
 | UC-005 Teilnahme verwalten | Yes | TC-011..012, TC-033 – explizite Erstellung via POST bestätigt; kein Auto-Create gewünscht; mehrere Buffet-Beiträge je Teilnahme |
 | UC-006 Bestätigung verwalten | Yes | TC-013 – `bestaetigungVersendet` via POST/Upsert nachträglich setzbar; kein PATCH benötigt |
@@ -356,17 +356,17 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 | TC-028 | UC-013 Mahnung erfassen und löschen | InkassoSicherstellenIT | tc028_mahnungErfassen | ✅ |
 | TC-029 | UC-001 Person bearbeiten | PersonVerwaltenIT | tc029_personBearbeiten | ✅ |
 | TC-030 | UC-002 Partei ohne Bezeichnung wird abgelehnt | ParteiVerwaltenIT | tc030_parteiOhneBezeichnung | ✅ |
-
+| TC-031 | UC-003 Event bearbeiten | EventAnlegenIT | tc031_eventBearbeiten | ✅ |
 | TC-032 | UC-012 Zustellungsdatum via POST/Upsert | AbrechnungZustellenIT | tc032_zustellungsDatumViаUpsert | ✅ |
 
-**30 TCs implementiert (TC-001..TC-033, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
+**31 TCs implementiert (TC-001..TC-033, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
 
 ---
 
 ## Open items
 
 - [ ] **Keine Controller-Validierung**: Alle POST-Fehlerszenarien liefern HTTP 500 statt 400. Für korrekte Fehlerbehandlung müssen `@Valid` + Bean-Validation-Annotationen ergänzt werden (TC-002, TC-005, TC-007, TC-012, TC-015, TC-021, TC-023, TC-027).
-- [x] **`PUT /api/events/{id}` fehlt im Backend**: Implementiert — `EventController` hat `@PutMapping("/{id}")`. Noch offen: TC für Event-bearbeiten fehlt (analog TC-029 für Person). Kann als TC-031 ergänzt werden.
+- [x] **TC-031 Event bearbeiten ergänzt**: `PUT /api/events/{id}` implementiert + TC-031 in `EventAnlegenIT` (analog TC-029 für Person).
 - [ ] **Keine Berechnungslogik-API**: UC-011 Abrechnungsberechnung ist nicht im API implementiert (TC-022, TC-023).
 - [ ] **Kein Konsumationslisten-Endpunkt**: UC-009 hat keinen dedizierten Endpunkt für die Listenansicht (TC-018, TC-019).
 - [ ] **Kein Event-Filter auf Collections**: Kein `?eventId=` Query-Parameter auf `/api/konsumationsangebote`, `/api/teilnahmen` etc.

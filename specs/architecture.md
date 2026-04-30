@@ -170,7 +170,7 @@ erDiagram
 ## Traceability
 
 > Automatisch generiert durch Traceability-Manager — Stand: 2026-05-01
-> UC-Abdeckung: 10/13 vollständig | 3 mit Lücken | 0 nicht implementiert
+> UC-Abdeckung: 11/13 vollständig | 2 mit Lücken | 0 nicht implementiert
 
 ### UC × Implementierung × Test
 
@@ -178,7 +178,7 @@ erDiagram
 |-------|-------|-------------|----------|-----------|--------|
 | UC-001 | Personendaten verwalten | GET/POST/PUT/DELETE `/api/persons` | TC-001, TC-002, TC-029 | PersonVerwaltenIT | ✅ Vollständig |
 | UC-002 | Parteien verwalten | GET/POST/PUT/DELETE `/api/parteien` | TC-004, TC-005, TC-030 | ParteiVerwaltenIT | ✅ Vollständig |
-| UC-003 | Event anlegen | GET/POST/PUT/DELETE `/api/events` | TC-006, TC-007 | EventAnlegenIT | ⚠ Kein TC |
+| UC-003 | Event anlegen | GET/POST/PUT/DELETE `/api/events` | TC-006, TC-007, TC-031 | EventAnlegenIT | ✅ Vollständig |
 | UC-004 | Einladung verwalten | GET/POST/DELETE `/api/einladungen` | TC-008, TC-009, TC-010 | EinladungVerwaltenIT | ✅ Vollständig |
 | UC-005 | Teilnahme erfassen | GET/POST/DELETE `/api/teilnahmen` | TC-011, TC-012, TC-033 | TeilnahmeVerwaltenIT | ✅ Vollständig |
 | UC-006 | Bestätigung versenden | POST `/api/einladungen` (Upsert, Flag `bestaetigungVersendet`) | TC-013 | BestaetigungVerwaltenIT | ✅ Vollständig |
@@ -194,6 +194,5 @@ erDiagram
 
 ### Offene Traceability-Lücken
 
-- **UC-003** (Event bearbeiten): `PUT /api/events/{id}` ist implementiert, aber TC-031 fehlt in `EventAnlegenIT`. → Empfehlung: Analog TC-029 in `PersonVerwaltenIT` implementieren
 - **UC-009** (Konsumationsliste erstellen): Kein dedizierter `GET /api/events/{id}/konsumationsliste`-Endpunkt; Frontend kombiniert Daten clientseitig. → Empfehlung: Endpunkt für Event-spezifische Konsumationsansicht implementieren
 - **UC-011** (Abrechnung erstellen): Keine automatische Berechnung von `anteilAllgemeinkosten` / `totalKonsumation`; Werte werden manuell übergeben. → Empfehlung: Berechnungslogik im Service kapseln
