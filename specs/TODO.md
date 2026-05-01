@@ -14,7 +14,19 @@ Alle `/api/**`-Endpunkte sind ohne Authentifizierung zugänglich. Spring Securit
 Jeder mit Netzwerkzugang kann Personen, Parteien, Einladungen, Abrechnungen und Zahlungsdaten lesen, schreiben und löschen.
 
 **Betroffen:** Alle 11 Controller.
-**Empfehlung:** Spring Security mit HTTP Basic Auth (für lokalen Betrieb) oder JWT-Token (für Netzwerkbetrieb) konfigurieren.
+
+**Kontext:** Die App soll künftig öffentlich im Web verfügbar sein. Geplantes Feature: Parteien sollen sich direkt über die Web-App für einen Event anmelden können. Damit entstehen zwei Rollen:
+- **Organisator** — voller Zugriff auf alle Domänen
+- **Partei** — sieht nur ihre eigene Einladung, Teilnahme und Abrechnung (Datensatz-Ebene)
+
+**Empfehlung: Externer Identity Provider (z.B. Auth0, Supabase Auth)**
+- Login, Registrierung und Passwort-Reset werden an den IdP delegiert
+- Spring Security validiert nur den JWT via JWKS-Endpoint (~30 Zeilen Config)
+- Rollen (`ORGANISATOR`, `PARTEI`) werden im IdP verwaltet und im Token transportiert
+- Datensatz-Autorisierung (Partei sieht nur eigene Daten) via `@PreAuthorize` + Custom Security Expression im Service
+- Kostenloser Tier bei Auth0/Supabase ausreichend für diesen Use Case
+
+**Nicht empfohlen:** HTTP Basic Auth (kein Multi-User, kein Self-Registration), JWT selbst implementiert (Session-Management, Passwort-Reset, Token-Refresh = hoher Eigenaufwand).
 
 ---
 
