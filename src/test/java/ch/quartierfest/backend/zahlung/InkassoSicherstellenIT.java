@@ -1,9 +1,9 @@
-package ch.quartierfest.backend.citrus;
+package ch.quartierfest.backend.zahlung;
 
 /**
  * Traceability:
- *   UC: UC-011 (Abrechnung erstellen)
- *   TCs: TC-022, TC-023
+ *   UC: UC-013 (Inkasso sicherstellen)
+ *   TCs: TC-026, TC-027, TC-028
  *   Last traced: 2026-05-01
  */
 
@@ -26,15 +26,14 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for UC-011 – Abrechnung erstellen.
- * Covers TC-022, TC-023.
+ * Integration tests for UC-013 – Inkasso sicherstellen.
+ * Covers TC-026, TC-027, TC-028.
  *
- * NOTE: UC-011 requires automatic calculation of anteilAllgemeinkosten and totalKonsumation.
- * The API has no calculation endpoint; all amounts must be passed manually.
- * TODO: Implement POST /api/events/{id}/abrechnungen/erstellen to trigger auto-calculation.
+ * Preconditions: Full chain from Event → Partei → Einladung → Teilnahme → Abrechnung
+ * is created in @BeforeEach.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
-class AbrechnungErstellenIT {
+class InkassoSicherstellenIT {
 
     private RestTemplate http;
     @LocalServerPort private int port;
@@ -45,6 +44,7 @@ class AbrechnungErstellenIT {
     private Long parteiId;
     private Long einladungId;
     private Long teilnahmeId;
+    private Long abrechnungId;
 
     @BeforeEach
     void setUp() {
@@ -58,9 +58,9 @@ class AbrechnungErstellenIT {
         json.setContentType(MediaType.APPLICATION_JSON);
 
         eventId = id(setupPost("http://localhost:" + port + "/api/events",
-                Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Abrechnung-Test")));
+                Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Inkasso-Test")));
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("bezeichnung", "Abrechnung-Partei", "adresse", "Abrechnungsstrasse 1", "twintAktiv", false)));
+                Map.of("bezeichnung", "Inkasso-Partei", "adresse", "Inkassostrasse 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
                 "event", Map.of("id", eventId),
                 "partei", Map.of("id", parteiId),
@@ -69,11 +69,18 @@ class AbrechnungErstellenIT {
                 "bestaetigungVersendet", false)));
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
                 Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
+        abrechnungId = id(setupPost("http://localhost:" + port + "/api/abrechnungen", Map.of(
+                "teilnahme", Map.of("id", teilnahmeId),
+                "anteilAllgemeinkosten", "40.00",
+                "totalKonsumation", "17.00",
+                "totalBetrag", "57.00",
+                "zustellungskanal", "EMAIL")));
     }
 
     @AfterEach
     void tearDown() {
-        // Abrechnung wird im Test gelöscht; Teilnahme kann nur ohne referenzierte Abrechnung gelöscht werden
+        // Zahlungen/Mahnungen werden im Test gelöscht; dann Abrechnung, dann Kette aufwärts
+        if (abrechnungId != null) tryDelete("http://localhost:" + port + "/api/abrechnungen/" + abrechnungId);
         if (teilnahmeId != null) tryDelete("http://localhost:" + port + "/api/teilnahmen/" + teilnahmeId);
         if (einladungId != null) tryDelete("http://localhost:" + port + "/api/einladungen/" + einladungId);
         if (parteiId != null) tryDelete("http://localhost:" + port + "/api/parteien/" + parteiId);
@@ -91,41 +98,57 @@ class AbrechnungErstellenIT {
     }
 
     @Test
-    @DisplayName("TC-022 – UC-011 Abrechnung erstellen: happy path (manuelle Beträge)")
+    @DisplayName("TC-026 – UC-013 TWINT-Zahlung erfassen und löschen")
     @SuppressWarnings("unchecked")
-    void tc022_abrechnungErstellenHappyPath() {
-        // TODO: anteilAllgemeinkosten (40.00) and totalKonsumation (17.00) are calculated
-        //       manually here. UC-011 requires automatic calculation. No such endpoint exists.
-        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
+    void tc026_twintZahlungErfassen() {
+        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/zahlungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId),
-                        "anteilAllgemeinkosten", 40.00,
-                        "totalKonsumation", 17.00,
-                        "totalBetrag", 57.00,
-                        "zustellungskanal", "EMAIL"), json), Map.class);
+                        "abrechnung", Map.of("id", abrechnungId),
+                        "zahlungskanal", "TWINT",
+                        "datum", "2025-07-15",
+                        "betrag", 57.00), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("id")).isNotNull();
 
-        // Cleanup als Lösch-Test (vor @AfterEach-Teilnahme-Cleanup: Abrechnung referenziert Teilnahme)
-        String url = "http://localhost:" + port + "/api/abrechnungen/" + response.getBody().get("id");
+        // Cleanup als Lösch-Test (vor @AfterEach-Abrechnung-Cleanup: Zahlung referenziert Abrechnung)
+        String url = "http://localhost:" + port + "/api/zahlungen/" + response.getBody().get("id");
         ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
         assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
-    @DisplayName("TC-023 – UC-011 Abrechnung erstellen: Teilnahme existiert nicht")
+    @DisplayName("TC-027 – UC-013 Zahlung ohne Datum wird abgelehnt")
     @SuppressWarnings("unchecked")
-    void tc023_abrechnungErstellenTeilnahmeFehlt() {
-        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
+    void tc027_zahlungOhneDatum() {
+        // TODO: Should be HTTP 400 – requires @Valid + @NotNull on Zahlung.datum
+        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/zahlungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", 999999),
-                        "anteilAllgemeinkosten", 40.00,
-                        "totalKonsumation", 17.00,
-                        "totalBetrag", 57.00,
-                        "zustellungskanal", "EMAIL"), json), Map.class);
+                        "abrechnung", Map.of("id", abrechnungId),
+                        "zahlungskanal", "TWINT",
+                        "betrag", 57.00), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+    }
+
+    @Test
+    @DisplayName("TC-028 – UC-013 Mahnung erfassen und löschen")
+    @SuppressWarnings("unchecked")
+    void tc028_mahnungErfassen() {
+        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/mahnungen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "abrechnung", Map.of("id", abrechnungId),
+                        "datum", "2025-07-20",
+                        "bemerkung", "Bitte bis Ende Juli bezahlen"), json), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("id")).isNotNull();
+
+        // Cleanup als Lösch-Test (vor @AfterEach-Abrechnung-Cleanup: Mahnung referenziert Abrechnung)
+        String url = "http://localhost:" + port + "/api/mahnungen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

@@ -1,4 +1,4 @@
-# Testdesign – Citrus Integration Tests
+# Testdesign – Integration Tests
 
 ## Scope
 

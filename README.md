@@ -73,7 +73,7 @@ npm start        # http://localhost:4200
 - 11 `*ControllerTest`-Klassen mit `@WebMvcTest` (39 Tests) — decken GET, POST, DELETE und PUT-Endpunkte für alle Domänen ab
 - `ParteiServiceTest` mit Mockito (4 Tests) — testet `personenIds`-Auflösung
 
-**Integrationstests** (`./mvnw verify`): 31 Testmethoden (TC-001..TC-033, ohne TC-003 und TC-017) in 13 `*IT`-Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`, laufen gegen echte PostgreSQL.
+**Integrationstests** (`./mvnw verify`): 31 Testmethoden (TC-001..TC-033, ohne TC-003 und TC-017) in 13 `*IT`-Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/`, laufen gegen echte PostgreSQL.
 
 ---
 

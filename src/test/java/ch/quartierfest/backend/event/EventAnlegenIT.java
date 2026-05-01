@@ -1,4 +1,4 @@
-package ch.quartierfest.backend.citrus;
+package ch.quartierfest.backend.event;
 
 /**
  * Traceability:

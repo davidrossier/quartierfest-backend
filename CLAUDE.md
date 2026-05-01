@@ -128,7 +128,7 @@ class PersonControllerTest {
 **Smoke-Test**: `BackendApplicationTests.java` — Spring-Kontext-Ladetest (braucht PostgreSQL).
 
 ### Integration tests
-13 `*IT.java` Klassen unter `src/test/java/ch/quartierfest/backend/citrus/`.
+13 `*IT.java` Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `abrechnung/AbrechnungErstellenIT.java`).
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
 **31 Testmethoden (TC-001..TC-033, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 

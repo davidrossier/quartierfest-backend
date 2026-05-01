@@ -1,9 +1,9 @@
-package ch.quartierfest.backend.citrus;
+package ch.quartierfest.backend.konsumation;
 
 /**
  * Traceability:
- *   UC: UC-009 (Konsumationsliste erstellen)
- *   TCs: TC-018, TC-019
+ *   UC: UC-010 (Konsumation übernehmen)
+ *   TCs: TC-020, TC-021
  *   Last traced: 2026-05-01
  */
 
@@ -26,16 +26,14 @@ import java.util.Map;
 import static org.assertj.core.api.Assertions.assertThat;
 
 /**
- * Integration tests for UC-009 – Konsumationsliste erstellen.
- * Covers TC-018, TC-019.
+ * Integration tests for UC-010 – Konsumation übernehmen.
+ * Covers TC-020, TC-021.
  *
- * NOTE: No dedicated "Konsumationsliste" endpoint exists.
- * These tests verify that the underlying data (Konsumationsangebote + Teilnahmen)
- * can be retrieved successfully, which is the data basis for list generation.
- * TODO: Implement GET /api/events/{id}/konsumationsliste for full UC-009 coverage.
+ * Preconditions: Event, Partei, Einladung, Teilnahme and Konsumationsangebot
+ * are created in @BeforeEach.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
-class KonsumationslisteErstellenIT {
+class KonsumationUebernehmenIT {
 
     private RestTemplate http;
     @LocalServerPort private int port;
@@ -45,6 +43,7 @@ class KonsumationslisteErstellenIT {
     private Long eventId;
     private Long parteiId;
     private Long einladungId;
+    private Long teilnahmeId;
     private Long angebotId;
 
     @BeforeEach
@@ -59,15 +58,17 @@ class KonsumationslisteErstellenIT {
         json.setContentType(MediaType.APPLICATION_JSON);
 
         eventId = id(setupPost("http://localhost:" + port + "/api/events",
-                Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Liste-Test")));
+                Map.of("datum", "2025-07-05", "startzeit", "15:00:00", "standort", "Konsumation-Test")));
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
-                Map.of("bezeichnung", "Liste-Partei", "adresse", "Listenweg 1", "twintAktiv", false)));
+                Map.of("bezeichnung", "Konsumation-Partei", "adresse", "Konsumationsweg 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
                 "event", Map.of("id", eventId),
                 "partei", Map.of("id", parteiId),
                 "status", "ANGEMELDET",
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
+        teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
+                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
         angebotId = id(setupPost("http://localhost:" + port + "/api/konsumationsangebote",
                 Map.of("event", Map.of("id", eventId), "bezeichnung", "Bier 5dl", "preis", "3.00")));
     }
@@ -75,6 +76,7 @@ class KonsumationslisteErstellenIT {
     @AfterEach
     void tearDown() {
         if (angebotId != null) tryDelete("http://localhost:" + port + "/api/konsumationsangebote/" + angebotId);
+        if (teilnahmeId != null) tryDelete("http://localhost:" + port + "/api/teilnahmen/" + teilnahmeId);
         if (einladungId != null) tryDelete("http://localhost:" + port + "/api/einladungen/" + einladungId);
         if (parteiId != null) tryDelete("http://localhost:" + port + "/api/parteien/" + parteiId);
         if (eventId != null) tryDelete("http://localhost:" + port + "/api/events/" + eventId);
@@ -91,38 +93,35 @@ class KonsumationslisteErstellenIT {
     }
 
     @Test
-    @DisplayName("TC-018 – UC-009 Konsumationsangebote für Event abrufbar (X-Achse)")
-    void tc018_konsumationsangeboteAbrufbar() {
-        // TODO: No event-scoped filter on GET /api/konsumationsangebote.
-        //       Returns all offers across all events.
-        ResponseEntity<String> response = http.exchange(
-                "http://localhost:" + port + "/api/konsumationsangebote", HttpMethod.GET, null, String.class);
+    @DisplayName("TC-020 – UC-010 Konsumation erfassen: happy path")
+    @SuppressWarnings("unchecked")
+    void tc020_konsumationErfassenHappyPath() {
+        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/konsumationen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "teilnahme", Map.of("id", teilnahmeId),
+                        "konsumationsangebot", Map.of("id", angebotId),
+                        "anzahl", 3), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotEmpty();
-        // Kein Cleanup notwendig – kein Datensatz im Test angelegt
+        assertThat(response.getBody()).isNotNull();
+        assertThat(response.getBody().get("id")).isNotNull();
+
+        // Cleanup als Lösch-Test (vor @AfterEach-Teardown)
+        String url = "http://localhost:" + port + "/api/konsumationen/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
-    @DisplayName("TC-019 – UC-009 Teilnahmen für Event abrufbar (Y-Achse)")
+    @DisplayName("TC-021 – UC-010 Konsumation erfassen: Pflichtfeld anzahl fehlt")
     @SuppressWarnings("unchecked")
-    void tc019_teilnahmenAbrufbar() {
-        // TODO: No event-scoped filter on GET /api/teilnahmen.
-        //       Returns all participations across all events.
+    void tc021_konsumationErfassenAnzahlFehlt() {
+        // TODO: Should be HTTP 400 – requires @Valid + @NotNull on Konsumation.anzahl
+        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/konsumationen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "teilnahme", Map.of("id", teilnahmeId),
+                        "konsumationsangebot", Map.of("id", angebotId)), json), Map.class);
 
-        // Given: create a Teilnahme for the ANGEMELDET Einladung from setup
-        Map<String, Object> teilnahme = setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2));
-
-        ResponseEntity<String> response = http.exchange(
-                "http://localhost:" + port + "/api/teilnahmen", HttpMethod.GET, null, String.class);
-
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(response.getBody()).isNotEmpty();
-
-        // Cleanup als Lösch-Test (vor @AfterEach-Einladungs-Cleanup)
-        String url = "http://localhost:" + port + "/api/teilnahmen/" + teilnahme.get("id");
-        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
-        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
     }
 }
