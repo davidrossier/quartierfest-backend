@@ -1,6 +1,6 @@
 # Technische Schulden — Offene Punkte
 
-> Stand: 2026-05-01. Quellen: SonarQube-Analyse, Clean-Code-Review.
+> Stand: 2026-05-08. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
@@ -38,6 +38,63 @@ Jeder mit Netzwerkzugang kann Personen, Parteien, Einladungen, Abrechnungen und 
 Kein Profil-Support — für Production-Deployment nicht verwendbar.
 
 **Empfehlung:** `@Value("${cors.allowed-origins:http://localhost:4200}")` mit Profil-spezifischen Properties.
+
+```properties
+# application-prod.properties
+cors.allowed-origins=https://davidrossier.ch
+```
+
+---
+
+### DEPLOY-001 – Kein Spring-Profil für Production
+
+Es existiert nur `application.properties` (dev-Defaults: `localhost`, `qfuser/qfpass`).
+Für ein Deployment auf `davidrossier.ch` fehlt `application-prod.properties` mit produktiven DB-Credentials, CORS-Origin und ggf. anderem Log-Level.
+
+**Empfehlung:** `application-prod.properties` anlegen; Start mit `--spring.profiles.active=prod`. Sensitive Werte (DB-Passwort) via Umgebungsvariablen injizieren:
+
+```properties
+# application-prod.properties
+spring.datasource.url=${DB_URL}
+spring.datasource.username=${DB_USER}
+spring.datasource.password=${DB_PASSWORD}
+cors.allowed-origins=https://davidrossier.ch
+spring.jpa.show-sql=false
+```
+
+---
+
+### DEPLOY-002 – Frontend: `localhost:8080` hardcoded in allen Services
+
+Alle 11 Angular-Services (z.B. `person.service.ts`) setzen `http://localhost:8080/api/...` direkt als URL.
+Ein Production-Build liefert dadurch eine App, die gegen `localhost` statt den echten Server zeigt.
+
+**Betroffen:** `person.service.ts`, `partei.service.ts`, `event.service.ts`, `einladung.service.ts`, `teilnahme.service.ts`, `konsumationsangebot.service.ts`, `konsumation.service.ts`, `allgemeinausgabe.service.ts`, `abrechnung.service.ts`, `mahnung.service.ts`, `zahlung.service.ts` (im Frontend-Repo).
+
+**Empfehlung:** Angular-Environments einführen (`src/environments/environment.ts` / `environment.prod.ts`) und alle Services auf `environment.apiUrl` umstellen. Für Production: leere `apiUrl` verwenden (relative URLs `/api/...`) — Nginx übernimmt das Routing zum Backend.
+
+---
+
+### DEPLOY-003 – Kein CI/CD-Pipeline-Setup
+
+Es existiert keine `.github/workflows/`-Konfiguration (oder äquivalent).
+Tests laufen nur lokal; die Integration Tests (`*IT.java`) benötigen eine echte PostgreSQL-Instanz.
+
+**Empfehlung:** GitHub Actions Workflow mit PostgreSQL-Service-Container:
+
+```yaml
+services:
+  postgres:
+    image: postgres:16
+    env:
+      POSTGRES_DB: quartierfest
+      POSTGRES_USER: qfuser
+      POSTGRES_PASSWORD: qfpass
+    ports:
+      - 5432:5432
+```
+
+Pipeline-Schritte: `mvn verify` (Backend-Unit + IT-Tests) → `ng build --configuration production` (Frontend-Build-Check).
 
 ---
 
