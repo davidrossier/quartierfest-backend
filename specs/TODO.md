@@ -1,68 +1,12 @@
-# Technische Schulden — Offene Punkte
+# Technische Schulden
 
-> Stand: 2026-05-08. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse.
+> Stand: 2026-05-09. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
 ---
 
-## CRITICAL
-
-### AUTH-001 – Keine Authentifizierung / Autorisierung
-
-Alle `/api/**`-Endpunkte sind ohne Authentifizierung zugänglich. Spring Security ist nicht konfiguriert.
-Jeder mit Netzwerkzugang kann Personen, Parteien, Einladungen, Abrechnungen und Zahlungsdaten lesen, schreiben und löschen.
-
-**Betroffen:** Alle 11 Controller.
-
-**Kontext:** Die App soll künftig öffentlich im Web verfügbar sein. Geplantes Feature: Parteien sollen sich direkt über die Web-App für einen Event anmelden können. Damit entstehen zwei Rollen:
-- **Organisator** — voller Zugriff auf alle Domänen
-- **Partei** — sieht nur ihre eigene Einladung, Teilnahme und Abrechnung (Datensatz-Ebene)
-
-**Empfehlung: Externer Identity Provider (z.B. Auth0, Supabase Auth)**
-- Login, Registrierung und Passwort-Reset werden an den IdP delegiert
-- Spring Security validiert nur den JWT via JWKS-Endpoint (~30 Zeilen Config)
-- Rollen (`ORGANISATOR`, `PARTEI`) werden im IdP verwaltet und im Token transportiert
-- Datensatz-Autorisierung (Partei sieht nur eigene Daten) via `@PreAuthorize` + Custom Security Expression im Service
-- Kostenloser Tier bei Auth0/Supabase ausreichend für diesen Use Case
-
-**Nicht empfohlen:** HTTP Basic Auth (kein Multi-User, kein Self-Registration), JWT selbst implementiert (Session-Management, Passwort-Reset, Token-Refresh = hoher Eigenaufwand).
-
----
-
 ## MAJOR
-
-### CORS-001 – CORS `allowedOrigins` hardcoded
-
-`WebConfig.java:13`: `allowedOrigins("http://localhost:4200")` ist hardcoded.
-Kein Profil-Support — für Production-Deployment nicht verwendbar.
-
-**Empfehlung:** `@Value("${cors.allowed-origins:http://localhost:4200}")` mit Profil-spezifischen Properties.
-
-```properties
-# application-prod.properties
-cors.allowed-origins=https://davidrossier.ch
-```
-
----
-
-### DEPLOY-001 – Kein Spring-Profil für Production
-
-Es existiert nur `application.properties` (dev-Defaults: `localhost`, `qfuser/qfpass`).
-Für ein Deployment auf `davidrossier.ch` fehlt `application-prod.properties` mit produktiven DB-Credentials, CORS-Origin und ggf. anderem Log-Level.
-
-**Empfehlung:** `application-prod.properties` anlegen; Start mit `--spring.profiles.active=prod`. Sensitive Werte (DB-Passwort) via Umgebungsvariablen injizieren:
-
-```properties
-# application-prod.properties
-spring.datasource.url=${DB_URL}
-spring.datasource.username=${DB_USER}
-spring.datasource.password=${DB_PASSWORD}
-cors.allowed-origins=https://davidrossier.ch
-spring.jpa.show-sql=false
-```
-
----
 
 ### DEPLOY-002 – Frontend: `localhost:8080` hardcoded in allen Services
 
@@ -174,3 +118,34 @@ Nur `ParteiService` hat einen Mockito-Unit-Test (`ParteiServiceTest`).
 Alle anderen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Tests abgedeckt.
 
 **Einschätzung:** Da die Services fast ausschliesslich 1:1 an das Repository delegieren, ist der Mehrwert von Unit-Tests gering. Sinnvoll wäre ein Unit-Test für `AbrechnungService`, sobald dort Berechnungslogik (UC-011) implementiert wird.
+
+---
+
+## Behoben
+
+### AUTH-001 – Keine Authentifizierung / Autorisierung ✅ `2026-05-09`
+
+Spring Security 7.x + OAuth2 Resource Server implementiert (Branch `feature/auth-001`).
+- `SecurityConfig.java` absichert alle `/api/**`-Endpunkte mit `hasRole('ORGANISATOR')` im `prod`-Profil
+- JWT-Validierung via JWKS-Endpoint des IdP (`spring.security.oauth2.resourceserver.jwt.issuer-uri`)
+- Dev/Test-Betrieb (kein `prod`-Profil): `permitAll()` — keine Teständerungen nötig
+- `WebConfig.java` entfernt; CORS via `CorsConfigurationSource`-Bean in `SecurityConfig`
+
+**Noch ausstehend (künftiges Feature):** Rolle `PARTEI` + datensatz-seitige Autorisierung via `@PreAuthorize`
+
+---
+
+### CORS-001 – CORS `allowedOrigins` hardcoded ✅ `2026-05-09`
+
+Origin via Property `cors.allowed-origins` konfigurierbar (Branch `feature/auth-001`).
+- Dev-Default: `http://localhost:4200` in `application.properties`
+- Prod: `https://davidrossier.ch` in `application-prod.properties`
+
+---
+
+### DEPLOY-001 – Kein Spring-Profil für Production ✅ `2026-05-09`
+
+`application-prod.properties` angelegt (Branch `feature/auth-001`).
+- DB-Credentials via `${DB_URL}`, `${DB_USER}`, `${DB_PASSWORD}`
+- JWT-Issuer-URI Platzhalter vorhanden (IdP-spezifisch eintragen)
+- Start: `java -jar backend.jar --spring.profiles.active=prod`
