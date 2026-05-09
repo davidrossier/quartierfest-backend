@@ -9,33 +9,52 @@ graph LR
 
     subgraph Spring Boot Backend
         direction TB
-        CORS[WebConfig\nCORS-Filter]
+        SEC[SecurityConfig\nCORS + JWT-Filter]
         Controller[Controller\nREST API]
         Service[Service\nGeschäftslogik]
         Repository[Repository\nJPA / Spring Data]
-        CORS --> Controller
+        SEC --> Controller
         Controller --> Service
         Service --> Repository
     end
 
     DB[(PostgreSQL\nquartierfest)]
 
-    Angular -->|HTTP + CORS| CORS
-    Other -->|HTTP| CORS
+    Angular -->|HTTP + CORS + JWT| SEC
+    Other -->|HTTP| SEC
     Repository -->|JDBC| DB
 ```
 
 ### CORS-Konfiguration
 
-`WebConfig.java` konfiguriert CORS global für alle `/api/**`-Endpunkte:
+`SecurityConfig.java` konfiguriert CORS global für alle `/api/**`-Endpunkte via `CorsConfigurationSource`-Bean:
 
 | Einstellung | Wert |
 |---|---|
-| Erlaubter Origin | `http://localhost:4200` (Angular-Dev-Server) |
+| Erlaubter Origin | Property `cors.allowed-origins` (Default: `http://localhost:4200`) |
 | Erlaubte Methoden | `GET`, `POST`, `PUT`, `DELETE` |
 | Erlaubte Headers | `*` |
 
 Andere Origins werden vom Browser blockiert. Server-seitige Clients (z.B. `RestTemplate` in Integrationstests) sind von CORS nicht betroffen.
+
+### Sicherheit (JWT / Spring Security)
+
+Alle `/api/**`-Endpunkte sind über Spring Security 7.x abgesichert. Die Absicherung ist profil-abhängig:
+
+| Profil | SecurityFilterChain | Beschreibung |
+|--------|---------------------|--------------|
+| `prod` | JWT-Pflicht | Alle Requests benötigen ein gültiges Bearer-Token mit Rolle `ORGANISATOR` |
+| kein / `test` / `dev` | `permitAll()` | Kein Token erforderlich — für lokale Entwicklung und Tests |
+
+**JWT-Validierung (Profil `prod`):**
+- Spring Security validiert das Bearer-Token via JWKS-Endpoint des IdP
+- Konfiguration: `spring.security.oauth2.resourceserver.jwt.issuer-uri` in `application-prod.properties`
+- Empfohlene IdP: Auth0 oder Supabase Auth (kostenloser Tier)
+- Rolle `ORGANISATOR`: voller Zugriff auf alle Domänen
+
+**Noch nicht implementiert (künftiges Feature):**
+- Rolle `PARTEI`: Eingeschränkter Zugriff auf eigene Einladung/Teilnahme/Abrechnung (datensatz-seitige Autorisierung via `@PreAuthorize`)
+- Self-Registration über die Web-App
 
 ---
 
@@ -171,14 +190,15 @@ erDiagram
 
 > Identifiziert durch SonarQube-Analyse 2026-05-01. Details und Massnahmen → `specs/TODO.md`.
 
-| # | Bereich | Befund | Schweregrad |
-|---|---------|--------|-------------|
-| AUTH-001 | Sicherheit | Keine Authentifizierung/Autorisierung — alle `/api/**`-Endpunkte offen | CRITICAL |
-| CORS-001 | Infrastruktur | `allowedOrigins("localhost:4200")` hardcoded, kein Profil-Support | MAJOR |
-| PERF-001 | Performance | `FetchType.EAGER` auf `Partei.personen` + `Teilnahme.buffetBeitraege` — N+1-Risiko | MAJOR |
-| VALID-001 | Validierung | Kein `@Valid` auf Controllern — Pflichtfeldverletzungen liefern HTTP 500 statt 400 | MAJOR |
-| REFACT-001 | Code-Qualität | 8 Controller + 10 Services mit identischem CRUD-Boilerplate, kein `BaseCrud*` | MINOR |
-| TEST-001 | Tests | 13 IT-Klassen duplizieren `setUp()`/`tearDown()`/`setupPost()`/`tryDelete()` | MINOR |
+| # | Bereich | Befund | Schweregrad | Stand |
+|---|---------|--------|-------------|-------|
+| AUTH-001 | Sicherheit | Keine Authentifizierung/Autorisierung — alle `/api/**`-Endpunkte offen | CRITICAL | ✅ Behoben 2026-05-09 |
+| CORS-001 | Infrastruktur | `allowedOrigins("localhost:4200")` hardcoded, kein Profil-Support | MAJOR | ✅ Behoben 2026-05-09 |
+| DEPLOY-001 | Deployment | Kein Spring-Profil für Production | MAJOR | ✅ Behoben 2026-05-09 |
+| PERF-001 | Performance | `FetchType.EAGER` auf `Partei.personen` + `Teilnahme.buffetBeitraege` — N+1-Risiko | MAJOR | Offen |
+| VALID-001 | Validierung | Kein `@Valid` auf Controllern — Pflichtfeldverletzungen liefern HTTP 500 statt 400 | MAJOR | Offen |
+| REFACT-001 | Code-Qualität | 8 Controller + 10 Services mit identischem CRUD-Boilerplate, kein `BaseCrud*` | MINOR | Offen |
+| TEST-001 | Tests | 13 IT-Klassen duplizieren `setUp()`/`tearDown()`/`setupPost()`/`tryDelete()` | MINOR | Offen |
 
 ---
 
