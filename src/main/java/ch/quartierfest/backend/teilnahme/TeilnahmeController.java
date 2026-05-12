@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.teilnahme;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,7 +18,7 @@ public class TeilnahmeController {
     }
 
     @PostMapping
-    public Teilnahme create(@RequestBody Teilnahme teilnahme) {
+    public Teilnahme create(@Valid @RequestBody Teilnahme teilnahme) {
         return teilnahmeService.save(teilnahme);
     }
 

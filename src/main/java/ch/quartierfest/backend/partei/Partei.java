@@ -3,6 +3,7 @@ package ch.quartierfest.backend.partei;
 import ch.quartierfest.backend.person.Person;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import java.util.List;
 
@@ -15,9 +16,11 @@ public class Partei {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
     @Column(nullable = false)
     private String bezeichnung;
 
+    @NotBlank
     @Column(nullable = false)
     private String adresse;
 

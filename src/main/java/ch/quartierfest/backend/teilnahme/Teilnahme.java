@@ -2,6 +2,7 @@ package ch.quartierfest.backend.teilnahme;
 
 import ch.quartierfest.backend.einladung.Einladung;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 import java.util.ArrayList;
@@ -16,6 +17,7 @@ public class Teilnahme {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @OneToOne(optional = false)
     private Einladung einladung;
 

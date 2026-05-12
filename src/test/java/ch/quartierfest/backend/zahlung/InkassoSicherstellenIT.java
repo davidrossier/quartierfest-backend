@@ -122,14 +122,13 @@ class InkassoSicherstellenIT {
     @DisplayName("TC-027 – UC-013 Zahlung ohne Datum wird abgelehnt")
     @SuppressWarnings("unchecked")
     void tc027_zahlungOhneDatum() {
-        // TODO: Should be HTTP 400 – requires @Valid + @NotNull on Zahlung.datum
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/zahlungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
                         "abrechnung", Map.of("id", abrechnungId),
                         "zahlungskanal", "TWINT",
                         "betrag", 57.00), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test

@@ -91,12 +91,11 @@ class AllgemeinausgabeVerwaltenIT {
     @DisplayName("TC-015 – UC-007 Allgemeinausgabe anlegen: Pflichtfeld betrag fehlt")
     @SuppressWarnings("unchecked")
     void tc015_allgemeinausgabeAnlegenBetragFehlt() {
-        // TODO: Should be HTTP 400 – requires @Valid + @NotNull on Allgemeinausgabe.betrag
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/allgemeinausgaben", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
                         "event", Map.of("id", eventId),
                         "beschreibung", "Ohne Betrag"), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

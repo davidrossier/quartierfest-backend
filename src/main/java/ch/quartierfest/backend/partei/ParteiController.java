@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.partei;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,12 +18,12 @@ public class ParteiController {
     }
 
     @PostMapping
-    public Partei create(@RequestBody Partei partei) {
+    public Partei create(@Valid @RequestBody Partei partei) {
         return parteiService.save(partei);
     }
 
     @PutMapping("/{id}")
-    public Partei update(@PathVariable Long id, @RequestBody Partei partei) {
+    public Partei update(@PathVariable Long id, @Valid @RequestBody Partei partei) {
         partei.setId(id);
         return parteiService.save(partei);
     }

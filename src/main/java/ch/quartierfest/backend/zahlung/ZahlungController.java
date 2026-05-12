@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.zahlung;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,7 +18,7 @@ public class ZahlungController {
     }
 
     @PostMapping
-    public Zahlung create(@RequestBody Zahlung zahlung) {
+    public Zahlung create(@Valid @RequestBody Zahlung zahlung) {
         return zahlungService.save(zahlung);
     }
 

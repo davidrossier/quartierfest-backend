@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.konsumation;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,7 +18,7 @@ public class KonsumationController {
     }
 
     @PostMapping
-    public Konsumation create(@RequestBody Konsumation konsumation) {
+    public Konsumation create(@Valid @RequestBody Konsumation konsumation) {
         return konsumationService.save(konsumation);
     }
 

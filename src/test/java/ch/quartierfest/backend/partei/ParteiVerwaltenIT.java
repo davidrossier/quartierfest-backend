@@ -70,23 +70,21 @@ class ParteiVerwaltenIT {
     @DisplayName("TC-005 – UC-002 Partei anlegen: Pflichtfeld adresse fehlt")
     @SuppressWarnings("unchecked")
     void tc005_parteiAnlegenAdresseFehlt() {
-        // TODO: Should be HTTP 400 – requires @Valid + @NotBlank on Partei.adresse
         ResponseEntity<Map> response = http.exchange(
                 "http://localhost:" + port + "/api/parteien", HttpMethod.POST,
                 new HttpEntity<>(Map.of("bezeichnung", "Testpartei", "twintAktiv", false), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 
     @Test
     @DisplayName("TC-030 – UC-002 Partei anlegen: Pflichtfeld bezeichnung fehlt")
     @SuppressWarnings("unchecked")
     void tc030_parteiAnlegenBezeichnungFehlt() {
-        // TODO: Should be HTTP 400 – requires @Valid + @NotBlank on Partei.bezeichnung
         ResponseEntity<Map> response = http.exchange(
                 "http://localhost:" + port + "/api/parteien", HttpMethod.POST,
                 new HttpEntity<>(Map.of("adresse", "Musterstrasse 1", "twintAktiv", false), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

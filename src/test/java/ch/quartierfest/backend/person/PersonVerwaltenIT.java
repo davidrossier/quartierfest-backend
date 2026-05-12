@@ -97,10 +97,9 @@ class PersonVerwaltenIT {
     @DisplayName("TC-002 – UC-001 Person anlegen: Pflichtfeld name fehlt")
     @SuppressWarnings("unchecked")
     void tc002_personAnlegenNameFehlt() {
-        // TODO: Should be HTTP 400 – requires @Valid + @NotBlank on Person.name
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/persons", HttpMethod.POST,
                 new HttpEntity<>(Map.of("vorname", "Hans"), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

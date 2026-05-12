@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.mahnung;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,7 +18,7 @@ public class MahnungController {
     }
 
     @PostMapping
-    public Mahnung create(@RequestBody Mahnung mahnung) {
+    public Mahnung create(@Valid @RequestBody Mahnung mahnung) {
         return mahnungService.save(mahnung);
     }
 

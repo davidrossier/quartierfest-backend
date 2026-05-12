@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.allgemeinausgabe;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,7 +18,7 @@ public class AllgemeinausgabeController {
     }
 
     @PostMapping
-    public Allgemeinausgabe create(@RequestBody Allgemeinausgabe allgemeinausgabe) {
+    public Allgemeinausgabe create(@Valid @RequestBody Allgemeinausgabe allgemeinausgabe) {
         return allgemeinausgabeService.save(allgemeinausgabe);
     }
 

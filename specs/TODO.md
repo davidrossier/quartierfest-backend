@@ -42,16 +42,6 @@ Pipeline-Schritte: `mvn verify` (Backend-Unit + IT-Tests) → `ng build --config
 
 ---
 
-### VALID-001 – Fehlende Input-Validierung (@Valid)
-
-Pflichtfeld-Verletzungen liefern HTTP 500 (DB-Constraint-Exception) statt HTTP 400 (Bad Request).
-`@Valid` fehlt auf allen `@RequestBody`-Parametern; `@NotNull`/`@NotBlank` fehlen auf Entity-Pflichtfeldern.
-
-**Betroffen:** Alle Controller und Entities.
-**Betroffene TCs (als TODO markiert):** TC-002, TC-005, TC-007, TC-012, TC-015, TC-021, TC-023, TC-027, TC-030.
-**Empfehlung:** `@Valid` auf `@RequestBody` + Bean-Validation-Annotationen auf Entities ergänzen. Erfordert Spring Boot Validation Starter.
-
----
 
 ## MINOR
 
@@ -112,6 +102,19 @@ Alle anderen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Te
 ---
 
 ## Behoben
+
+### VALID-001 – Input-Validierung (@Valid) implementiert ✅ `2026-05-12`
+
+`spring-boot-starter-validation` ergänzt. `@Valid` auf allen `@RequestBody`-Parametern.
+Bean Validation Constraints auf allen Entities:
+- `@NotBlank` auf String-Pflichtfeldern (vorname, name, bezeichnung, adresse, standort, beschreibung, bezeichnung)
+- `@NotNull` auf Object/Enum/Datums-Pflichtfeldern und required Beziehungen (@ManyToOne, @OneToOne)
+
+Pflichtfeld-Verletzungen liefern neu HTTP 400 (statt 500).
+TCs TC-002, TC-005, TC-007, TC-015, TC-021, TC-027, TC-030 angepasst.
+TC-012 und TC-023 (FK nicht gefunden) bleiben bei HTTP 500 — kein Validierungsfehler.
+
+---
 
 ### DEPLOY-002 – Frontend: `localhost:8080` in allen Services ersetzt ✅ `2026-05-12`
 

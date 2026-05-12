@@ -2,6 +2,7 @@ package ch.quartierfest.backend.mahnung;
 
 import ch.quartierfest.backend.abrechnung.Abrechnung;
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 import java.time.LocalDate;
 
@@ -14,9 +15,11 @@ public class Mahnung {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotNull
     @ManyToOne(optional = false)
     private Abrechnung abrechnung;
 
+    @NotNull
     @Column(nullable = false)
     private LocalDate datum;
 

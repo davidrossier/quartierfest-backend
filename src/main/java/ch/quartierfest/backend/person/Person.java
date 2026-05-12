@@ -1,6 +1,7 @@
 package ch.quartierfest.backend.person;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 
 @Data
@@ -12,9 +13,11 @@ public class Person {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @NotBlank
     @Column(nullable = false)
     private String vorname;
 
+    @NotBlank
     @Column(nullable = false)
     private String name;
 

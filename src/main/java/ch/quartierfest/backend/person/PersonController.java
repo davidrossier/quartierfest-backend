@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.person;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,12 +18,12 @@ public class PersonController {
     }
 
     @PostMapping
-    public Person create(@RequestBody Person person) {
+    public Person create(@Valid @RequestBody Person person) {
         return personService.save(person);
     }
 
     @PutMapping("/{id}")
-    public Person update(@PathVariable Long id, @RequestBody Person person) {
+    public Person update(@PathVariable Long id, @Valid @RequestBody Person person) {
         person.setId(id);
         return personService.save(person);
     }

@@ -99,11 +99,10 @@ class EventAnlegenIT {
     @DisplayName("TC-007 – UC-003 Event anlegen: Pflichtfeld datum fehlt")
     @SuppressWarnings("unchecked")
     void tc007_eventAnlegenDatumFehlt() {
-        // TODO: Should be HTTP 400 – requires @Valid + @NotNull on Event.datum
         ResponseEntity<Map> response = http.exchange(
                 "http://localhost:" + port + "/api/events", HttpMethod.POST,
                 new HttpEntity<>(Map.of("startzeit", "15:00:00", "standort", "Buchlenwiese"), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

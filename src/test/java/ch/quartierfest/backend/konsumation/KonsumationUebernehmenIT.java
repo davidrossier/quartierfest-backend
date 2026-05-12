@@ -116,12 +116,11 @@ class KonsumationUebernehmenIT {
     @DisplayName("TC-021 – UC-010 Konsumation erfassen: Pflichtfeld anzahl fehlt")
     @SuppressWarnings("unchecked")
     void tc021_konsumationErfassenAnzahlFehlt() {
-        // TODO: Should be HTTP 400 – requires @Valid + @NotNull on Konsumation.anzahl
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/konsumationen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
                         "teilnahme", Map.of("id", teilnahmeId),
                         "konsumationsangebot", Map.of("id", angebotId)), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }
 }

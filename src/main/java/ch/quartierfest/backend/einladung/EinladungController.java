@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.einladung;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,7 +18,7 @@ public class EinladungController {
     }
 
     @PostMapping
-    public Einladung create(@RequestBody Einladung einladung) {
+    public Einladung create(@Valid @RequestBody Einladung einladung) {
         return einladungService.save(einladung);
     }
 

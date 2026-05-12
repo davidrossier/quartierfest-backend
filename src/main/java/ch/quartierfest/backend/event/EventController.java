@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.event;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,12 +18,12 @@ public class EventController {
     }
 
     @PostMapping
-    public Event create(@RequestBody Event event) {
+    public Event create(@Valid @RequestBody Event event) {
         return eventService.save(event);
     }
 
     @PutMapping("/{id}")
-    public Event update(@PathVariable Long id, @RequestBody Event event) {
+    public Event update(@PathVariable Long id, @Valid @RequestBody Event event) {
         event.setId(id);
         return eventService.save(event);
     }

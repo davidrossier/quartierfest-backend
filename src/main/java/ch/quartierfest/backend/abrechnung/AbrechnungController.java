@@ -1,5 +1,6 @@
 package ch.quartierfest.backend.abrechnung;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import java.util.List;
@@ -17,7 +18,7 @@ public class AbrechnungController {
     }
 
     @PostMapping
-    public Abrechnung create(@RequestBody Abrechnung abrechnung) {
+    public Abrechnung create(@Valid @RequestBody Abrechnung abrechnung) {
         return abrechnungService.save(abrechnung);
     }
 
