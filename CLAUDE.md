@@ -43,6 +43,7 @@ SQL logging is enabled via `spring.jpa.show-sql=true`.
 - **Spring Data JPA** + **PostgreSQL** (runtime)
 - **Lombok** (`@Data`, `@RequiredArgsConstructor`) — never write boilerplate manually
 - **Spring WebMVC** (synchronous) — not WebFlux
+- **spring-boot-starter-validation** — Bean Validation (`@NotBlank`, `@NotNull` auf Entities; `@Valid` auf `@RequestBody`)
 - **spring-boot-devtools** (runtime, optional)
 
 Test scope:
@@ -181,10 +182,10 @@ class XxxIT {
 **Cleanup-Strategie:** Im Test erstellte Datensätze werden **innerhalb des Tests** via expliziter `DELETE`-Assertion gelöscht — der Lösch-Test dient gleichzeitig als Cleanup. `@BeforeEach`-Fixtures werden im `@AfterEach` in umgekehrter FK-Reihenfolge bereinigt (abhängige Tabellen zuerst). Es gibt keine `toDelete`-Liste mehr.
 
 Bekannte Einschränkungen (als TODO in den IT-Klassen markiert):
-- Kein `@Valid` auf Controllern → Pflichtfeldverletzungen liefern `500` statt `400`
 - Kein PATCH-Endpunkt (z.B. für `bestaetigungVersendet`, `zustellungsDatum`)
 - Kein `GET /api/events/{id}/konsumationsliste` (UC-009 nur teilweise abgedeckt)
 - Kein Auto-Kalkulationsendpunkt für Abrechnungen (UC-011 manuell)
+- TC-012 / TC-023: Referenz auf nicht-existierende FK-ID liefert weiterhin `500` (kein EntityNotFound-Handler)
 
 Vollständige technische Schulden → `specs/TODO.md`
 

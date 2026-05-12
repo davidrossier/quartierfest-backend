@@ -60,10 +60,11 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 | Aspekt | Verhalten |
 |---|---|
 | POST – happy path | `200 OK` + Entity-Body |
-| POST – DB-Constraint verletzt | `500 Internal Server Error` (kein `@Valid`, keine Controller-Validierung) |
+| POST – Pflichtfeld fehlt (Bean Validation) | `400 Bad Request` (`@Valid` + `@NotBlank`/`@NotNull` auf Entities) |
+| POST – referenzierte FK-ID existiert nicht | `500 Internal Server Error` (kein EntityNotFound-Handler) |
 | DELETE | `200 OK`, leerer Body |
 | GET | `200 OK` + JSON-Array |
-| Fehler-HTTP-Status | Pflichtfeld-Fehler resultieren in `500`, nicht `400` |
+| Fehler-HTTP-Status | Pflichtfeld-Fehler → `400`; FK-Fehler (ungültige ID) → `500` |
 | Update-Endpunkte | `PUT /api/persons/{id}`, `PUT /api/parteien/{id}` und `PUT /api/events/{id}` vorhanden; kein PUT auf anderen Ressourcen |
 | Upsert via POST | `POST /api/einladungen` und `POST /api/abrechnungen` mit `id` im Body agieren als Upsert (JPA `save()`) |
 | Berechnungslogik | **Nicht vorhanden** – Abrechnung muss manuell mit berechneten Werten gespeichert werden |
@@ -91,9 +92,8 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Type**: Error scenario
 - **Given**: Keine Voraussetzung
 - **When**: POST `/api/persons` ohne Feld `name`
-- **Then**: HTTP 500 (DB-Constraint `nullable = false`)
-- **Citrus actions**: `send POST /api/persons`, `receive 500`
-- **TODO**: Sollte HTTP 400 sein; erfordert `@Valid` + `@NotNull` in Entity/Controller
+- **Then**: HTTP 400 (Bean Validation `@NotBlank`)
+- **Citrus actions**: `send POST /api/persons`, `receive 400`
 
 ### TC-004 – UC-002 Partei anlegen und löschen
 - **Source**: UC-002, Hauptfluss
@@ -108,17 +108,16 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Type**: Error scenario
 - **Given**: Keine Voraussetzung
 - **When**: POST `/api/parteien` ohne Feld `adresse`
-- **Then**: HTTP 500 (DB-Constraint)
-- **Citrus actions**: `send POST /api/parteien`, `receive 500`
+- **Then**: HTTP 400 (Bean Validation `@NotBlank`)
+- **Citrus actions**: `send POST /api/parteien`, `receive 400`
 
 ### TC-030 – UC-002 Partei anlegen: Pflichtfeld bezeichnung fehlt
 - **Source**: UC-002, Error Scenario E1
 - **Type**: Error scenario
 - **Given**: Keine Voraussetzung
 - **When**: POST `/api/parteien` ohne Feld `bezeichnung`
-- **Then**: HTTP 500 (DB-Constraint)
-- **Citrus actions**: `send POST /api/parteien`, `receive 500`
-- **TODO**: Sollte HTTP 400 sein; erfordert `@Valid` + `@NotBlank` auf `Partei.bezeichnung`
+- **Then**: HTTP 400 (Bean Validation `@NotBlank`)
+- **Citrus actions**: `send POST /api/parteien`, `receive 400`
 
 ### TC-006 – UC-003 Event anlegen und löschen
 - **Source**: UC-003, Hauptfluss
@@ -133,8 +132,8 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Type**: Error scenario
 - **Given**: Keine Voraussetzung
 - **When**: POST `/api/events` ohne Feld `datum`
-- **Then**: HTTP 500 (DB-Constraint)
-- **Citrus actions**: `send POST /api/events`, `receive 500`
+- **Then**: HTTP 400 (Bean Validation `@NotNull`)
+- **Citrus actions**: `send POST /api/events`, `receive 400`
 
 ### TC-008 – UC-004 Einladung erstellen (Status OFFEN) und löschen
 - **Source**: UC-004, Gherkin "Einladungen für alle Parteien erstellen"
@@ -206,8 +205,8 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Type**: Error scenario
 - **Given**: Event existiert (Setup)
 - **When**: POST `/api/allgemeinausgaben` ohne Feld `betrag`
-- **Then**: HTTP 500
-- **Citrus actions**: `send POST /api/allgemeinausgaben`, `receive 500`
+- **Then**: HTTP 400 (Bean Validation `@NotNull`)
+- **Citrus actions**: `send POST /api/allgemeinausgaben`, `receive 400`
 
 ### TC-016 – UC-008 Konsumationsangebot anlegen und löschen
 - **Source**: UC-008, Hauptfluss (inkl. ehem. TC-017 Konsumationsangebot löschen)
@@ -248,8 +247,8 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Type**: Error scenario
 - **Given**: Teilnahme und Konsumationsangebot existieren (Setup)
 - **When**: POST `/api/konsumationen` ohne Feld `anzahl`
-- **Then**: HTTP 500
-- **Citrus actions**: `send POST /api/konsumationen`, `receive 500`
+- **Then**: HTTP 400 (Bean Validation `@NotNull`)
+- **Citrus actions**: `send POST /api/konsumationen`, `receive 400`
 
 ### TC-022 – UC-011 Abrechnung erstellen und löschen: happy path
 - **Source**: UC-011, Hauptfluss
@@ -306,8 +305,8 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Type**: Error scenario
 - **Given**: Abrechnung existiert (Setup)
 - **When**: POST `/api/zahlungen` ohne Feld `datum`
-- **Then**: HTTP 500
-- **Citrus actions**: `send POST /api/zahlungen`, `receive 500`
+- **Then**: HTTP 400 (Bean Validation `@NotNull`)
+- **Citrus actions**: `send POST /api/zahlungen`, `receive 400`
 
 ### TC-028 – UC-013 Mahnung erfassen und löschen
 - **Source**: UC-013, Gherkin "Mahnung erfassen"
@@ -365,7 +364,7 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 
 ## Open items
 
-- [ ] **Keine Controller-Validierung**: Alle POST-Fehlerszenarien liefern HTTP 500 statt 400. Für korrekte Fehlerbehandlung müssen `@Valid` + Bean-Validation-Annotationen ergänzt werden (TC-002, TC-005, TC-007, TC-012, TC-015, TC-021, TC-023, TC-027).
+- [x] **Controller-Validierung implementiert**: `@Valid` + Bean Validation (`@NotBlank`/`@NotNull`) auf allen Entities und Controllern. Pflichtfeld-Fehler liefern nun HTTP 400 (TC-002, TC-005, TC-007, TC-015, TC-021, TC-027, TC-030). TC-012/TC-023 (FK-ID nicht gefunden) liefern weiterhin 500.
 - [x] **TC-031 Event bearbeiten ergänzt**: `PUT /api/events/{id}` implementiert + TC-031 in `EventAnlegenIT` (analog TC-029 für Person).
 - [ ] **Keine Berechnungslogik-API**: UC-011 Abrechnungsberechnung ist nicht im API implementiert (TC-022, TC-023).
 - [ ] **Kein Konsumationslisten-Endpunkt**: UC-009 hat keinen dedizierten Endpunkt für die Listenansicht (TC-018, TC-019).
