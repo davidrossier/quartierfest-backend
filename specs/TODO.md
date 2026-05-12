@@ -1,6 +1,6 @@
 # Technische Schulden
 
-> Stand: 2026-05-09. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse.
+> Stand: 2026-05-12. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, Brainstorming Auth.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
@@ -8,6 +8,31 @@
 
 ## MAJOR
 
+### AUTH-002 – Login-Komponente und Rollenverwaltung fehlen
+
+**Priorität: MAJOR** — ohne dies ist die Applikation im `prod`-Profil für Endnutzer unbrauchbar: alle `/api/**`-Requests scheitern mit 401, weil das Angular-Frontend kein Bearer-Token mitschickt.
+
+**Was fehlt:**
+
+- **Frontend (Angular):**
+  - Login-Flow (OAuth2 PKCE-Redirect zum IdP, Callback-Route, Token-Speicherung)
+  - HTTP-Interceptor: hängt `Authorization: Bearer <token>` an alle API-Requests
+  - Route Guard: schützt alle App-Routen, leitet unauthentifizierte User zur Login-Seite
+  - Empfohlene Library: `@auth0/auth0-angular` (Auth0) oder `supabase-js` (Supabase Auth)
+
+- **Backend (Spring Security):** Infrastruktur bereits vorhanden (JWT-Validierung via JWKS, `prod`-Profil). Noch ausstehend:
+  - Rolle `PARTEI`: eingeschränkter Zugriff auf eigene Einladung / Teilnahme / Abrechnung via `@PreAuthorize`
+
+**Notizen für künftigen Use Case (UC-014 geplant):**
+
+- Dies bedingt einen neuen Use Case «Benutzerverwaltung / Login» mit mindestens zwei Rollen:
+  - `ORGANISATOR`: voller Zugriff auf alle Domänen (bereits modelliert)
+  - `PARTEI`: datensatz-seitiger Zugriff nur auf eigene Daten
+- Der Admin (Rolle `ORGANISATOR`) soll Benutzer anlegen und Rollen zuweisen können — entweder direkt im IdP (Auth0 Dashboard / Supabase) oder über eine dedizierte Admin-UI im Frontend
+- Self-Registration durch Parteien ist offen (noch kein Entscheid)
+- UC-014 muss vor der Implementierung ausformuliert und in `specs/` abgelegt werden
+
+---
 
 ### DEPLOY-003 – Kein CI/CD-Pipeline-Setup
 
