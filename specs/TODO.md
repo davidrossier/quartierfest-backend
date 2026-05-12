@@ -8,16 +8,6 @@
 
 ## MAJOR
 
-### DEPLOY-002 – Frontend: `localhost:8080` hardcoded in allen Services
-
-Alle 11 Angular-Services (z.B. `person.service.ts`) setzen `http://localhost:8080/api/...` direkt als URL.
-Ein Production-Build liefert dadurch eine App, die gegen `localhost` statt den echten Server zeigt.
-
-**Betroffen:** `person.service.ts`, `partei.service.ts`, `event.service.ts`, `einladung.service.ts`, `teilnahme.service.ts`, `konsumationsangebot.service.ts`, `konsumation.service.ts`, `allgemeinausgabe.service.ts`, `abrechnung.service.ts`, `mahnung.service.ts`, `zahlung.service.ts` (im Frontend-Repo).
-
-**Empfehlung:** Angular-Environments einführen (`src/environments/environment.ts` / `environment.prod.ts`) und alle Services auf `environment.apiUrl` umstellen. Für Production: leere `apiUrl` verwenden (relative URLs `/api/...`) — Nginx übernimmt das Routing zum Backend.
-
----
 
 ### DEPLOY-003 – Kein CI/CD-Pipeline-Setup
 
@@ -122,6 +112,16 @@ Alle anderen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Te
 ---
 
 ## Behoben
+
+### DEPLOY-002 – Frontend: `localhost:8080` in allen Services ersetzt ✅ `2026-05-12`
+
+Angular-Environments eingeführt (`src/environments/environment.ts` / `environment.prod.ts`).
+- Dev: `apiUrl: 'http://localhost:8080'` — lokales Verhalten unverändert
+- Prod: `apiUrl: ''` — relative URLs (`/api/...`), Nginx routet zum Backend
+- Alle 11 Services auf `` `${environment.apiUrl}/api/...` `` umgestellt
+- `angular.json`: `fileReplacements` für Production-Build ergänzt
+
+---
 
 ### AUTH-001 – Keine Authentifizierung / Autorisierung ✅ `2026-05-09`
 
