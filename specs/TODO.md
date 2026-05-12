@@ -30,6 +30,11 @@ services:
 
 Pipeline-Schritte: `mvn verify` (Backend-Unit + IT-Tests) → `ng build --configuration production` (Frontend-Build-Check).
 
+**Umsetzung (zwei Repos):**
+
+- **Backend** (`.github/workflows/ci.yml`): PostgreSQL-Service-Container (postgres:16, db=quartierfest, user=qfuser, pass=qfpass) + `./mvnw verify` — Unit-Tests und alle `*IT.java` laufen gegen die echte DB, keine Teständerungen nötig.
+- **Frontend** (`.github/workflows/ci.yml`): `npm ci` + `npm run build -- --configuration production` — prüft, ob der Production-Build fehlerfrei kompiliert.
+
 ---
 
 ### PERF-001 – FetchType.EAGER — N+1-Query-Risiko
