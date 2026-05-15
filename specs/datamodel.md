@@ -35,6 +35,21 @@ Gruppierung von Personen (typischerweise ein Haushalt). Erhält die Einladung.
 
 ---
 
+### ParteiBenutzer
+Verknüpft einen Auth0-Benutzeraccount (via `sub`-Claim) mit einer Partei (UC-015). Ermöglicht der Partei, sich direkt im System anzumelden (UC-014) und ihre Teilnahme zu pflegen (UC-016).
+
+| Feld | Typ | Pflicht | Hinweis |
+|---|---|---|---|
+| id | Long | ja | — |
+| partei | Partei | ja | FK → Partei; `@ManyToOne` |
+| idpSub | String | ja | `sub`-Claim des Auth0-JWT; `@Column(unique = true)` |
+| email | String | nein | Nur zur Anzeige; wird nicht für Authentifizierung verwendet |
+
+**Beziehungen:**
+- `ParteiBenutzer` → `Partei`: n:1
+
+---
+
 ### Event
 Ein Quartierfest-Anlass (Buchlenfest).
 
@@ -196,6 +211,7 @@ Festgehaltene Mahnung zu einer Abrechnung.
 
 ```
 Person          ←── n:1 ──── Partei
+Partei          ←── n:1 ──── ParteiBenutzer          (Auth0-Verknüpfung, UC-015)
 Partei          ←── n:1 ──── Einladung ──── n:1 ───→ Event
 Einladung       ──── 1:1 ──→ Teilnahme
 Teilnahme       ←── n:1 ──── Konsumation ── n:1 ───→ Konsumationsangebot

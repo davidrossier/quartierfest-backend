@@ -1,6 +1,6 @@
 # Technische Schulden
 
-> Stand: 2026-05-12. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, Brainstorming Auth.
+> Stand: 2026-05-15. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
@@ -12,25 +12,38 @@
 
 **Priorität: MAJOR** — ohne dies ist die Applikation im `prod`-Profil für Endnutzer unbrauchbar: alle `/api/**`-Requests scheitern mit 401, weil das Angular-Frontend kein Bearer-Token mitschickt.
 
-**Was fehlt:**
+**Specs abgeschlossen (2026-05-15):** UC-014, UC-015 und UC-016 sind in `specs/` ausformuliert. Entscheide:
+- **IdP:** Auth0 (`@auth0/auth0-angular`)
+- **Account-Anlage:** ORGANISATOR legt Auth0-Accounts im Dashboard an und verknüpft sie via Admin-UI (UC-015)
+- **Partei-User-Mapping:** Neue Entity `ParteiBenutzer` (0..n IdP-Accounts pro Partei); `idpSub` ist unique
+- **Partei-Schreibzugriff:** PARTEI kann eigene Teilnahme und Buffet-Beiträge bearbeiten (UC-016); ORGANISATOR kann jederzeit überschreiben
+- **Self-Registration:** explizit nicht vorgesehen
 
-- **Frontend (Angular):**
-  - Login-Flow (OAuth2 PKCE-Redirect zum IdP, Callback-Route, Token-Speicherung)
-  - HTTP-Interceptor: hängt `Authorization: Bearer <token>` an alle API-Requests
-  - Route Guard: schützt alle App-Routen, leitet unauthentifizierte User zur Login-Seite
-  - Empfohlene Library: `@auth0/auth0-angular` (Auth0) oder `supabase-js` (Supabase Auth)
+**Implementierung ausstehend — drei Arbeitspakete:**
 
-- **Backend (Spring Security):** Infrastruktur bereits vorhanden (JWT-Validierung via JWKS, `prod`-Profil). Noch ausstehend:
-  - Rolle `PARTEI`: eingeschränkter Zugriff auf eigene Einladung / Teilnahme / Abrechnung via `@PreAuthorize`
+1. **UC-014 – Login-Frontend** (`specs/UC-014_Benutzer-Anmelden.md`)
+   - `@auth0/auth0-angular` einbinden, PKCE-Flow konfigurieren
+   - HTTP-Interceptor: hängt `Authorization: Bearer <token>` an alle `/api/**`-Requests
+   - Route Guard: schützt alle App-Routen, leitet zu `/login` weiter
+   - Rollenbasiertes Routing nach Login (`ORGANISATOR` → `/personen`, `PARTEI` → `/meine-teilnahme`)
+   - Auth0 Custom Action: Rollen-Claim in Access Token schreiben
+   - Offene Punkte: Custom-Claim-Namespace, Silent-Auth-Methode (`specs/UC-014`, Open Items)
 
-**Notizen für künftigen Use Case (UC-014 geplant):**
+2. **UC-015 – ParteiBenutzer-Domain** (`specs/UC-015_Parteibenutzer-Verwalten.md`)
+   - Neues Backend-Package `parteibenutzer` (Entity, Repository, Service, Controller)
+   - Entity: `id`, `partei` (FK), `idpSub` (unique), `email` (optional)
+   - Endpunkte: `GET/POST/DELETE /api/parteibenutzer`
+   - Frontend: Admin-UI unter `/admin/benutzer` (nur für `ORGANISATOR`)
+   - Geplante Tests: TC-034 (Happy Path), TC-035 (Duplikat-Sub)
+   - Offener Entscheid: 1:n (unique `idpSub`) vs. n:m (`specs/UC-015`, Open Items)
 
-- Dies bedingt einen neuen Use Case «Benutzerverwaltung / Login» mit mindestens zwei Rollen:
-  - `ORGANISATOR`: voller Zugriff auf alle Domänen (bereits modelliert)
-  - `PARTEI`: datensatz-seitiger Zugriff nur auf eigene Daten
-- Der Admin (Rolle `ORGANISATOR`) soll Benutzer anlegen und Rollen zuweisen können — entweder direkt im IdP (Auth0 Dashboard / Supabase) oder über eine dedizierte Admin-UI im Frontend
-- Self-Registration durch Parteien ist offen (noch kein Entscheid)
-- UC-014 muss vor der Implementierung ausformuliert und in `specs/` abgelegt werden
+3. **UC-016 – Teilnahme bestätigen** (`specs/UC-016_Teilnahme-Bestaetigen.md`)
+   - Neuer Backend-Endpunkt `PUT /api/teilnahmen/{id}` (für PARTEI und ORGANISATOR)
+   - Neuer Backend-Endpunkt `GET /api/teilnahmen/meine` (filtert auf eigene Partei via JWT `sub`)
+   - `@PreAuthorize`-Logik: JWT `sub` → `ParteiBenutzer` → `Partei` → Teilnahme-Zugriff prüfen
+   - Frontend: neue Komponente `MeineTeilnahmeComponent` unter `/meine-teilnahme` (nur `PARTEI`)
+   - Geplante Tests: TC-036 (PARTEI editiert eigene Teilnahme), TC-037 (Fremdzugriff → 403)
+   - Offener Entscheid: Event-Selektion für «nächster Event» (`specs/UC-016`, Open Items)
 
 ---
 

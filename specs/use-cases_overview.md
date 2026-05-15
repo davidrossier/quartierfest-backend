@@ -1,130 +1,66 @@
-# Quartierfest – Requirements
+# Quartierfest – Use-Case-Übersicht
 
-## Übersicht
 Software zur Unterstützung bei Planung, Durchführung und Nachbearbeitung von Quartierfesten (Buchlenfest).
 
 ---
 
-## UC-01: Personendaten verwalten
-**Beschreibung:** Die Daten der Empfänger der Einladung können erfasst, aktualisiert oder gelöscht werden.
+## Akteure
 
-**Details:**
-- Daten können für mehrere Events wiederverwendet werden
-- Felder: Name, Vorname, Telefonnummer, Mobilenummer, E-Mail-Adresse
-
----
-
-## UC-02: Parteien verwalten
-**Beschreibung:** Personen werden zu einer Partei gruppiert. Typischerweise gilt als Partei ein Haushalt.
-
-**Details:**
-- Eine Partei erhält eine Einladung
-- Felder: Adresse, Twint-Angabe (wenn ja: Mobilenummer)
-- Eine Partei besteht aus einer oder mehreren Personen
+| Actor | Typ | Beschreibung |
+|---|---|---|
+| Organisator | `Human` | Primärer Systemakteur; plant, führt durch und rechnet ab |
+| Partei | `Human` / `External` | Haushalt als Einladungseinheit; in UC-001–013 externer Stakeholder; ab UC-014 direkter Systemakteur |
+| Auth0 | `System` | Identity Provider (OAuth2 / PKCE); stellt JWT aus |
 
 ---
 
-## UC-03: Event anlegen
-**Beschreibung:** Die Durchführung eines Events wird geplant.
+## Übersicht aller Use Cases
 
-**Details:**
-- Felder: Datum, Startzeit, Standort, Alternativer Standort (bei schlechtem Wetter), Zeit für Aufstellen, Zeit für Aufräumen
-- Ein Event hat Beziehungen zu: teilnehmende Personen, Konsumationsangebot, effektive Konsumation, Allgemeinkosten, individuelle Abrechnungen
-
----
-
-## UC-04: Einladung erstellen
-**Beschreibung:** Für ein Event wird für alle möglichen Parteien eine Einladung erstellt.
-
-**Details:**
-- Enthält alle relevanten Angaben zum Event
-- Partei kann sich an- oder abmelden
-- Partei gibt an wieviele Personen teilnehmen
-- Partei gibt an ob sie beim Aufstellen/Aufräumen hilft
-- Partei gibt an ob und was sie zum Essensbuffet beiträgt (Salate, Brot/Zopf, Dessert, weitere Beilagen)
-
----
-
-## UC-05: Teilnahmen verwalten
-**Beschreibung:** Die Rückmeldungen aus den Einladungen werden übernommen und verwaltet.
-
-**Details:**
-- Konsolidierte Sicht der teilnehmenden Personen und deren Angaben
-- Rückmeldungen können nachträglich editiert werden
+| UC-ID | Datei | Name | Phase | Actors | Completeness | Status |
+|---|---|---|---|---|---|---|
+| [UC-001](UC-001_Person-Verwalten.md) | `UC-001_Person-Verwalten.md` | Personendaten verwalten | Stammdaten | Organisator | Intermediate | ✅ Impl. vollständig |
+| [UC-002](UC-002_Partei-Verwalten.md) | `UC-002_Partei-Verwalten.md` | Parteien verwalten | Stammdaten | Organisator | Intermediate | ✅ Impl. vollständig |
+| [UC-003](UC-003_Event-Anlegen.md) | `UC-003_Event-Anlegen.md` | Event anlegen | Stammdaten | Organisator | Intermediate | ✅ Impl. vollständig |
+| [UC-004](UC-004_Einladung-Verwalten.md) | `UC-004_Einladung-Verwalten.md` | Einladung erstellen und verwalten | Planung | Organisator, Partei (External) | Minimum | ✅ Impl. vollständig |
+| [UC-005](UC-005_Teilnahme-Verwalten.md) | `UC-005_Teilnahme-Verwalten.md` | Teilnahmen verwalten | Planung | Organisator | Intermediate | ✅ Impl. vollständig |
+| [UC-006](UC-006_Bestaetigung-Versenden.md) | `UC-006_Bestaetigung-Versenden.md` | Bestätigung erstellen und versenden | Planung | Organisator, Partei (External) | Intermediate | ✅ Impl. vollständig |
+| [UC-007](UC-007_Allgemeinausgabe-Verwalten.md) | `UC-007_Allgemeinausgabe-Verwalten.md` | Allgemeinausgaben verwalten | Planung | Organisator | Intermediate | ✅ Impl. vollständig |
+| [UC-008](UC-008_Konsumationsangebot-Verwalten.md) | `UC-008_Konsumationsangebot-Verwalten.md` | Konsumationsangebot verwalten | Planung | Organisator | Intermediate | ✅ Impl. vollständig |
+| [UC-009](UC-009_Konsumationsliste-Erstellen.md) | `UC-009_Konsumationsliste-Erstellen.md` | Konsumationsliste erstellen | Durchführung | Organisator | Minimum | ⚠ Impl. teilweise |
+| [UC-010](UC-010_Konsumation-Uebernehmen.md) | `UC-010_Konsumation-Uebernehmen.md` | Konsumation übernehmen | Durchführung | Organisator | Intermediate | ✅ Impl. vollständig |
+| [UC-011](UC-011_Abrechnung-Erstellen.md) | `UC-011_Abrechnung-Erstellen.md` | Abrechnung erstellen | Nachbearbeitung | Organisator | Minimum | ⚠ Impl. teilweise |
+| [UC-012](UC-012_Abrechnung-Zustellen.md) | `UC-012_Abrechnung-Zustellen.md` | Abrechnung zustellen | Nachbearbeitung | Organisator, Partei (External) | Intermediate | ✅ Impl. vollständig |
+| [UC-013](UC-013_Inkasso-Sicherstellen.md) | `UC-013_Inkasso-Sicherstellen.md` | Inkasso sicherstellen | Nachbearbeitung | Organisator, Partei (External) | Intermediate | ✅ Impl. vollständig |
+| [UC-014](UC-014_Benutzer-Anmelden.md) | `UC-014_Benutzer-Anmelden.md` | Benutzer anmelden | Auth / Querschnitt | Organisator, Partei, Auth0 | Minimum | 🔲 Ausstehend |
+| [UC-015](UC-015_Parteibenutzer-Verwalten.md) | `UC-015_Parteibenutzer-Verwalten.md` | Parteibenutzer verwalten | Auth / Querschnitt | Organisator | Minimum | 🔲 Ausstehend |
+| [UC-016](UC-016_Teilnahme-Bestaetigen.md) | `UC-016_Teilnahme-Bestaetigen.md` | Teilnahme bestätigen | Planung (Partei-Sicht) | Partei, Organisator | Minimum | 🔲 Ausstehend |
 
 ---
 
-## UC-06: Bestätigung erstellen
-**Beschreibung:** Einige Tage vor dem Event wird eine Bestätigung an die teilnehmenden Parteien zugestellt.
+## Abhängigkeitskette
 
-**Details:**
-- Enthält: definitiver Standort, Erinnerung der Zeiten, Zusammenstellung Buffet, Konsumationsangebot
+```
+UC-001 ──┐
+UC-002 ──┼──→ UC-004 ──→ UC-005 ──→ UC-006
+UC-003 ──┘              │           │
+                        │           └──→ UC-008 ──→ UC-009 ──→ UC-010
+                        │                                      │
+                        └──→ UC-007 ──────────────────────────┤
+                                                               ↓
+                                                           UC-011 ──→ UC-012 ──→ UC-013
 
----
-
-## UC-07: Allgemeinausgaben verwalten
-**Beschreibung:** Ausgaben die durch alle Teilnehmenden gleichermassen getragen werden.
-
-**Beispiele:** Kühlschrankmiete, Festbankgarnituren, Servietten, Tischtücher
-
-**Details:**
-- Pro Ausgabe: was, woher beschafft
-- Ausgaben werden je Event zusammengetragen
-- Werden bei der Schlussabrechnung berücksichtigt
+UC-014 ──→ UC-015 ──→ UC-016 (erweitert UC-005)
+```
 
 ---
 
-## UC-08: Konsumationsangebot verwalten
-**Beschreibung:** Angebot an Getränken, welche bei Konsumation individuell bezahlt werden.
+## Phasen-Zuordnung (Frontend-Routen)
 
-**Details:**
-- Angebot besteht aus verschiedenen Einträgen mit je einem Preis
-- Angebot wird bei der Bestätigung kommuniziert
-
----
-
-## UC-09: Konsumationsliste erstellen
-**Beschreibung:** Liste zur Erfassung der Getränkekonsumation am Event.
-
-**Details:**
-- X-Achse: Konsumationsangebot inkl. Preis
-- Y-Achse: teilnehmende Parteien
-- Konsumation wird handschriftlich mit Strichen festgehalten
-- Liste wird gross ausgedruckt und am Kühlschrank montiert
-- Je Partei: Möglichkeit zur definitiven Angabe der effektiven Teilnehmerzahl (relevant für Abrechnung)
-
----
-
-## UC-10: Konsumation übernehmen
-**Beschreibung:** Die handschriftlich ausgefüllte Konsumationsliste wird digital erfasst.
-
-**Details:**
-- Konsumation je Partei wird ins System übertragen
-
----
-
-## UC-11: Abrechnung erstellen
-**Beschreibung:** Die Abrechnung wird je Partei zusammengestellt.
-
-**Details:**
-- Allgemeinkosten werden auf Anzahl Personen aufgeteilt
-- Konsumationsanteil der Partei wird addiert
-
----
-
-## UC-12: Abrechnung zustellen
-**Beschreibung:** Die Abrechnung wird den Parteien zugestellt.
-
-**Details:**
-- Mit Twint: Betrag wird via Twint angefordert
-- Ohne Twint: Schreiben via E-Mail oder in Papierform
-- Zahlungsmöglichkeiten: Twint, Überweisung, Bar
-
----
-
-## UC-13: Inkasso sicherstellen
-**Beschreibung:** Die erfolgte Zahlung wird kontinuierlich kontrolliert und festgehalten.
-
-**Details:**
-- Erfasst wird: Zahlungskanal, Datum, bezahlter Betrag
-- Mahnungen werden ebenfalls festgehalten
+| Phase | Route-Präfix | Use Cases |
+|---|---|---|
+| Stammdaten | `/personen`, `/parteien`, `/events` | UC-001, UC-002, UC-003 |
+| Planung | `/planung/...` | UC-004, UC-005, UC-006, UC-007, UC-008 |
+| Durchführung | `/durchfuehrung/...` | UC-009, UC-010 |
+| Nachbearbeitung | `/nachbearbeitung/...` | UC-011, UC-012, UC-013 |
+| Auth / Admin | `/login`, `/callback`, `/admin/benutzer` | UC-014, UC-015 |
+| Partei-Ansicht | `/meine-teilnahme` | UC-016 |

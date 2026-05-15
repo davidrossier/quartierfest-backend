@@ -17,6 +17,9 @@
 | UC-011 Abrechnung erstellen | Partial | TC-022..023 – keine Berechnungslogik im API; manuelle Eingabe aller Felder |
 | UC-012 Abrechnung zustellen | Yes | TC-024..025, TC-032 – `zustellungsDatum` und Kanal via POST/Upsert nachträglich setzbar |
 | UC-013 Inkasso sicherstellen | Yes | TC-026..028 |
+| UC-014 Benutzer anmelden | No | Ausstehend — Frontend-Flow (PKCE, Route Guard, Interceptor); kein Backend-TC erforderlich (JWT-Validierung via AUTH-001 abgedeckt) |
+| UC-015 Parteibenutzer verwalten | No | Ausstehend — neue Domain `parteibenutzer`; TC-034 (Happy Path), TC-035 (Duplikat-Sub) geplant |
+| UC-016 Teilnahme bestätigen | No | Ausstehend — neuer Endpunkt `PUT /api/teilnahmen/{id}` + `GET /api/teilnahmen/meine`; TC-036 (PARTEI editiert eigene Teilnahme), TC-037 (PARTEI auf fremde Teilnahme → 403) geplant |
 
 **Hinweis:** TC-003 (Person löschen) ist in TC-001 integriert. TC-017 (Konsumationsangebot löschen) ist in TC-016 integriert. Die Löschung erfolgt als letzter Schritt des jeweiligen Happy-Path-Tests (Lösch-Test).
 
@@ -376,3 +379,4 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - [x] **UC-005 Mehrere Buffet-Beiträge**: `buffetBeitrag`/`buffetBeitragBeschreibung` durch `buffetBeitraege: List<TeilnahmeBuffetBeitrag>` ersetzt (`@ElementCollection`, Tabelle `teilnahme_buffet_beitrag`). TC-033 neu ergänzt.
 - [x] **UC-006 PATCH für `bestaetigungVersendet`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-013 aktualisiert.
 - [x] **UC-012 PATCH für `zustellungsDatum`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-032 ergänzt.
+- [ ] **UC-014–016 (AUTH-002) ausstehend**: TCs für Parteibenutzer-Domain (TC-034, TC-035) und Teilnahme-PUT (TC-036, TC-037) sind geplant aber noch nicht implementiert. IT-Tests für Auth-Flows (UC-014) werden durch den `permitAll()`-Dev-Modus vereinfacht; `@PreAuthorize`-Tests erfordern Token-Generierung im Test-Kontext.
