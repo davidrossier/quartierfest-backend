@@ -10,7 +10,6 @@ Software zur Unterstützung bei Planung, Durchführung und Nachbearbeitung von Q
 |---|---|---|
 | Organisator | `Human` | Primärer Systemakteur; plant, führt durch und rechnet ab |
 | Partei | `Human` / `External` | Haushalt als Einladungseinheit; in UC-001–013 externer Stakeholder; ab UC-014 direkter Systemakteur |
-| Auth0 | `System` | Identity Provider (OAuth2 / PKCE); stellt JWT aus |
 
 ---
 
@@ -31,9 +30,9 @@ Software zur Unterstützung bei Planung, Durchführung und Nachbearbeitung von Q
 | [UC-011](UC-011_Abrechnung-Erstellen.md) | `UC-011_Abrechnung-Erstellen.md` | Abrechnung erstellen | Nachbearbeitung | Organisator | Minimum | ⚠ Impl. teilweise |
 | [UC-012](UC-012_Abrechnung-Zustellen.md) | `UC-012_Abrechnung-Zustellen.md` | Abrechnung zustellen | Nachbearbeitung | Organisator, Partei (External) | Intermediate | ✅ Impl. vollständig |
 | [UC-013](UC-013_Inkasso-Sicherstellen.md) | `UC-013_Inkasso-Sicherstellen.md` | Inkasso sicherstellen | Nachbearbeitung | Organisator, Partei (External) | Intermediate | ✅ Impl. vollständig |
-| [UC-014](UC-014_Benutzer-Anmelden.md) | `UC-014_Benutzer-Anmelden.md` | Benutzer anmelden | Auth / Querschnitt | Organisator, Partei, Auth0 | Minimum | 🔲 Ausstehend |
-| [UC-015](UC-015_Parteibenutzer-Verwalten.md) | `UC-015_Parteibenutzer-Verwalten.md` | Parteibenutzer verwalten | Auth / Querschnitt | Organisator | Minimum | 🔲 Ausstehend |
-| [UC-016](UC-016_Teilnahme-Bestaetigen.md) | `UC-016_Teilnahme-Bestaetigen.md` | Teilnahme bestätigen | Planung (Partei-Sicht) | Partei, Organisator | Minimum | 🔲 Ausstehend |
+| [UC-014](UC-014_Benutzer-Anmelden.md) | `UC-014_Benutzer-Anmelden.md` | Benutzer anmelden | Auth / Querschnitt | Organisator, Partei | Minimum | ✅ Impl. vollständig |
+| [UC-015](UC-015_Benutzer-Verwalten.md) | `UC-015_Benutzer-Verwalten.md` | Benutzer verwalten | Auth / Querschnitt | Organisator | Minimum | ✅ Impl. vollständig |
+| [UC-016](UC-016_Teilnahme-Bestaetigen.md) | `UC-016_Teilnahme-Bestaetigen.md` | Teilnahme bestätigen | Planung (Partei-Sicht) | Partei, Organisator | Minimum | ✅ Impl. vollständig |
 
 ---
 
@@ -49,7 +48,7 @@ UC-003 ──┘              │           │
                                                                ↓
                                                            UC-011 ──→ UC-012 ──→ UC-013
 
-UC-014 ──→ UC-015 ──→ UC-016 (erweitert UC-005)
+UC-015 ──→ UC-014 ──→ UC-016 (erweitert UC-005; UC-015-Admin-UI setzt Anmeldung via UC-014 voraus, Bootstrap-Account löst das Henne-Ei-Problem)
 ```
 
 ---
@@ -62,5 +61,5 @@ UC-014 ──→ UC-015 ──→ UC-016 (erweitert UC-005)
 | Planung | `/planung/...` | UC-004, UC-005, UC-006, UC-007, UC-008 |
 | Durchführung | `/durchfuehrung/...` | UC-009, UC-010 |
 | Nachbearbeitung | `/nachbearbeitung/...` | UC-011, UC-012, UC-013 |
-| Auth / Admin | `/login`, `/callback`, `/admin/benutzer` | UC-014, UC-015 |
+| Auth / Admin | `/login`, `/admin/benutzer` | UC-014, UC-015 |
 | Partei-Ansicht | `/meine-teilnahme` | UC-016 |

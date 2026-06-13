@@ -16,8 +16,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -111,5 +113,28 @@ class TeilnahmeControllerTest {
     void delete_returnsOk() throws Exception {
         mockMvc.perform(delete("/api/teilnahmen/4"))
                 .andExpect(status().isOk());
+    }
+
+    // GET /api/teilnahmen/meine wird nicht im MVC-Slice getestet: der
+    // @AuthenticationPrincipal-Resolver ist dort nicht registriert. Abdeckung
+    // end-to-end mit echtem JWT in TeilnahmeBestaetigenIT (TC-036, inkl. 401 ohne Token).
+
+    @Test
+    @DisplayName("UC-016: PUT /api/teilnahmen/{id} aktualisiert die Whitelist-Felder")
+    void update_returnsAktualisierteTeilnahme() throws Exception {
+        Teilnahme t = buildTeilnahme();
+        t.setAnzahlPersonenEffektiv(4);
+        when(teilnahmeService.update(eq(4L), any(TeilnahmeUpdateRequest.class))).thenReturn(t);
+
+        mockMvc.perform(put("/api/teilnahmen/4")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "anzahlPersonenEffektiv", 4,
+                                "hilftAufstellen", true,
+                                "hilftAufraumen", false,
+                                "buffetBeitraege", List.of(
+                                        Map.of("art", "SALAT", "beschreibung", "Rüebli-Salat"))))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.anzahlPersonenEffektiv").value(4));
     }
 }

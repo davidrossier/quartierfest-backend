@@ -17,9 +17,9 @@
 | UC-011 Abrechnung erstellen | Partial | TC-022..023 – keine Berechnungslogik im API; manuelle Eingabe aller Felder |
 | UC-012 Abrechnung zustellen | Yes | TC-024..025, TC-032 – `zustellungsDatum` und Kanal via POST/Upsert nachträglich setzbar |
 | UC-013 Inkasso sicherstellen | Yes | TC-026..028 |
-| UC-014 Benutzer anmelden | No | Ausstehend — Frontend-Flow (PKCE, Route Guard, Interceptor); kein Backend-TC erforderlich (JWT-Validierung via AUTH-001 abgedeckt) |
-| UC-015 Parteibenutzer verwalten | No | Ausstehend — neue Domain `parteibenutzer`; TC-034 (Happy Path), TC-035 (Duplikat-Sub) geplant |
-| UC-016 Teilnahme bestätigen | No | Ausstehend — neuer Endpunkt `PUT /api/teilnahmen/{id}` + `GET /api/teilnahmen/meine`; TC-036 (PARTEI editiert eigene Teilnahme), TC-037 (PARTEI auf fremde Teilnahme → 403) geplant |
+| UC-014 Benutzer anmelden | Yes | TC-038 (Login), TC-040 (Autorisierungsmatrix, Profil `security-test`); Frontend-Flow zusätzlich via Playwright-E2E (`UC-014_Benutzer-Anmelden.spec.ts`) |
+| UC-015 Benutzer verwalten | Yes | TC-034 (Happy Path), TC-035 (Duplikat-E-Mail), TC-039 (letzter ORGANISATOR) — `BenutzerVerwaltenIT` |
+| UC-016 Teilnahme bestätigen | Yes | TC-036 (PARTEI bestätigt eigene Teilnahme, mit echtem JWT), TC-037 (Fremdzugriff → 403) — `TeilnahmeBestaetigenIT` |
 
 **Hinweis:** TC-003 (Person löschen) ist in TC-001 integriert. TC-017 (Konsumationsangebot löschen) ist in TC-016 integriert. Die Löschung erfolgt als letzter Schritt des jeweiligen Happy-Path-Tests (Lösch-Test).
 
@@ -27,6 +27,9 @@
 
 - Spring Boot App läuft mit `DEFINED_PORT` (Standard: 8080)
 - PostgreSQL läuft auf `localhost:5432`, Datenbank `quartierfest`, User `qfuser/qfpass`
+- Default-Profil: `permitAll()`-Chain, aber JWT-Verarbeitung aktiv — Tests können via `POST /api/auth/login` echte Tokens beziehen; Methoden-Security (`@PreAuthorize`, TC-036/037) wirkt auch hier
+- `SecurityMatrixIT` (TC-040) läuft mit `@ActiveProfiles("security-test")`: prod-gleiche URL-Matrix, Konfiguration in `src/test/resources/application-security-test.properties`
+- Bootstrap-ORGANISATOR (`auth.bootstrap.email/password`) wird beim App-Start angelegt und steht den ITs zur Verfügung
 - Keine externen Mocks; alle Tests treffen die echte Datenbank
 - Tests sind nicht isoliert gegenüber Fremddaten in der DB (keine automatische DB-Bereinigung zwischen Test-Runs)
 
@@ -319,11 +322,71 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - **Then**: POST → HTTP 200 + id; DELETE → HTTP 200
 - **Citrus actions**: `send POST /api/mahnungen`, `receive 200`, `send DELETE /api/mahnungen/{id}`, `receive 200`
 
+### TC-034 – UC-015 Benutzer anlegen und löschen
+- **Source**: UC-015, Hauptfluss Schritte 2 und 4
+- **Type**: Happy path + Lösch-Test
+- **Given**: Partei existiert (Setup)
+- **When**: POST `/api/benutzer` mit `{email: "mueller@quartier.ch", passwort: "geheim-1234", rolle: "PARTEI", partei: {id}}`, dann GET `/api/benutzer`, dann DELETE `/api/benutzer/{id}`
+- **Then**: POST → HTTP 200 + id; Response enthält **weder** `passwort` **noch** `passwortHash`; GET enthält den Account; DELETE → HTTP 200
+- **Citrus actions**: `send POST /api/benutzer`, `receive 200`, `send GET /api/benutzer`, `receive 200`, `send DELETE /api/benutzer/{id}`, `receive 200`
+
+### TC-035 – UC-015 Benutzer anlegen: E-Mail bereits vergeben
+- **Source**: UC-015, Error Scenario E2
+- **Type**: Error scenario
+- **Given**: Benutzer mit `email: "doppelt@quartier.ch"` existiert (Setup)
+- **When**: POST `/api/benutzer` mit derselben E-Mail
+- **Then**: HTTP 409, kein zweiter Account angelegt
+- **Citrus actions**: `send POST /api/benutzer`, `receive 409`
+
+### TC-036 – UC-016 PARTEI bestätigt eigene Teilnahme
+- **Source**: UC-016, Hauptfluss
+- **Type**: Happy path (mit echtem JWT)
+- **Given**: Zukünftiger Event, Partei, Einladung (ANGEMELDET), Teilnahme und PARTEI-Benutzer für die Partei existieren (Setup); Login via POST `/api/auth/login` liefert Token
+- **When**: GET `/api/teilnahmen/meine` mit Bearer-Token, dann PUT `/api/teilnahmen/{id}` mit `{anzahlPersonenEffektiv: 4, hilftAufstellen: true, hilftAufraumen: false, buffetBeitraege: [...]}` und Bearer-Token
+- **Then**: GET → HTTP 200 + eigene Teilnahme; PUT → HTTP 200, Felder aktualisiert; `einladung` unverändert (Whitelist-DTO)
+- **Citrus actions**: `send POST /api/auth/login`, `receive 200`, `send GET /api/teilnahmen/meine`, `receive 200`, `send PUT /api/teilnahmen/{id}`, `receive 200`
+
+### TC-037 – UC-016 PARTEI auf fremde Teilnahme: Zugriff verweigert
+- **Source**: UC-016, Error Scenario E2
+- **Type**: Error scenario (Autorisierung, Methoden-Security)
+- **Given**: Wie TC-036, zusätzlich zweite Partei mit eigener Teilnahme (Setup)
+- **When**: PUT `/api/teilnahmen/{idFremd}` mit Bearer-Token der ersten Partei
+- **Then**: HTTP 403; fremde Teilnahme unverändert
+- **Citrus actions**: `send PUT /api/teilnahmen/{idFremd}`, `receive 403`
+
+### TC-038 – UC-014 Login: Happy Path und falsches Passwort
+- **Source**: UC-014, Hauptfluss Schritte 4–5 und Error Scenario E1
+- **Type**: Happy path + Error scenario
+- **Given**: Benutzer existiert (Setup via POST `/api/benutzer`)
+- **When**: POST `/api/auth/login` mit korrekten Credentials, dann mit falschem Passwort
+- **Then**: korrekt → HTTP 200 + `token` (JWT, drei Segmente); falsch → HTTP 401 ohne Hinweis, welches Feld falsch war
+- **Citrus actions**: `send POST /api/auth/login`, `receive 200`, `send POST /api/auth/login`, `receive 401`
+
+### TC-039 – UC-015 Letzter ORGANISATOR nicht löschbar
+- **Source**: UC-015, Error Scenario E3
+- **Type**: Error scenario
+- **Given**: Genau ein Benutzer mit Rolle ORGANISATOR existiert (Bootstrap-Admin)
+- **When**: DELETE `/api/benutzer/{id}` auf diesen Account
+- **Then**: HTTP 409; Account existiert weiterhin
+- **Citrus actions**: `send DELETE /api/benutzer/{id}`, `receive 409`
+
+### TC-040 – AUTH-002 Autorisierungsmatrix (Profil `security-test`)
+- **Source**: UC-014/AUTH-002, SecurityFilterChain-Matrix
+- **Type**: Security scenario — läuft als einziger TC mit `@ActiveProfiles("security-test")` (prod-gleiche Chain, Test-Secret)
+- **Given**: Bootstrap-ORGANISATOR existiert; PARTEI-Benutzer wird via ORGANISATOR-Token angelegt
+- **When/Then**:
+  1. GET `/api/persons` ohne Token → HTTP 401
+  2. POST `/api/auth/login` ohne Token → erreichbar (HTTP 200 bzw. 401 bei falschen Credentials, nie 401 wegen fehlendem Token vor dem Credential-Check)
+  3. GET `/api/persons` mit PARTEI-Token → HTTP 403
+  4. GET `/api/teilnahmen/meine` mit PARTEI-Token → HTTP 200/404 (erlaubt)
+  5. GET `/api/persons` mit ORGANISATOR-Token → HTTP 200
+- **Citrus actions**: Sequenz aus `send`/`receive` gemäss When/Then
+
 ---
 
 ## Traceability-Status
 
-> Automatisch generiert durch Traceability-Manager — Stand: 2026-05-01
+> Automatisch generiert durch Traceability-Manager — Stand: 2026-06-12
 
 ### TC × IT-Implementierung
 
@@ -360,8 +423,15 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 | TC-030 | UC-002 Partei ohne Bezeichnung wird abgelehnt | ParteiVerwaltenIT | tc030_parteiOhneBezeichnung | ✅ |
 | TC-031 | UC-003 Event bearbeiten | EventAnlegenIT | tc031_eventBearbeiten | ✅ |
 | TC-032 | UC-012 Zustellungsdatum via POST/Upsert | AbrechnungZustellenIT | tc032_zustellungsDatumViаUpsert | ✅ |
+| TC-034 | UC-015 Benutzer anlegen und löschen | BenutzerVerwaltenIT | tc034_benutzerAnlegen | ✅ |
+| TC-035 | UC-015 Benutzer mit doppelter E-Mail wird abgelehnt | BenutzerVerwaltenIT | tc035_benutzerDuplikatEmail | ✅ |
+| TC-036 | UC-016 PARTEI bestätigt eigene Teilnahme | TeilnahmeBestaetigenIT | tc036_parteiBestaetigtEigeneTeilnahme | ✅ |
+| TC-037 | UC-016 PARTEI auf fremde Teilnahme verweigert | TeilnahmeBestaetigenIT | tc037_parteiFremdeTeilnahmeVerweigert | ✅ |
+| TC-038 | UC-014 Login Happy Path und falsches Passwort | BenutzerAnmeldenIT | tc038_loginHappyPathUndFalschesPasswort | ✅ |
+| TC-039 | UC-015 Letzter ORGANISATOR nicht löschbar | BenutzerVerwaltenIT | tc039_letzterOrganisatorNichtLoeschbar | ✅ |
+| TC-040 | AUTH-002 Autorisierungsmatrix (security-test) | SecurityMatrixIT | tc040_autorisierungsmatrix | ✅ |
 
-**31 TCs implementiert (TC-001..TC-033, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
+**38 TCs implementiert (TC-001..TC-040, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
 
 ---
 
@@ -379,4 +449,4 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - [x] **UC-005 Mehrere Buffet-Beiträge**: `buffetBeitrag`/`buffetBeitragBeschreibung` durch `buffetBeitraege: List<TeilnahmeBuffetBeitrag>` ersetzt (`@ElementCollection`, Tabelle `teilnahme_buffet_beitrag`). TC-033 neu ergänzt.
 - [x] **UC-006 PATCH für `bestaetigungVersendet`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-013 aktualisiert.
 - [x] **UC-012 PATCH für `zustellungsDatum`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-032 ergänzt.
-- [ ] **UC-014–016 (AUTH-002) ausstehend**: TCs für Parteibenutzer-Domain (TC-034, TC-035) und Teilnahme-PUT (TC-036, TC-037) sind geplant aber noch nicht implementiert. IT-Tests für Auth-Flows (UC-014) werden durch den `permitAll()`-Dev-Modus vereinfacht; `@PreAuthorize`-Tests erfordern Token-Generierung im Test-Kontext.
+- [x] **UC-014–016 (AUTH-002) implementiert** (2026-06-12): TC-034..TC-040 umgesetzt. TC-036/TC-037 laufen mit echten JWTs (via `POST /api/auth/login`) im Default-Profil — die Ownership-Prüfung ist Methoden-Security und wirkt auch dort. Die URL-Autorisierungsmatrix testet `SecurityMatrixIT` (TC-040) mit `@ActiveProfiles("security-test")` und prod-gleicher Chain; Konfiguration in `src/test/resources/application-security-test.properties`.

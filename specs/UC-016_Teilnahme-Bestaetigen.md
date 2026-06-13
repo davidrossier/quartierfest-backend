@@ -4,13 +4,13 @@ type: Use Case
 name: "Teilnahme bestätigen"
 completeness: Minimum
 traceability:
-  impl_status: ausstehend
+  impl_status: implementiert
   endpoints:
     - "GET /api/teilnahmen/meine"
     - "PUT /api/teilnahmen/{id}"
-  test_ids: []
-  it_classes: []
-  last_traced: "2026-05-15"
+  test_ids: [TC-036, TC-037]
+  it_classes: [TeilnahmeBestaetigenIT]
+  last_traced: "2026-06-12"
 ---
 
 # UC-016 – Teilnahme bestätigen
@@ -38,7 +38,7 @@ traceability:
 >
 > Der Organisator kann alle Felder jederzeit überschreiben — seine Sicht (UC-005) hat immer Vorrang. Es besteht kein Konfliktmechanismus; der zuletzt gespeicherte Wert gilt. Dies gilt für beide Richtungen: sowohl Änderungen der Partei als auch des Organisators werden ohne Warnung gespeichert.
 >
-> Der Zugriff der Partei ist auf ihre eigene Teilnahme beschränkt. Das Backend ermittelt die zugehörige Partei anhand des `sub`-Claims im Access Token via der `ParteiBenutzer`-Tabelle (UC-015) und verweigert Zugriff auf fremde Teilnahmen mit HTTP 403.
+> Der Zugriff der Partei ist auf ihre eigene Teilnahme beschränkt. Das Backend ermittelt die zugehörige Partei anhand des `sub`-Claims im Access Token (= Benutzer-ID) via der `Benutzer`-Tabelle (UC-015) und verweigert Zugriff auf fremde Teilnahmen mit HTTP 403.
 
 ---
 
@@ -58,7 +58,7 @@ traceability:
 ## Preconditions
 
 - Eine authentifizierte Sitzung der Partei besteht (UC-014).
-- Der Auth0-Account der Partei ist mit ihrer Partei verknüpft (UC-015).
+- Ein Benutzeraccount mit Rolle `PARTEI` und Zuordnung zur Partei existiert (UC-015).
 - Eine Teilnahme für die Partei wurde vom Organisator aus einer ANGEMELDET-Einladung erstellt (UC-005).
 
 ---
@@ -71,7 +71,7 @@ traceability:
 
 ## Description
 
-1. Das System ermittelt die Partei der angemeldeten Benutzerin via `sub`-Claim → `ParteiBenutzer` → `Partei`.
+1. Das System ermittelt die Partei der angemeldeten Benutzerin via `sub`-Claim → `Benutzer` → `Partei`.
 2. Das System lädt die Teilnahme der Partei für den nächsten Event via `GET /api/teilnahmen/meine`. *(→ E1 wenn noch keine Teilnahme vorhanden)*
 3. Das System zeigt die aktuellen Angaben: Anzahl Personen, Hilft Aufstellen, Hilft Aufräumen, Buffet-Beiträge.
 4. Die Partei passt die Angaben an.
@@ -130,8 +130,8 @@ traceability:
 ```gherkin
 Scenario: Partei sieht eigene Teilnahme nach Anmeldung
   Given die Partei "Familie Müller" hat eine Teilnahme für den nächsten Event
-  And der Auth0-Account "auth0|abc123" ist mit "Familie Müller" verknüpft
-  When der Benutzer "auth0|abc123" sich anmeldet und "/meine-teilnahme" aufruft
+  And der Benutzer "mueller@quartier.ch" ist mit "Familie Müller" verknüpft
+  When der Benutzer "mueller@quartier.ch" sich anmeldet und "/meine-teilnahme" aufruft
   Then sieht er die Teilnahmedaten der Partei "Familie Müller"
 
 Scenario: Partei aktualisiert Anzahl Personen und Buffet-Beitrag
@@ -145,7 +145,7 @@ Scenario: Organisator überschreibt Angaben der Partei ohne Konfliktmeldung
   Then sieht die Partei beim nächsten Laden anzahlPersonenEffektiv=2 ohne Fehlermeldung
 
 Scenario: Partei kann nicht auf fremde Teilnahme zugreifen
-  Given der Auth0-Account "auth0|abc123" ist mit Partei "Familie Müller" verknüpft
+  Given der Benutzer "mueller@quartier.ch" ist mit Partei "Familie Müller" verknüpft
   When er versucht die Teilnahme der Partei "Familie Meier" zu bearbeiten
   Then antwortet das Backend mit HTTP 403
 
@@ -159,12 +159,14 @@ Scenario: Noch keine Teilnahme vorhanden
 
 ## Open Items
 
-- [ ] OPEN: Welcher Event gilt als «nächster Event»? Frühestes Event-Datum in der Zukunft? Oder kann die Partei zwischen mehreren Events wählen?
+- [x] RESOLVED (2026-06-12): «Nächster Event» = frühestes Event-Datum ≥ heute (Entscheid 2026-06-12); umgesetzt in `TeilnahmeRepository.findEigeneAbStichtag`. Event-Auswahl durch die Partei bei Bedarf später.
 - [ ] OPEN: Soll die Partei zusätzlich zur Teilnahme auch ihre Einladung (UC-004) und Abrechnung (UC-011) einsehen können?
+- [x] RESOLVED (2026-06-12): Whitelist umgesetzt — `PUT /api/teilnahmen/{id}` nimmt das DTO `TeilnahmeUpdateRequest` (nur `anzahlPersonenEffektiv`, `hilftAufstellen`, `hilftAufraumen`, `buffetBeitraege`) für beide Rollen entgegen; die `einladung` ist über diesen Endpunkt nie änderbar (ORGANISATOR nutzt weiterhin POST/Upsert, UC-005).
+- [x] RESOLVED (2026-06-12): Testbarkeit gelöst — TC-036/TC-037 laufen mit echten JWTs im Default-Profil (Methoden-Security wirkt auch dort); die URL-Matrix wird separat durch TC-040 (`SecurityMatrixIT`, `@ActiveProfiles("security-test")`) abgedeckt.
 
 ---
 
 ## Dependencies & References
 
-- **Depends on**: UC-005 (Teilnahmen verwalten), UC-014 (Benutzer anmelden), UC-015 (Parteibenutzer verwalten)
+- **Depends on**: UC-005 (Teilnahmen verwalten), UC-014 (Benutzer anmelden), UC-015 (Benutzer verwalten)
 - **Erweitert**: UC-005 — fügt Schreibzugriff für Rolle PARTEI via `PUT /api/teilnahmen/{id}` hinzu; dieser Endpunkt existiert noch nicht und muss neu implementiert werden

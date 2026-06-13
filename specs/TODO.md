@@ -1,51 +1,12 @@
 # Technische Schulden
 
-> Stand: 2026-05-15. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session.
+> Stand: 2026-06-12. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0).
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
 ---
 
 ## MAJOR
-
-### AUTH-002 – Login-Komponente und Rollenverwaltung fehlen
-
-**Priorität: MAJOR** — ohne dies ist die Applikation im `prod`-Profil für Endnutzer unbrauchbar: alle `/api/**`-Requests scheitern mit 401, weil das Angular-Frontend kein Bearer-Token mitschickt.
-
-**Specs abgeschlossen (2026-05-15):** UC-014, UC-015 und UC-016 sind in `specs/` ausformuliert. Entscheide:
-- **IdP:** Auth0 (`@auth0/auth0-angular`)
-- **Account-Anlage:** ORGANISATOR legt Auth0-Accounts im Dashboard an und verknüpft sie via Admin-UI (UC-015)
-- **Partei-User-Mapping:** Neue Entity `ParteiBenutzer` (0..n IdP-Accounts pro Partei); `idpSub` ist unique
-- **Partei-Schreibzugriff:** PARTEI kann eigene Teilnahme und Buffet-Beiträge bearbeiten (UC-016); ORGANISATOR kann jederzeit überschreiben
-- **Self-Registration:** explizit nicht vorgesehen
-
-**Implementierung ausstehend — drei Arbeitspakete:**
-
-1. **UC-014 – Login-Frontend** (`specs/UC-014_Benutzer-Anmelden.md`)
-   - `@auth0/auth0-angular` einbinden, PKCE-Flow konfigurieren
-   - HTTP-Interceptor: hängt `Authorization: Bearer <token>` an alle `/api/**`-Requests
-   - Route Guard: schützt alle App-Routen, leitet zu `/login` weiter
-   - Rollenbasiertes Routing nach Login (`ORGANISATOR` → `/personen`, `PARTEI` → `/meine-teilnahme`)
-   - Auth0 Custom Action: Rollen-Claim in Access Token schreiben
-   - Offene Punkte: Custom-Claim-Namespace, Silent-Auth-Methode (`specs/UC-014`, Open Items)
-
-2. **UC-015 – ParteiBenutzer-Domain** (`specs/UC-015_Parteibenutzer-Verwalten.md`)
-   - Neues Backend-Package `parteibenutzer` (Entity, Repository, Service, Controller)
-   - Entity: `id`, `partei` (FK), `idpSub` (unique), `email` (optional)
-   - Endpunkte: `GET/POST/DELETE /api/parteibenutzer`
-   - Frontend: Admin-UI unter `/admin/benutzer` (nur für `ORGANISATOR`)
-   - Geplante Tests: TC-034 (Happy Path), TC-035 (Duplikat-Sub)
-   - Offener Entscheid: 1:n (unique `idpSub`) vs. n:m (`specs/UC-015`, Open Items)
-
-3. **UC-016 – Teilnahme bestätigen** (`specs/UC-016_Teilnahme-Bestaetigen.md`)
-   - Neuer Backend-Endpunkt `PUT /api/teilnahmen/{id}` (für PARTEI und ORGANISATOR)
-   - Neuer Backend-Endpunkt `GET /api/teilnahmen/meine` (filtert auf eigene Partei via JWT `sub`)
-   - `@PreAuthorize`-Logik: JWT `sub` → `ParteiBenutzer` → `Partei` → Teilnahme-Zugriff prüfen
-   - Frontend: neue Komponente `MeineTeilnahmeComponent` unter `/meine-teilnahme` (nur `PARTEI`)
-   - Geplante Tests: TC-036 (PARTEI editiert eigene Teilnahme), TC-037 (Fremdzugriff → 403)
-   - Offener Entscheid: Event-Selektion für «nächster Event» (`specs/UC-016`, Open Items)
-
----
 
 ### DEPLOY-003 – Kein CI/CD-Pipeline-Setup
 
@@ -145,6 +106,27 @@ Alle anderen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Te
 ---
 
 ## Behoben
+
+### AUTH-002 – Login und Rollenverwaltung (Eigenbau) implementiert ✅ `2026-06-12`
+
+UC-014/UC-015/UC-016 vollständig umgesetzt (Eigenbau-Entscheid vom 2026-06-12 statt Auth0).
+
+**Backend:**
+- Neue Domain `benutzer`: Entity (`email` unique, `passwortHash` BCrypt, `rolle`, optionaler Partei-FK), `GET/POST/DELETE /api/benutzer`, `PUT /api/benutzer/{id}/passwort`; Duplikat-E-Mail und letzter ORGANISATOR → 409; Bootstrap-ORGANISATOR via `auth.bootstrap.*` (ApplicationRunner)
+- Neues Package `auth`: `POST /api/auth/login` stellt HS256-JWT aus (`JwtEncoder`, Claims `sub`/`email`/`rolle`, 12 h); falsche Credentials → 401 ohne Felddifferenzierung
+- `SecurityConfig`: gesicherte Chain für `prod`/`security-test` (Login offen, `/api/benutzer/**` nur ORGANISATOR, PARTEI nur `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}`, Rest ORGANISATOR); `JwtAuthenticationConverter` (`rolle` → `ROLE_*`); offene Chain verarbeitet Tokens trotzdem (Dev/ITs); `@EnableMethodSecurity`
+- UC-016: `PUT /api/teilnahmen/{id}` mit Whitelist-DTO (`einladung` nie änderbar), `GET /api/teilnahmen/meine` (frühester zukünftiger Event), Ownership via `@PreAuthorize` + `TeilnahmeZugriff`-Bean
+- `application-prod.properties`: `issuer-uri` ersetzt durch `AUTH_JWT_SECRET` / `AUTH_INITIAL_ADMIN_*`
+
+**Frontend:**
+- `auth/`: `AuthService` (Token in `sessionStorage`), funktionaler Interceptor (Bearer + 401→`/login`), `authGuard`/`roleGuard`, `LoginComponent`; rollenbasiertes Routing (ORGANISATOR → `/personen`, PARTEI → `/meine-teilnahme`); Nav rollenabhängig mit Logout
+- `BenutzerVerwaltungComponent` (`/admin/benutzer`), `MeineTeilnahmeComponent` (`/meine-teilnahme`)
+
+**Tests:** TC-034..TC-040 (BenutzerVerwaltenIT, BenutzerAnmeldenIT, TeilnahmeBestaetigenIT, SecurityMatrixIT mit `@ActiveProfiles("security-test")`); 19 neue Backend-Unit-Tests; 12 neue Vitest-Specs; Playwright-E2E UC-014/015/016 + Auto-Login-Fixture (`e2e/fixtures.ts`) für bestehende Specs.
+
+**Bewusst offen geblieben** (UC-014/015 Open Items): Brute-Force-Drosselung, Passwort-Selbstwechsel, Token-Blacklist bei Account-Löschung (Restgültigkeit max. 12 h akzeptiert).
+
+---
 
 ### VALID-001 – Input-Validierung (@Valid) implementiert ✅ `2026-05-12`
 

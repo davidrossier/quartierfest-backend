@@ -4,12 +4,12 @@ type: Use Case
 name: "Benutzer anmelden"
 completeness: Minimum
 traceability:
-  impl_status: ausstehend
+  impl_status: implementiert
   endpoints:
-    - "Backend: JWT-Validierung via JWKS bereits implementiert (AUTH-001)"
-  test_ids: []
-  it_classes: []
-  last_traced: "2026-05-15"
+    - "POST /api/auth/login"
+  test_ids: [TC-038, TC-040]
+  it_classes: [BenutzerAnmeldenIT, SecurityMatrixIT]
+  last_traced: "2026-06-12"
 ---
 
 # UC-014 – Benutzer anmelden
@@ -28,39 +28,38 @@ traceability:
 |---|---|---|
 | Organisator | `Human` | Authentifiziert sich für vollen Zugriff auf alle Domänen |
 | Partei | `Human` | Authentifiziert sich für rollenbasierten Zugriff auf eigene Daten |
-| Auth0 | `System` | Identity Provider; führt Authentifizierung durch und stellt JWT aus |
 
 ---
 
 ## Context & Background
 
-> Das System verwendet OAuth 2.0 Authorization Code Flow with PKCE (Proof Key for Code Exchange) über Auth0 als Identity Provider. Das Angular-Frontend initiiert den Login-Flow; das Spring-Boot-Backend validiert das Access-Token via JWKS-Endpoint. Die Rollenzuordnung (ORGANISATOR / PARTEI) erfolgt in Auth0 und wird als Custom Claim im JWT-Access-Token mitgeführt.
+> **Entscheid 2026-06-12: Eigenbau statt externer IdP** (ersetzt den Auth0-Entscheid vom 2026-05-15). Begründung: geschlossener Benutzerkreis, Accounts werden ausschliesslich durch den Organisator angelegt (UC-015), keine Self-Registration, kein E-Mail-basierter Passwort-Reset nötig — damit entfällt der Hauptnutzen eines externen IdP, und die externe Abhängigkeit sowie der Konfigurationsaufwand (Tenant, Custom Action, Claim-Namespace) fallen weg.
 >
-> Die Backend-Absicherung via Spring Security und JWT-Validierung ist bereits implementiert (AUTH-001). Ausstehend sind der Frontend-Login-Flow sowie die rollenbasierte Navigation nach Anmeldung.
+> Die Authentifizierung verwendet ausschliesslich etablierte Spring-Security-Bausteine: Passwörter werden mit BCrypt gehasht (`PasswordEncoder`), das Backend stellt nach erfolgreicher Prüfung ein selbst signiertes JWT aus (HS256, symmetrischer Schlüssel aus der Umgebungsvariable `AUTH_JWT_SECRET`, Gültigkeit 12 Stunden). Die bestehende Resource-Server-Validierung aus AUTH-001 bleibt erhalten; der `JwtDecoder` wird von JWKS/issuer-uri auf den symmetrischen Schlüssel umgestellt. Die Rolle steht als Claim `rolle` im Token (kein Namespace nötig) und wird im Backend via `JwtAuthenticationConverter` auf `ROLE_ORGANISATOR`/`ROLE_PARTEI` gemappt.
+>
+> Passwort-Reset ist kein Self-Service: Der Benutzer meldet sich beim Organisator, der über die Benutzerverwaltung (UC-015) ein neues Passwort setzt.
 
 ---
 
 ## Frontend-Kontext
 
-> **Callback-Route:** `/callback` — Auth0 PKCE Redirect-Ziel
-> **Login-Seite:** `/login` — Einstiegspunkt für unauthentifizierte Benutzer
-> **Library:** `@auth0/auth0-angular`
+> **Login-Seite:** `/login` — eigenes Formular (E-Mail + Passwort), `LoginComponent` (Angular 21, Standalone)
+> Keine externe Library, kein Redirect-/Callback-Flow.
 
 - Route Guard (`AuthGuard`) schützt alle App-Routen und leitet unauthentifizierte Benutzer zu `/login` weiter.
-- HTTP-Interceptor hängt `Authorization: Bearer <access_token>` automatisch an alle Requests gegen `/api/**`.
+- HTTP-Interceptor hängt `Authorization: Bearer <token>` automatisch an alle Requests gegen `/api/**`; bei einer 401-Antwort (Token abgelaufen/ungültig) wird das Token verworfen und zu `/login` umgeleitet.
 - Nach erfolgreichem Login wird rollenbasiert geroutet:
   - `ORGANISATOR` → `/personen` (bestehende App-Einstiegsseite)
   - `PARTEI` → `/meine-teilnahme` (UC-016)
-- Token wird im Memory des Angular-Prozesses gehalten (kein LocalStorage); bei Page-Reload startet Silent Authentication.
+- Token wird in `sessionStorage` gehalten: übersteht einen Seitenreload, wird beim Schliessen des Tabs gelöscht. Kein Refresh-Token — nach Ablauf der 12 Stunden ist eine erneute Anmeldung nötig.
 
 ---
 
 ## Preconditions
 
-- Der Benutzer verfügt über einen aktiven Account im Auth0-Tenant des Systems.
-- Der Account ist der Rolle `ORGANISATOR` oder `PARTEI` zugeordnet.
-- Die Auth0-Applikation (SPA) und die API-Audience sind im Auth0-Tenant konfiguriert.
-- Der Auth0-Custom-Action «Add Roles to Token» ist aktiv und fügt den Rollen-Claim in den Access Token ein.
+- Für den Benutzer existiert ein Account in der `Benutzer`-Tabelle (durch den Organisator angelegt, UC-015; der erste Organisator-Account wird beim Applikationsstart aus Umgebungsvariablen erzeugt).
+- Der Account hat die Rolle `ORGANISATOR` oder `PARTEI`; bei `PARTEI` ist eine Partei zugeordnet.
+- Dem Benutzer sind E-Mail-Adresse und (Initial-)Passwort bekannt.
 
 ---
 
@@ -72,47 +71,51 @@ traceability:
 
 ## Description
 
-1. Der Route Guard stellt fest, dass keine aktive Sitzung besteht.
+1. Der Route Guard stellt fest, dass kein gültiges Token vorliegt.
 2. Das System leitet den Benutzer auf die Login-Seite (`/login`) weiter.
-3. Der Benutzer klickt auf «Anmelden». Das System initiiert den PKCE-Flow und leitet zu Auth0 weiter.
-4. Der Benutzer authentifiziert sich bei Auth0 (E-Mail + Passwort).
-5. Auth0 leitet mit einem Authorization Code zur Callback-Route (`/callback`) zurück.
-6. Das Frontend tauscht den Authorization Code gegen Access Token und Refresh Token aus.
-7. Der HTTP-Interceptor registriert das Access Token für alle künftigen API-Requests.
-8. Das System liest den Rollen-Claim aus dem Access Token und leitet den Benutzer zur rollenbasierten Einstiegsseite weiter. *(→ A1 wenn Rolle unbekannt oder fehlend)*
+3. Der Benutzer gibt E-Mail-Adresse und Passwort ein und klickt auf «Anmelden». Das Frontend sendet `POST /api/auth/login`.
+4. Das Backend prüft die E-Mail-Adresse und vergleicht das Passwort gegen den BCrypt-Hash. *(→ E1 bei ungültigen Anmeldedaten)*
+5. Das Backend stellt ein signiertes JWT aus (Claims: `sub` = Benutzer-ID, `email`, `rolle`; Gültigkeit 12 h) und liefert es zurück.
+6. Das Frontend legt das Token in `sessionStorage` ab; der HTTP-Interceptor verwendet es für alle künftigen API-Requests.
+7. Das System liest den Rollen-Claim aus dem Token und leitet den Benutzer zur rollenbasierten Einstiegsseite weiter.
 
 ---
 
 ## Alternative Flows
 
-### A1 – Unbekannte oder fehlende Rolle
-
-> Entry point: step 8 of the main flow
-
-1. A1.1: Das System stellt fest, dass der Access Token keinen gültigen Rollen-Claim enthält.
-2. A1.2: Das System zeigt die Fehlermeldung: «Ihr Account hat keine gültige Rollenzuordnung. Bitte kontaktieren Sie den Organisator.»
-3. A1.3: Der Benutzer wird nicht weitergeroutet; die Login-Seite bleibt aktiv.
-
-### A2 – Silent Authentication (Seitenreload)
+### A1 – Seitenreload mit gültigem Token
 
 > Entry point: step 1 of the main flow
 
-1. A2.1: Das System erkennt, dass ein Refresh-Token vorliegt.
-2. A2.2: Das Frontend führt Silent Authentication durch (kein sichtbarer Redirect).
-3. A2.3: Bei Erfolg wird die ursprünglich angeforderte Route geladen.
-4. A2.4: Bei Ablauf des Refresh-Tokens → zurück zu Schritt 2 des Hauptflows.
+1. A1.1: Das System findet ein noch gültiges Token in `sessionStorage`.
+2. A1.2: Die ursprünglich angeforderte Route wird direkt geladen, ohne Login-Umweg.
+
+### A2 – Sitzung abgelaufen
+
+> Entry point: beliebiger API-Request während der Nutzung
+
+1. A2.1: Das Backend beantwortet einen Request mit 401 (Token abgelaufen oder ungültig).
+2. A2.2: Der Interceptor verwirft das Token und leitet zu `/login` weiter; das System zeigt den Hinweis «Sitzung abgelaufen, bitte erneut anmelden.»
 
 ---
 
 ## Error Scenarios
 
-### E1 – Authentifizierung bei Auth0 fehlgeschlagen
+### E1 – Ungültige Anmeldedaten
 
 > Entry point: step 4 of the main flow
 
-1. E1.1: Auth0 meldet fehlgeschlagene Authentifizierung (falsches Passwort, gesperrter Account).
-2. E1.2: Auth0 zeigt die entsprechende Fehlermeldung auf der Auth0-Login-Seite.
-3. E1.3: Der Benutzer kann den Anmeldevorgang erneut starten.
+1. E1.1: Das Backend stellt fest, dass die E-Mail-Adresse unbekannt ist oder das Passwort nicht stimmt.
+2. E1.2: Das Backend antwortet mit 401 — bewusst ohne Unterscheidung, welches der beiden Felder falsch war (verhindert das Ausspähen gültiger E-Mail-Adressen).
+3. E1.3: Das Frontend zeigt: «E-Mail-Adresse oder Passwort falsch.» Der Benutzer kann es erneut versuchen.
+
+### E2 – Passwort vergessen
+
+> Entry point: step 3 of the main flow
+
+1. E2.1: Der Benutzer kennt sein Passwort nicht mehr. Es gibt keinen Self-Service-Reset.
+2. E2.2: Die Login-Seite zeigt den Hinweis: «Passwort vergessen? Bitte wenden Sie sich an den Organisator.»
+3. E2.3: Der Organisator setzt über die Benutzerverwaltung (UC-015) ein neues Passwort und teilt es dem Benutzer mit.
 
 ---
 
@@ -120,7 +123,7 @@ traceability:
 
 ### Success
 
-- Eine aktive Sitzung mit gültigem Access Token besteht.
+- Eine aktive Sitzung mit gültigem, selbst ausgestelltem JWT besteht.
 - Alle API-Requests enthalten den `Authorization: Bearer`-Header.
 - Der Benutzer befindet sich auf der für seine Rolle bestimmten Einstiegsseite.
 
@@ -134,41 +137,48 @@ traceability:
 
 ```gherkin
 Scenario: Organisator meldet sich erfolgreich an
-  Given ein Auth0-Account mit Rolle ORGANISATOR existiert
-  When der Organisator die App öffnet und sich über Auth0 anmeldet
+  Given ein Benutzer "orga@quartier.ch" mit Rolle ORGANISATOR existiert
+  When er sich mit korrektem Passwort anmeldet
   Then ist er auf der Seite "/personen" und alle API-Requests enthalten einen Bearer-Token
 
 Scenario: Partei meldet sich erfolgreich an
-  Given ein Auth0-Account mit Rolle PARTEI existiert
-  When die Partei die App öffnet und sich über Auth0 anmeldet
-  Then ist sie auf der Seite "/meine-teilnahme" und alle API-Requests enthalten einen Bearer-Token
+  Given ein Benutzer "mueller@quartier.ch" mit Rolle PARTEI und Partei-Zuordnung existiert
+  When er sich mit korrektem Passwort anmeldet
+  Then ist er auf der Seite "/meine-teilnahme" und alle API-Requests enthalten einen Bearer-Token
 
 Scenario: Unauthentifizierter Zugriff auf geschützte Route wird umgeleitet
   Given der Benutzer hat keine aktive Sitzung
   When er direkt "/personen" aufruft
   Then leitet das System ihn auf "/login" weiter
 
-Scenario: Anmeldung mit ungültigem Passwort schlägt fehl
-  Given ein Auth0-Account existiert
-  When der Benutzer ein falsches Passwort eingibt
-  Then zeigt Auth0 eine Fehlermeldung und die Sitzung wird nicht erstellt
+Scenario: Anmeldung mit falschem Passwort schlägt fehl
+  Given ein Benutzer "orga@quartier.ch" existiert
+  When er ein falsches Passwort eingibt
+  Then antwortet das Backend mit 401 und das Frontend zeigt "E-Mail-Adresse oder Passwort falsch"
 
-Scenario: Account ohne Rollenzuordnung wird abgewiesen
-  Given ein Auth0-Account existiert ohne Rollenzuordnung
-  When der Benutzer sich anmeldet
-  Then zeigt das System die Meldung "Ihr Account hat keine gültige Rollenzuordnung"
+Scenario: Seitenreload erhält die Sitzung
+  Given ein angemeldeter Benutzer mit gültigem Token
+  When er die Seite neu lädt
+  Then bleibt er angemeldet und die angeforderte Route wird direkt geladen
+
+Scenario: Abgelaufenes Token führt zurück zum Login
+  Given ein angemeldeter Benutzer, dessen Token abgelaufen ist
+  When der nächste API-Request mit 401 beantwortet wird
+  Then leitet das System zu "/login" und zeigt "Sitzung abgelaufen"
 ```
 
 ---
 
 ## Open Items
 
-- [ ] OPEN: Welcher Custom-Claim-Namespace wird für Rollen verwendet (z. B. `https://quartierfest.ch/roles`)? Nach Auth0-Tenant-Konfiguration festlegen.
-- [ ] OPEN: Silent Authentication via Refresh-Token oder via Auth0-Session-Cookie (`prompt=none`)?
+- [ ] OPEN: Brute-Force-Schutz für `POST /api/auth/login` — Umfang festlegen (z. B. zunehmende Verzögerung oder temporäre Sperre nach n Fehlversuchen pro E-Mail/IP). Für den geschlossenen Benutzerkreis reicht vermutlich eine einfache Drosselung. (Entscheid 2026-06-12: nicht Teil der ersten Iteration.)
+- [ ] OPEN: Soll der Benutzer sein eigenes Passwort ändern können (z. B. `POST /api/auth/passwort`)? Reduziert, dass der Organisator Passwörter dauerhaft kennt. (Entscheid 2026-06-12: nicht Teil der ersten Iteration.)
+- [x] RESOLVED (2026-06-12): Token-Gültigkeit 12 h umgesetzt (`auth.jwt.ttl-stunden`, konfigurierbar) — deckt einen Festtag ab.
 
 ---
 
 ## Dependencies & References
 
-- **Ermöglicht**: UC-015 (Parteibenutzer verwalten), UC-016 (Teilnahme bestätigen)
-- **Backend vorausgesetzt**: AUTH-001 (Spring Security + JWT-Validierung bereits implementiert)
+- **Depends on**: UC-015 (Benutzer verwalten — `Benutzer`-Entity, Account-Anlage, Bootstrap des ersten Organisator-Accounts)
+- **Ermöglicht**: UC-016 (Teilnahme bestätigen), Nutzung der Admin-UI aus UC-015
+- **Backend vorausgesetzt**: AUTH-001 (Spring Security + JWT-Validierung; `JwtDecoder` wird auf symmetrischen Schlüssel umgestellt)
