@@ -2,7 +2,7 @@
 id: UC-011
 type: Use Case
 name: "Abrechnung erstellen"
-completeness: Intermediate
+completeness: Minimum
 traceability:
   impl_status: teilweise
   endpoints:

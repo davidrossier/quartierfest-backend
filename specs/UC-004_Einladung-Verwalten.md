@@ -33,7 +33,7 @@ traceability:
 | Actor | Type | Role |
 |---|---|---|
 | Organisator | `Human` | Erstellt Einladungen und erfasst Rückmeldungen der Parteien |
-| Partei | `External` | Empfängt die Einladung ausserhalb des Systems und meldet sich ab oder an |
+| Partei | `External` | Empfängt die Einladung ausserhalb des Systems und meldet sich ab oder an (ab UC-016 als direkter Systemakteur) |
 
 ---
 
@@ -166,3 +166,4 @@ Scenario: Einladungen erstellen überspringt bereits vorhandene Einladung
 ## Dependencies & References
 
 - **Depends on**: UC-002 (Parteien verwalten), UC-003 (Event anlegen)
+- **Vorgreifend auf**: UC-016 (Teilnahme bestätigen) — ab UC-016 kann die Partei Teilnahmedaten selbst im System pflegen, ohne dass der Organisator als Vermittler dient

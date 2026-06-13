@@ -35,6 +35,22 @@ Gruppierung von Personen (typischerweise ein Haushalt). Erhält die Einladung.
 
 ---
 
+### Benutzer
+Login-Account der Applikation (UC-015, Eigenbau-Entscheid 2026-06-12). Ermöglicht Organisator und Parteien, sich anzumelden (UC-014); Accounts mit Rolle `PARTEI` sind einer Partei zugeordnet und pflegen deren Teilnahme (UC-016).
+
+| Feld | Typ | Pflicht | Hinweis |
+|---|---|---|---|
+| id | Long | ja | Wird als `sub`-Claim ins JWT geschrieben |
+| email | String | ja | Login-Identifikator; `@Column(unique = true)` |
+| passwortHash | String | ja | BCrypt; wird nie über die API ausgeliefert |
+| rolle | Benutzer.Rolle | ja | Enum `ORGANISATOR` / `PARTEI` |
+| partei | Partei | nein | FK → Partei; `@ManyToOne`; Pflicht bei Rolle `PARTEI`, leer bei `ORGANISATOR` |
+
+**Beziehungen:**
+- `Benutzer` → `Partei`: n:0..1
+
+---
+
 ### Event
 Ein Quartierfest-Anlass (Buchlenfest).
 
@@ -196,6 +212,7 @@ Festgehaltene Mahnung zu einer Abrechnung.
 
 ```
 Person          ←── n:1 ──── Partei
+Partei          ←── n:0..1 ── Benutzer               (Login-Account, UC-015)
 Partei          ←── n:1 ──── Einladung ──── n:1 ───→ Event
 Einladung       ──── 1:1 ──→ Teilnahme
 Teilnahme       ←── n:1 ──── Konsumation ── n:1 ───→ Konsumationsangebot

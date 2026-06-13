@@ -1,38 +1,12 @@
 # Technische Schulden
 
-> Stand: 2026-05-12. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, Brainstorming Auth.
+> Stand: 2026-06-12. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0).
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
 ---
 
 ## MAJOR
-
-### AUTH-002 – Login-Komponente und Rollenverwaltung fehlen
-
-**Priorität: MAJOR** — ohne dies ist die Applikation im `prod`-Profil für Endnutzer unbrauchbar: alle `/api/**`-Requests scheitern mit 401, weil das Angular-Frontend kein Bearer-Token mitschickt.
-
-**Was fehlt:**
-
-- **Frontend (Angular):**
-  - Login-Flow (OAuth2 PKCE-Redirect zum IdP, Callback-Route, Token-Speicherung)
-  - HTTP-Interceptor: hängt `Authorization: Bearer <token>` an alle API-Requests
-  - Route Guard: schützt alle App-Routen, leitet unauthentifizierte User zur Login-Seite
-  - Empfohlene Library: `@auth0/auth0-angular` (Auth0) oder `supabase-js` (Supabase Auth)
-
-- **Backend (Spring Security):** Infrastruktur bereits vorhanden (JWT-Validierung via JWKS, `prod`-Profil). Noch ausstehend:
-  - Rolle `PARTEI`: eingeschränkter Zugriff auf eigene Einladung / Teilnahme / Abrechnung via `@PreAuthorize`
-
-**Notizen für künftigen Use Case (UC-014 geplant):**
-
-- Dies bedingt einen neuen Use Case «Benutzerverwaltung / Login» mit mindestens zwei Rollen:
-  - `ORGANISATOR`: voller Zugriff auf alle Domänen (bereits modelliert)
-  - `PARTEI`: datensatz-seitiger Zugriff nur auf eigene Daten
-- Der Admin (Rolle `ORGANISATOR`) soll Benutzer anlegen und Rollen zuweisen können — entweder direkt im IdP (Auth0 Dashboard / Supabase) oder über eine dedizierte Admin-UI im Frontend
-- Self-Registration durch Parteien ist offen (noch kein Entscheid)
-- UC-014 muss vor der Implementierung ausformuliert und in `specs/` abgelegt werden
-
----
 
 ### DEPLOY-003 – Kein CI/CD-Pipeline-Setup
 
@@ -132,6 +106,27 @@ Alle anderen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Te
 ---
 
 ## Behoben
+
+### AUTH-002 – Login und Rollenverwaltung (Eigenbau) implementiert ✅ `2026-06-12`
+
+UC-014/UC-015/UC-016 vollständig umgesetzt (Eigenbau-Entscheid vom 2026-06-12 statt Auth0).
+
+**Backend:**
+- Neue Domain `benutzer`: Entity (`email` unique, `passwortHash` BCrypt, `rolle`, optionaler Partei-FK), `GET/POST/DELETE /api/benutzer`, `PUT /api/benutzer/{id}/passwort`; Duplikat-E-Mail und letzter ORGANISATOR → 409; Bootstrap-ORGANISATOR via `auth.bootstrap.*` (ApplicationRunner)
+- Neues Package `auth`: `POST /api/auth/login` stellt HS256-JWT aus (`JwtEncoder`, Claims `sub`/`email`/`rolle`, 12 h); falsche Credentials → 401 ohne Felddifferenzierung
+- `SecurityConfig`: gesicherte Chain für `prod`/`security-test` (Login offen, `/api/benutzer/**` nur ORGANISATOR, PARTEI nur `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}`, Rest ORGANISATOR); `JwtAuthenticationConverter` (`rolle` → `ROLE_*`); offene Chain verarbeitet Tokens trotzdem (Dev/ITs); `@EnableMethodSecurity`
+- UC-016: `PUT /api/teilnahmen/{id}` mit Whitelist-DTO (`einladung` nie änderbar), `GET /api/teilnahmen/meine` (frühester zukünftiger Event), Ownership via `@PreAuthorize` + `TeilnahmeZugriff`-Bean
+- `application-prod.properties`: `issuer-uri` ersetzt durch `AUTH_JWT_SECRET` / `AUTH_INITIAL_ADMIN_*`
+
+**Frontend:**
+- `auth/`: `AuthService` (Token in `sessionStorage`), funktionaler Interceptor (Bearer + 401→`/login`), `authGuard`/`roleGuard`, `LoginComponent`; rollenbasiertes Routing (ORGANISATOR → `/personen`, PARTEI → `/meine-teilnahme`); Nav rollenabhängig mit Logout
+- `BenutzerVerwaltungComponent` (`/admin/benutzer`), `MeineTeilnahmeComponent` (`/meine-teilnahme`)
+
+**Tests:** TC-034..TC-040 (BenutzerVerwaltenIT, BenutzerAnmeldenIT, TeilnahmeBestaetigenIT, SecurityMatrixIT mit `@ActiveProfiles("security-test")`); 19 neue Backend-Unit-Tests; 12 neue Vitest-Specs; Playwright-E2E UC-014/015/016 + Auto-Login-Fixture (`e2e/fixtures.ts`) für bestehende Specs.
+
+**Bewusst offen geblieben** (UC-014/015 Open Items): Brute-Force-Drosselung, Passwort-Selbstwechsel, Token-Blacklist bei Account-Löschung (Restgültigkeit max. 12 h akzeptiert).
+
+---
 
 ### VALID-001 – Input-Validierung (@Valid) implementiert ✅ `2026-05-12`
 

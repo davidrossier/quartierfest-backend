@@ -153,3 +153,4 @@ Scenario: Mehrere Buffet-Beiträge erfassen
 ## Dependencies & References
 
 - **Depends on**: UC-004 (Einladung erstellen und verwalten)
+- **Erweitert durch**: UC-016 (Teilnahme bestätigen) — führt `PUT /api/teilnahmen/{id}` ein und erlaubt der Partei, ihre eigenen Teilnahmedaten direkt zu pflegen; der Organisator behält Überschreibrecht

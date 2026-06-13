@@ -2,7 +2,7 @@
 id: UC-003
 type: Use Case
 name: "Event anlegen"
-completeness: Minimum
+completeness: Intermediate
 traceability:
   impl_status: vollständig
   endpoints:
