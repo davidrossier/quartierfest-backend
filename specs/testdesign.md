@@ -56,7 +56,7 @@ psql -U qfuser -d quartierfest -f src/test/resources/cleanup-testdata.sql
 
 ## Transport strategy
 
-Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vorhanden.
+Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vorhanden.
 
 **Transport:** `RestTemplate` mit no-op `ResponseErrorHandler` (wirft nie bei 4xx/5xx)
 **Correlation:** `http` (Testaufruf) vs. `setup` (Voraussetzungen) — zwei separate RestTemplate-Instanzen pro Test.
@@ -443,8 +443,8 @@ Alle 11 REST-Endpunkte sprechen HTTP/JSON. Kein Messaging-System (Kafka, JMS) vo
 - [ ] **Kein Konsumationslisten-Endpunkt**: UC-009 hat keinen dedizierten Endpunkt für die Listenansicht (TC-018, TC-019).
 - [ ] **Kein Event-Filter auf Collections**: Kein `?eventId=` Query-Parameter auf `/api/konsumationsangebote`, `/api/teilnahmen` etc.
 - [x] **Citrus 4.9.4 + Spring Boot 4.x Kompatibilität**: Citrus ist inkompatibel (HttpHeaders implementiert MultiValueMap nicht mehr). Tests verwenden stattdessen `RestTemplate` direkt — kein Citrus-API im Einsatz.
-- [ ] **AbstractQuartierfestIT fehlt**: `setUp()`, `setupPost()`, `tryDelete()`, `id()` sind in allen 13 IT-Klassen identisch kopiert (~400 Zeilen Boilerplate). Empfehlung: gemeinsame abstrakte Basisklasse einführen. Details → `specs/TODO.md` (TEST-001).
-- [ ] **Keine Unit-Tests für 10 Services**: Nur `ParteiService` hat einen Mockito-Unit-Test. Alle anderen Services (Delegation an Repository) haben 0% Unit-Test-Abdeckung. Details → `specs/TODO.md` (TEST-003).
+- [ ] **AbstractQuartierfestIT fehlt**: Das `setUp()`-Muster ist in allen 17 IT-Klassen identisch kopiert (`tryDelete()`/Fixture-Cleanup in 14 davon, ~400+ Zeilen Boilerplate). Empfehlung: gemeinsame abstrakte Basisklasse einführen. Details → `specs/TODO.md` (TEST-001).
+- [ ] **Keine Unit-Tests für 10 Services**: Nur `ParteiService`, `BenutzerService` und `AuthService` haben Mockito-Unit-Tests. Die übrigen 10 Services (Delegation an Repository) haben 0% Unit-Test-Abdeckung. Details → `specs/TODO.md` (TEST-003).
 - [x] **UC-005 Teilnahme-Erzeugungsmodell**: Bestätigt: Explizite Erstellung via Button (kein Auto-Create). TC-011 bleibt gültig.
 - [x] **UC-005 Mehrere Buffet-Beiträge**: `buffetBeitrag`/`buffetBeitragBeschreibung` durch `buffetBeitraege: List<TeilnahmeBuffetBeitrag>` ersetzt (`@ElementCollection`, Tabelle `teilnahme_buffet_beitrag`). TC-033 neu ergänzt.
 - [x] **UC-006 PATCH für `bestaetigungVersendet`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-013 aktualisiert.

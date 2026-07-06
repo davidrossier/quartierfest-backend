@@ -43,8 +43,8 @@ Alle `/api/**`-Endpunkte sind über Spring Security 7.x abgesichert. Die Absiche
 
 | Profil | SecurityFilterChain | Beschreibung |
 |--------|---------------------|--------------|
-| `prod` | JWT-Pflicht | Alle Requests benötigen ein gültiges Bearer-Token mit Rolle `ORGANISATOR` |
-| kein / `test` / `dev` | `permitAll()` | Kein Token erforderlich — für lokale Entwicklung und Tests |
+| `prod`, `security-test` | Autorisierungsmatrix | `POST /api/auth/login` offen; `/api/benutzer/**` nur `ORGANISATOR`; `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}` für `ORGANISATOR`/`PARTEI`; alle übrigen `/api/**` nur `ORGANISATOR` |
+| kein / `test` / `dev` | `permitAll()` | Kein Token erforderlich — für lokale Entwicklung und Tests. Bearer-Tokens werden trotzdem verarbeitet, damit `/meine` und die Ownership-Prüfung (`@PreAuthorize`) auch ohne gesicherte Matrix funktionieren |
 
 **Eigenbau-Login (AUTH-002, implementiert 2026-06-12 — UC-014/UC-015/UC-016):**
 - Das Backend stellt das JWT selbst aus: `POST /api/auth/login` prüft E-Mail/Passwort (BCrypt) und signiert mit HS256 (`JwtEncoder`; Secret via `auth.jwt.secret`, prod `AUTH_JWT_SECRET`; Gültigkeit 12 h; Claims `sub` = Benutzer-ID, `email`, `rolle`)
@@ -201,7 +201,7 @@ erDiagram
 
 ## Bekannte technische Schulden
 
-> Identifiziert durch SonarQube-Analyse 2026-05-01. Details und Massnahmen → `specs/TODO.md`.
+> Identifiziert durch SonarQube-Analyse 2026-05-01 und Repo-Review Frontend+Backend 2026-07-06. Details und Massnahmen → `specs/TODO.md`.
 
 | # | Bereich | Befund | Schweregrad | Stand |
 |---|---------|--------|-------------|-------|
@@ -214,7 +214,19 @@ erDiagram
 | VALID-001 | Validierung | Kein `@Valid` auf Controllern — Pflichtfeldverletzungen liefern HTTP 500 statt 400 | MAJOR | ✅ Behoben 2026-05-12 |
 | REFACT-001 | Code-Qualität | 8 Controller + 10 Services mit identischem CRUD-Boilerplate, kein `BaseCrud*` | MINOR | Offen |
 | DEPLOY-003 | CI/CD | Kein GitHub Actions Workflow — Tests laufen nur lokal | MAJOR | ✅ Behoben 2026-07-06 |
-| TEST-001 | Tests | 13 IT-Klassen duplizieren `setUp()`/`tearDown()`/`setupPost()`/`tryDelete()` | MINOR | Offen |
+| TEST-001 | Tests | 17 IT-Klassen duplizieren `setUp()`-Boilerplate (14 davon zusätzlich `tryDelete()`) | MINOR | Offen |
+| DB-001 | Deployment | `ddl-auto=update` gilt auch in prod — keine Flyway/Liquibase-Migrationen | MAJOR | Offen |
+| SEC-001 | Sicherheit | Security-Default fail-open: ohne `prod`-Profil ist die API komplett offen | MAJOR | Offen |
+| API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Offen |
+| CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | Offen |
+| ERROR-001 | Code-Qualität | Kein `@RestControllerAdvice` — FK-Fehler liefern 500, kein einheitliches Fehler-JSON | MINOR | Offen |
+| REST-001 | Architektur | Frontend aktualisiert Teilnahmen via POST-Upsert statt `PUT /api/teilnahmen/{id}` | MINOR | Offen |
+| TEST-004 | Tests | Frontend: kaum Unit-Tests ausserhalb `auth/` (Komponenten/Services ungetestet) | MINOR | Offen |
+| QUAL-001 | CI/CD | Kein ESLint/Prettier-Check in CI, keine Coverage, kein Dependabot | MINOR | Offen |
+| REFACT-002 | Code-Qualität | Frontend: `laden/fehler/erfolg`+`setTimeout`-Muster in ~12 Komponenten dupliziert | MINOR | Offen |
+| DEP-001 | Code-Qualität | Ungenutzte `citrus-bom` in `pom.xml` (zieht Jackson 2.x in den Test-Scope) | MINOR | Offen |
+| DOCS-001 | Dokumentation | Drift zwischen CLAUDE.md/README/architecture.md (TC-Range, alte Security-Tabelle) | MINOR | ✅ Behoben 2026-07-06 |
+| CODE-001 | Code-Qualität | Kyrillisches «а» (U+0430) in zwei IT-Methodennamen (`...ViаUpsert`) | MINOR | Offen |
 
 ---
 
@@ -244,7 +256,7 @@ erDiagram
 | UC-015 | Benutzer verwalten | GET/POST/DELETE `/api/benutzer`, PUT `/api/benutzer/{id}/passwort` | TC-034, TC-035, TC-039 | BenutzerVerwaltenIT | ✅ Vollständig |
 | UC-016 | Teilnahme bestätigen | GET `/api/teilnahmen/meine`, PUT `/api/teilnahmen/{id}` | TC-036, TC-037 | TeilnahmeBestaetigenIT | ✅ Vollständig |
 
-> **Unit-Test-Abdeckung (zusätzlich):** 11 `*ControllerTest.java`-Klassen (`@WebMvcTest`) decken die HTTP-Schicht aller UC-Domänen ab. `ParteiServiceTest` testet die Geschäftslogik von UC-002 (Personenauflösung via `personenIds`). Diese Tests sind nicht TC-gebunden, referenzieren UCs aber via `@DisplayName("UC-XXX: ...")`.
+> **Unit-Test-Abdeckung (zusätzlich):** 13 `*ControllerTest.java`-Klassen (`@WebMvcTest`) decken die HTTP-Schicht aller UC-Domänen ab. Drei Service-Tests (`ParteiServiceTest`, `BenutzerServiceTest`, `AuthServiceTest`) testen die Geschäftslogik von UC-002 bzw. UC-014/015. Diese Tests sind nicht TC-gebunden, referenzieren UCs aber via `@DisplayName("UC-XXX: ...")`.
 
 ### Offene Traceability-Lücken
 

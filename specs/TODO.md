@@ -1,6 +1,6 @@
 # Technische Schulden
 
-> Stand: 2026-07-06. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0).
+> Stand: 2026-07-06. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
@@ -8,7 +8,37 @@
 
 ## MAJOR
 
-_Keine offenen Punkte._
+### DB-001 – `ddl-auto=update` auch in Production, keine Schema-Migrationen
+
+`spring.jpa.hibernate.ddl-auto=update` steht in `application.properties` und wird von `application-prod.properties` **nicht** überschrieben — Hibernate migriert das Prod-Schema still bei jedem Start. Schemaänderungen sind dadurch weder reviewbar noch reproduzierbar; destruktive Änderungen (Spalte umbenennen/löschen) führen zu Schema-Drift, weil `update` nichts entfernt.
+
+**Empfehlung:** Flyway (oder Liquibase) einführen: `flyway-core` + `flyway-database-postgresql` in die `pom.xml`, bestehendes Schema als `V1__baseline.sql` einfrieren (`spring.flyway.baseline-on-migrate=true` für bestehende DBs), danach `ddl-auto=validate` setzen. Jede künftige Entity-Änderung bekommt ein nummeriertes Migrationsskript im PR. Vor ernsthaftem Prod-Betrieb umsetzen.
+
+---
+
+### SEC-001 – Security-Default ist fail-open
+
+Die Default-Filter-Chain (`@Profile("!prod & !security-test")`) ist `permitAll()`. Die Autorisierungsmatrix greift nur, wenn beim Start explizit `--spring.profiles.active=prod` gesetzt ist — ein vergessenes Profil beim Deployment öffnet die komplette API unbemerkt.
+
+**Empfehlung:** Default umkehren (fail-closed): gesicherte Chain als Default, offene Chain nur bei explizitem `@Profile("dev")`. Lokale Entwicklung und ITs starten dann mit `dev`-Profil (ein Eintrag in `application.properties` bzw. `@ActiveProfiles`). Alternativ minimal: beim Start ohne `prod`-Profil einen deutlichen WARN-Log ausgeben und im Deployment-Runbook das Profil verifizieren.
+
+---
+
+### API-001 – API-Contract nur implizit (kein OpenAPI, kein DTO-Layer)
+
+JPA-Entities sind direkt der API-Contract (inkl. verschachtelter Beziehungen wie `Teilnahme → Einladung → Partei → Personen`); die TypeScript-Interfaces im Frontend werden von Hand synchron gehalten. Es gibt keine OpenAPI-Spec, keine generierten Typen und keine Contract-Tests — Drift zwischen Entity und Frontend-Model fällt erst im lokal laufenden Playwright-E2E auf (das nicht in CI läuft, → CI-001). Folgeproblem: Entity-Serialisierung erzwingt die in PERF-001 dokumentierten verschachtelten Payloads.
+
+**Empfehlung:** In zwei Stufen:
+1. `springdoc-openapi-starter-webmvc-ui` einbinden → `/v3/api-docs` dokumentiert den Ist-Contract ohne Codeänderung; Frontend-Typen daraus generieren (z.B. `openapi-typescript`) und die Generierung in der Frontend-CI gegen das eingecheckte Schema diffen (Drift-Erkennung).
+2. Mittelfristig DTO-Layer (Java Records je Endpunkt) einführen, beginnend bei den Endpunkten mit verschachtelten Payloads (`/api/einladungen`, `/api/teilnahmen`, `/api/abrechnungen`) — entkoppelt Frontend vom DB-Schema und löst den PERF-001-Rest.
+
+---
+
+### CI-001 – Playwright-E2E läuft nicht in CI
+
+Die E2E-Suite (UC-001..016, wertvollste Absicherung des Frontend↔Backend-Zusammenspiels) läuft nur lokal. Contract- oder Integrationsfehler zwischen den Repos werden von keiner Pipeline erkannt.
+
+**Empfehlung:** Eigener Workflow im Frontend-Repo (Push/PR oder Nightly): PostgreSQL-16-Service-Container (wie Backend-CI) → Backend-Repo via `actions/checkout` (`repository: davidrossier/quartierfest-backend`) auschecken und mit `./mvnw spring-boot:run` im Hintergrund starten → `npm start` im Hintergrund → `npx playwright install chromium --with-deps` → `npm run e2e`. Auf Backend-Readiness warten (z.B. `curl --retry` auf `/api/persons`). Playwright-Report als Artifact hochladen. Falls Laufzeit stört: als Nightly-`schedule` statt pro Push.
 
 ---
 
@@ -31,7 +61,7 @@ _Keine offenen Punkte._
 
 ### TEST-001 – IT-Test-Boilerplate ohne Basisklasse
 
-`setUp()`, `setupPost()`, `tryDelete()`, `id()` sind in allen 13 IT-Klassen identisch kopiert (~400 Zeilen Duplikat-Code).
+Das `setUp()`-Muster (zwei `RestTemplate`, no-op `ResponseErrorHandler`, JSON-Header) ist in allen 17 IT-Klassen identisch kopiert; `tryDelete()`/Fixture-Cleanup zusätzlich in 14 davon (~400+ Zeilen Duplikat-Code).
 
 **Empfehlung:**
 
@@ -55,7 +85,7 @@ abstract class AbstractQuartierfestIT {
 ### TEST-002 – Raw `Map` / `@SuppressWarnings("unchecked")` in IT-Tests
 
 `RestTemplate.exchange(..., Map.class)` liefert unkontrolliertes `Map<String, Object>`.
-`@SuppressWarnings("unchecked")` ist in allen 13 IT-Klassen auf fast jeder Testmethode notwendig.
+`@SuppressWarnings("unchecked")` ist in den 17 IT-Klassen auf fast jeder Testmethode notwendig.
 
 **Empfehlung:** Typisierte Response-Records oder eigene Assertion-Helpers einführen (z.B. `assertField(response, "id")`). Alternativ akzeptieren (bei simpler CRUD-Struktur vertretbar).
 
@@ -63,14 +93,85 @@ abstract class AbstractQuartierfestIT {
 
 ### TEST-003 – Keine Unit-Tests für 10 Services
 
-Nur `ParteiService` hat einen Mockito-Unit-Test (`ParteiServiceTest`).
-Alle anderen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Tests abgedeckt.
+Drei Services haben Mockito-Unit-Tests (`ParteiServiceTest`, `BenutzerServiceTest`, `AuthServiceTest`).
+Die übrigen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Tests abgedeckt.
 
 **Einschätzung:** Da die Services fast ausschliesslich 1:1 an das Repository delegieren, ist der Mehrwert von Unit-Tests gering. Sinnvoll wäre ein Unit-Test für `AbrechnungService`, sobald dort Berechnungslogik (UC-011) implementiert wird.
 
 ---
 
+### ERROR-001 – Kein globaler Exception-Handler (500 statt 404, kein einheitliches Fehler-JSON)
+
+Referenzen auf nicht-existierende FK-IDs liefern HTTP 500 (`DataIntegrityViolation`/`EntityNotFound` ungefangen — TC-012, TC-023). Es gibt kein einheitliches Fehler-JSON; das Frontend zeigt `err.error?.message` an und bekommt bei 500ern nichts Brauchbares.
+
+**Empfehlung:** Einen `@RestControllerAdvice` einführen: `EntityNotFoundException`/`ResponseStatusException(404)` → 404, `DataIntegrityViolationException` → 409, Fallback → 500 mit generischer Meldung; einheitliches Format `{status, message}`. TC-012/TC-023 danach auf 404 anpassen (Erwartung in `testdesign.md` nachführen).
+
+---
+
+### REST-001 – Frontend aktualisiert Teilnahmen via POST-Upsert statt PUT
+
+`TeilnahmenVerwaltungComponent.speichern()` sendet beim Bearbeiten `POST /api/teilnahmen` mit gesetzter `id` (JPA-`save()` wirkt als Upsert) statt den vorhandenen `PUT /api/teilnahmen/{id}` zu nutzen. Gleiches Upsert-Muster bei UC-006/UC-012 (`bestaetigungVersendet`, `zustellungsDatum`). Der POST-Endpunkt umgeht damit faktisch die UC-016-Whitelist-Semantik des PUT.
+
+**Empfehlung:** Frontend auf `teilnahmeService.update(id, dto)` umstellen; POST-Upsert unterbinden (im Controller `id != null` → 400 oder `id` vor `save()` nullen). Für UC-006/UC-012 dedizierte PATCH/PUT-Endpunkte erwägen (bestehendes TODO in den IT-Klassen).
+
+---
+
+### TEST-004 – Frontend: kaum Unit-Tests ausserhalb Auth
+
+Nur 7 Spec-Dateien (~31 Tests), fast ausschliesslich `auth/` + `app`. Die 20+ Feature-Komponenten und 11 HTTP-Services haben keine Unit-Tests — insbesondere die `computed`-Logik (Event-Filterung, `einladungenOhneTeilnahme`, Sortierung via `shared/sortierung.ts`) wäre günstig testbar.
+
+**Empfehlung:** Vitest-Specs priorisiert für (1) `shared/sortierung.ts`, (2) `computed`-Ableitungen der Verwaltungs-Komponenten (Signal setzen → Ableitung prüfen, ohne DOM), (3) Services via `provideHttpClientTesting`. Ziel: Kernlogik abgedeckt, nicht Template-Details.
+
+---
+
+### QUAL-001 – Keine statische Analyse / kein Lint in der CI
+
+SonarQube lief einmalig manuell (2026-05-01). Frontend hat kein ESLint; Prettier wird in CI nicht geprüft. Keine Coverage-Reports, kein Dependency-Update-Bot.
+
+**Empfehlung:** Frontend: `ng add angular-eslint` + `npx prettier --check .` als CI-Steps. Beide Repos: Dependabot aktivieren (`.github/dependabot.yml` für npm bzw. maven + github-actions). Optional: SonarCloud (gratis für öffentliche Repos) oder `-Dspotbugs` in die Backend-CI; Vitest/JaCoCo-Coverage als CI-Artifact.
+
+---
+
+### REFACT-002 – Frontend: dupliziertes CRUD-/Meldungs-Muster in allen Verwaltungs-Komponenten
+
+Das Muster `ladevorgang/fehler/erfolg`-Signals + `setTimeout(3–4s)` zum Ausblenden + `laden()`-Reload ist in allen ~12 Verwaltungs-Komponenten kopiert (Pendant zu REFACT-001 im Backend). Querschnittsänderungen am Meldungsverhalten erfordern ~12 gleichlautende Edits.
+
+**Empfehlung:** (1) `MeldungService` (oder Composable `createMeldungen()`) für Erfolg/Fehler inkl. Auto-Ausblenden extrahieren; (2) generischen `CrudService<T, P>` als Basis der 11 HTTP-Services einführen. Komponenten-Templates bewusst individuell lassen.
+
+---
+
+### DEP-001 – Ungenutzte `citrus-bom` in der `pom.xml`
+
+Citrus 4.9.4 liegt auf dem Test-Classpath, ist aber dokumentiert inkompatibel mit Spring Framework 7.x und ungenutzt. Zieht Jackson 2.x in den Test-Scope und erzeugt so die in CLAUDE.md dokumentierte `ObjectMapper`-Verwechslungsfalle (Jackson 2 vs. 3).
+
+**Empfehlung:** `citrus-bom` und zugehörige Dependencies aus der `pom.xml` entfernen; Hinweise dazu in CLAUDE.md (Tech-Stack, Jackson-3.x-Warnung) zurückbauen.
+
+---
+
+### CODE-001 – Kyrillische Homoglyphen in zwei IT-Methodennamen
+
+`BestaetigungVerwaltenIT.tc013_bestaetigungVersendetViаUpsert()` und `AbrechnungZustellenIT.tc032_zustellungsDatumViаUpsert()` enthalten ein kyrillisches «а» (U+0430) statt eines lateinischen «a» in «Viа» (kompiliert, aber bricht Textsuche, `-Dtest`-Filter und Copy-Paste). Die Traceability-Tabelle in `testdesign.md` hat das Zeichen mitkopiert.
+
+**Empfehlung:** Beide Methoden auf lateinisches «a» umbenennen (`...ViaUpsert`), `testdesign.md`-Tabelle nachführen. Optional: Checkstyle/Editor-Regel gegen Nicht-ASCII-Identifier.
+
+---
+
 ## Behoben
+
+### DOCS-001 – Doku-Drift zwischen CLAUDE.md, README und architecture.md ✅ `2026-07-06`
+
+Vollständiger Konsistenz-Check aller Docs/Specs gegen den Code; behobene Drifts:
+
+- **CLAUDE.md (Backend):** Spec-Tabelle «TC-001..TC-033» → TC-040; «UC-014..016 ausstehend» → implementiert; Kommentar «Controller-Tests + ParteiServiceTest» → drei Service-Tests
+- **architecture.md:** obere Security-Tabelle auf AUTH-002-Stand (PARTEI-Rolle, `security-test`-Profil); Fussnote «11 ControllerTest-Klassen» → 13, Service-Tests ergänzt; TEST-001-Zeile 13 → 17 IT-Klassen
+- **README (Backend):** Testzahlen (43 → 62 Unit-Testmethoden, 31 → 38 IT-Methoden, TC-033 → TC-040, 13 → 17 IT-Klassen), «kein PostgreSQL nötig» bei `./mvnw test` korrigiert (Smoke-Test braucht DB), CORS-Abschnitt referenzierte entferntes `WebConfig.java` → `SecurityConfig`, Endpunkt-Tabelle um Auth/Benutzer/Teilnahme-PUT ergänzt, Spec-Tabelle «13 Use Cases» → 16
+- **README (Frontend):** UC-Nummern der Feature-Liste korrigiert (Einladungen = UC-004, Teilnahmen = UC-005, Bestätigung = UC-006, Allgemeinausgaben = UC-007, Konsumationsangebote = UC-008 — vorher verschoben), Auth-Features (UC-014/015/016) und `npm run e2e` ergänzt, Endpunkt-Tabelle vervollständigt
+- **e2e/TRACEABILITY.md:** Zeilen UC-014/015/016 ergänzt, UC-002-Szenarienzahl korrigiert (3 Happy, 3 Error)
+- **testdesign.md:** «Alle 11 REST-Endpunkte» → 13 Ressourcen; Open Items (13 → 17 IT-Klassen, drei Service-Tests) nachgeführt
+
+**Grundsatz (neu):** `specs/` ist die Quelle der Wahrheit; CLAUDE.md/README fassen zusammen und verlinken. Bei Test-/Endpunkt-Änderungen `/traceability-manager` laufen lassen — er schliesst die Tabellen in `architecture.md`, `testdesign.md` und `e2e/TRACEABILITY.md` ein.
+
+---
 
 ### PERF-001 – FetchType.EAGER entfernt (N+1-Queries) ✅ `2026-07-06`
 

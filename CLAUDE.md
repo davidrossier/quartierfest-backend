@@ -11,7 +11,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Run application
 ./mvnw spring-boot:run
 
-# Unit tests (Controller-Tests + ParteiServiceTest + Smoke-Test)
+# Unit tests (Controller-, Service- und Smoke-Tests)
 ./mvnw test
 
 # Integration tests only
@@ -223,8 +223,8 @@ Alle Spezifikationen liegen unter `specs/`:
 | Datei | Inhalt |
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 16 Use Cases |
-| `UC-001` .. `UC-016` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme, UC-014..016 = Auth/Eigenbau-Login, ausstehend) |
-| `testdesign.md` | Testdesign mit TC-001..TC-033, Transportstrategie, Open Items |
+| `UC-001` .. `UC-016` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme, UC-014..016 = Auth/Eigenbau-Login) |
+| `testdesign.md` | Testdesign mit TC-001..TC-040, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |
