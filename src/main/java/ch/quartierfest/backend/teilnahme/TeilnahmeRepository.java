@@ -11,12 +11,18 @@ import java.util.List;
 @Repository
 public interface TeilnahmeRepository extends JpaRepository<Teilnahme, Long> {
 
+    /** PERF-001: Buffet-Beiträge per Fetch-Join laden — eine Query statt 1+N bei GET /api/teilnahmen. */
+    @Override
+    @Query("select t from Teilnahme t left join fetch t.buffetBeitraege")
+    List<Teilnahme> findAll();
+
     /**
      * UC-016: Teilnahmen einer Partei ab Stichtag, früheste zuerst —
      * das erste Element ist die Teilnahme zum «nächsten Event».
      */
     @Query("""
             select t from Teilnahme t
+            left join fetch t.buffetBeitraege
             where t.einladung.partei.id = :parteiId
               and t.einladung.event.datum >= :stichtag
             order by t.einladung.event.datum asc

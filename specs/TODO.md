@@ -8,16 +8,9 @@
 
 ## MAJOR
 
-### PERF-001 – FetchType.EAGER — N+1-Query-Risiko
-
-- `Partei.personen`: `@OneToMany(fetch = FetchType.EAGER)` — bei `GET /api/parteien` werden für jede Partei alle Personen geladen (N+1-Queries)
-- `Teilnahme.buffetBeitraege`: `@ElementCollection(fetch = FetchType.EAGER)` — bei `GET /api/teilnahmen` werden alle Beiträge für jede Teilnahme geladen
-
-**Betroffen:** `Partei.java`, `Teilnahme.java`
-**Empfehlung:** `FetchType.LAZY` verwenden (JPA-Default); bei Bedarf explizite `JOIN FETCH`-Queries im Repository.
+_Keine offenen Punkte._
 
 ---
-
 
 ## MINOR
 
@@ -78,6 +71,16 @@ Alle anderen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Te
 ---
 
 ## Behoben
+
+### PERF-001 – FetchType.EAGER entfernt (N+1-Queries) ✅ `2026-07-06`
+
+- `Partei.personen` und `Teilnahme.buffetBeitraege` auf `FetchType.LAZY` (JPA-Default) umgestellt
+- `ParteiRepository.findAll()` und `TeilnahmeRepository.findAll()` mit `left join fetch` überschrieben — `GET /api/parteien` und `GET /api/teilnahmen` laden jetzt mit einer Query statt 1+N; `findEigeneAbStichtag` (UC-016) ebenfalls mit Fetch-Join
+- API-Contract unverändert (OSIV bleibt aktiv, Collections werden weiterhin serialisiert)
+
+**Bewusst offen geblieben:** Verschachtelte Payloads (z.B. `GET /api/einladungen` → `partei.personen`, `GET /api/abrechnungen` → `teilnahme.buffetBeitraege`) laden die Collections weiterhin pro Zeile — neu lazy bei der Serialisierung statt eager beim Query, gleiche Query-Anzahl wie vorher. Echte Behebung bräuchte DTOs oder `@EntityGraph` pro Endpunkt.
+
+---
 
 ### DEPLOY-003 – CI/CD-Pipeline (GitHub Actions) eingerichtet ✅ `2026-07-06`
 
