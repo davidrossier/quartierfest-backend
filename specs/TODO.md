@@ -1,40 +1,12 @@
 # Technische Schulden
 
-> Stand: 2026-06-12. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0).
+> Stand: 2026-07-06. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0).
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
 ---
 
 ## MAJOR
-
-### DEPLOY-003 – Kein CI/CD-Pipeline-Setup
-
-Es existiert keine `.github/workflows/`-Konfiguration (oder äquivalent).
-Tests laufen nur lokal; die Integration Tests (`*IT.java`) benötigen eine echte PostgreSQL-Instanz.
-
-**Empfehlung:** GitHub Actions Workflow mit PostgreSQL-Service-Container:
-
-```yaml
-services:
-  postgres:
-    image: postgres:16
-    env:
-      POSTGRES_DB: quartierfest
-      POSTGRES_USER: qfuser
-      POSTGRES_PASSWORD: qfpass
-    ports:
-      - 5432:5432
-```
-
-Pipeline-Schritte: `mvn verify` (Backend-Unit + IT-Tests) → `ng build --configuration production` (Frontend-Build-Check).
-
-**Umsetzung (zwei Repos):**
-
-- **Backend** (`.github/workflows/ci.yml`): PostgreSQL-Service-Container (postgres:16, db=quartierfest, user=qfuser, pass=qfpass) + `./mvnw verify` — Unit-Tests und alle `*IT.java` laufen gegen die echte DB, keine Teständerungen nötig.
-- **Frontend** (`.github/workflows/ci.yml`): `npm ci` + `npm run build -- --configuration production` — prüft, ob der Production-Build fehlerfrei kompiliert.
-
----
 
 ### PERF-001 – FetchType.EAGER — N+1-Query-Risiko
 
@@ -106,6 +78,15 @@ Alle anderen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Te
 ---
 
 ## Behoben
+
+### DEPLOY-003 – CI/CD-Pipeline (GitHub Actions) eingerichtet ✅ `2026-07-06`
+
+Beide Repos haben ein `.github/workflows/ci.yml` (Trigger: `push` auf `main` + `pull_request` gegen `main`):
+
+- **Backend:** PostgreSQL-16-Service-Container (db=quartierfest, user=qfuser, pass=qfpass, mit `pg_isready`-Health-Check) + `./mvnw --batch-mode verify` — Unit-Tests und alle `*IT.java` laufen gegen die echte DB, keine Teständerungen nötig (Java 21 / Temurin, Maven-Cache).
+- **Frontend:** `npm ci` → `npm test -- --watch=false` (Vitest-Unit-Tests) → `npm run build -- --configuration production` (Node 24, npm-Cache). Die Vitest-Tests wurden gegenüber der ursprünglichen Empfehlung (nur Build-Check) ergänzt; Playwright-E2E bleibt lokal (bräuchte Backend + DB im Frontend-Workflow).
+
+---
 
 ### AUTH-002 – Login und Rollenverwaltung (Eigenbau) implementiert ✅ `2026-06-12`
 

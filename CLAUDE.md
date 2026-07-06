@@ -27,6 +27,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./mvnw test -Dtest=BackendApplicationTests#contextLoads
 ```
 
+**CI:** GitHub Actions (`.github/workflows/ci.yml`) läuft bei Push/PR auf `main`: `./mvnw --batch-mode verify` gegen einen PostgreSQL-16-Service-Container (gleiche Credentials wie lokal — keine Teständerungen nötig).
+
 ## Database
 
 PostgreSQL is required. The app connects to:
