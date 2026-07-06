@@ -27,7 +27,7 @@ public class Teilnahme {
 
     private Boolean hilftAufraumen;
 
-    @ElementCollection(fetch = FetchType.EAGER)
+    @ElementCollection
     @CollectionTable(name = "teilnahme_buffet_beitrag", joinColumns = @JoinColumn(name = "teilnahme_id"))
     private List<TeilnahmeBuffetBeitrag> buffetBeitraege = new ArrayList<>();
 }

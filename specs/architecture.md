@@ -210,7 +210,7 @@ erDiagram
 | CORS-001 | Infrastruktur | `allowedOrigins("localhost:4200")` hardcoded, kein Profil-Support | MAJOR | ✅ Behoben 2026-05-09 |
 | DEPLOY-001 | Deployment | Kein Spring-Profil für Production | MAJOR | ✅ Behoben 2026-05-09 |
 | DEPLOY-002 | Deployment | `localhost:8080` hardcoded in allen 11 Angular-Services — Production-Build zeigt gegen localhost | MAJOR | ✅ Behoben 2026-05-12 |
-| PERF-001 | Performance | `FetchType.EAGER` auf `Partei.personen` + `Teilnahme.buffetBeitraege` — N+1-Risiko | MAJOR | Offen |
+| PERF-001 | Performance | `FetchType.EAGER` auf `Partei.personen` + `Teilnahme.buffetBeitraege` — N+1-Risiko | MAJOR | ✅ Behoben 2026-07-06 |
 | VALID-001 | Validierung | Kein `@Valid` auf Controllern — Pflichtfeldverletzungen liefern HTTP 500 statt 400 | MAJOR | ✅ Behoben 2026-05-12 |
 | REFACT-001 | Code-Qualität | 8 Controller + 10 Services mit identischem CRUD-Boilerplate, kein `BaseCrud*` | MINOR | Offen |
 | DEPLOY-003 | CI/CD | Kein GitHub Actions Workflow — Tests laufen nur lokal | MAJOR | ✅ Behoben 2026-07-06 |
