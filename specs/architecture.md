@@ -213,7 +213,7 @@ erDiagram
 | PERF-001 | Performance | `FetchType.EAGER` auf `Partei.personen` + `Teilnahme.buffetBeitraege` — N+1-Risiko | MAJOR | Offen |
 | VALID-001 | Validierung | Kein `@Valid` auf Controllern — Pflichtfeldverletzungen liefern HTTP 500 statt 400 | MAJOR | ✅ Behoben 2026-05-12 |
 | REFACT-001 | Code-Qualität | 8 Controller + 10 Services mit identischem CRUD-Boilerplate, kein `BaseCrud*` | MINOR | Offen |
-| DEPLOY-003 | CI/CD | Kein GitHub Actions Workflow — Tests laufen nur lokal | MAJOR | Offen |
+| DEPLOY-003 | CI/CD | Kein GitHub Actions Workflow — Tests laufen nur lokal | MAJOR | ✅ Behoben 2026-07-06 |
 | TEST-001 | Tests | 13 IT-Klassen duplizieren `setUp()`/`tearDown()`/`setupPost()`/`tryDelete()` | MINOR | Offen |
 
 ---
@@ -250,4 +250,4 @@ erDiagram
 
 - **UC-009** (Konsumationsliste erstellen): Kein dedizierter `GET /api/events/{id}/konsumationsliste`-Endpunkt; Frontend kombiniert Daten clientseitig. → Empfehlung: Endpunkt für Event-spezifische Konsumationsansicht implementieren
 - **UC-011** (Abrechnung erstellen): Keine automatische Berechnung von `anteilAllgemeinkosten` / `totalKonsumation`; Werte werden manuell übergeben. → Empfehlung: Berechnungslogik im Service kapseln
-- **AUTH-002** (UC-014/015/016): ✅ Behoben 2026-06-12 — Eigenbau-Login, Benutzer-Domain und Teilnahme-Bestätigung vollständig implementiert und getestet (TC-034..TC-040). Vor Go-Live verbleibt DEPLOY-003 (CI/CD)
+- **AUTH-002** (UC-014/015/016): ✅ Behoben 2026-06-12 — Eigenbau-Login, Benutzer-Domain und Teilnahme-Bestätigung vollständig implementiert und getestet (TC-034..TC-040). DEPLOY-003 (CI/CD) ist seit 2026-07-06 ebenfalls behoben
