@@ -201,7 +201,7 @@ erDiagram
 
 ## Bekannte technische Schulden
 
-> Identifiziert durch SonarQube-Analyse 2026-05-01 und Repo-Review Frontend+Backend 2026-07-06. Details und Massnahmen → `specs/TODO.md`.
+> Identifiziert durch SonarQube-Analyse 2026-05-01, Repo-Review Frontend+Backend 2026-07-06 und Multi-Perspektiven-Review 2026-07-09. Details und Massnahmen → `specs/TODO.md`.
 
 | # | Bereich | Befund | Schweregrad | Stand |
 |---|---------|--------|-------------|-------|
@@ -227,6 +227,13 @@ erDiagram
 | DEP-001 | Code-Qualität | Ungenutzte `citrus-bom` in `pom.xml` (zieht Jackson 2.x in den Test-Scope) | MINOR | Offen |
 | DOCS-001 | Dokumentation | Drift zwischen CLAUDE.md/README/architecture.md (TC-Range, alte Security-Tabelle) | MINOR | ✅ Behoben 2026-07-06 |
 | CODE-001 | Code-Qualität | Kyrillisches «а» (U+0430) in zwei IT-Methodennamen (`...ViаUpsert`) | MINOR | Offen |
+| DB-002 | Datenmodell | Fachliche 1:1-Kardinalitäten (Teilnahme/Abrechnung/Einladung) ohne Unique-Constraints; Geldfelder ohne `precision/scale` | MAJOR | Offen |
+| SEC-002 | Sicherheit | Kein Brute-Force-Schutz auf `POST /api/auth/login` (internet-exponiert) | MAJOR | Offen |
+| BIZ-001 | Fachlichkeit | UC-011: Abrechnungsbeträge werden manuell erfasst statt berechnet; UC-009 ohne Konsumationslisten-Endpunkt | MAJOR | Offen |
+| OPS-001 | Betrieb | Deployment-Prozess undokumentiert, keine Backup-Strategie, kein Actuator-Health-Endpoint | MAJOR | Offen |
+| UX-001 | Usability | Meldungen nach 3–4 s weg, kein `aria-live`, `window.prompt` unmaskiert, UC-010-Matrix mobil ungeprüft | MINOR | Offen |
+| SEC-003 | Sicherheit | Kein Audit-Trail für Abrechnungen/Zahlungen/Mahnungen | MINOR | Offen |
+| DATA-001 | Datenschutz | Kein Löschkonzept/Aufbewahrungsregel für Personendaten (revDSG) | MINOR | Offen |
 
 ---
 

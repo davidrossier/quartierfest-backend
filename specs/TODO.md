@@ -1,8 +1,29 @@
 # Technische Schulden
 
-> Stand: 2026-07-06. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06.
+> Stand: 2026-07-09. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
+
+---
+
+## Konsolidierte Priorisierung (Review 2026-07-09)
+
+**Vor dem nächsten Prod-Deployment (blockierend):**
+1. **DB-001 + DB-002** — Flyway-Baseline inkl. fehlender Unique-Constraints und Geld-Präzision
+2. **SEC-002** — Brute-Force-Drosselung auf `/api/auth/login` (internet-exponiert)
+
+**Hoher Nutzen, geringer Aufwand (nächster Sprint):**
+3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren)
+4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen
+5. **CODE-001 + DEP-001** — Quick Wins (je < 1 h)
+6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check
+
+**Mittelfristig:**
+7. **CI-001** — E2E-Workflow (Nightly), Actuator-Health als Readiness (→ OPS-001)
+8. **BIZ-001** — UC-011-Berechnungslogik (fachlich wichtigste Lücke) inkl. `AbrechnungServiceTest`; UC-009-Endpunkt
+9. **QUAL-001** — angular-eslint, Prettier-Check, Dependabot, Coverage
+10. **REFACT-001/002 + TEST-001/002** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen
+11. **OPS-001, DATA-001, SEC-003** — Deployment/Backups dokumentieren, Löschkonzept, Audit-Trail-Entscheid
 
 ---
 
@@ -12,7 +33,19 @@
 
 `spring.jpa.hibernate.ddl-auto=update` steht in `application.properties` und wird von `application-prod.properties` **nicht** überschrieben — Hibernate migriert das Prod-Schema still bei jedem Start. Schemaänderungen sind dadurch weder reviewbar noch reproduzierbar; destruktive Änderungen (Spalte umbenennen/löschen) führen zu Schema-Drift, weil `update` nichts entfernt.
 
-**Empfehlung:** Flyway (oder Liquibase) einführen: `flyway-core` + `flyway-database-postgresql` in die `pom.xml`, bestehendes Schema als `V1__baseline.sql` einfrieren (`spring.flyway.baseline-on-migrate=true` für bestehende DBs), danach `ddl-auto=validate` setzen. Jede künftige Entity-Änderung bekommt ein nummeriertes Migrationsskript im PR. Vor ernsthaftem Prod-Betrieb umsetzen.
+**Empfehlung:** Flyway (oder Liquibase) einführen: `flyway-core` + `flyway-database-postgresql` in die `pom.xml`, bestehendes Schema als `V1__baseline.sql` einfrieren (`spring.flyway.baseline-on-migrate=true` für bestehende DBs), danach `ddl-auto=validate` setzen. Jede künftige Entity-Änderung bekommt ein nummeriertes Migrationsskript im PR. Vor ernsthaftem Prod-Betrieb umsetzen. Fehlende Constraints (DB-002) im selben Zug einziehen.
+
+---
+
+### DB-002 – Fachliche Kardinalitäten nicht per DB-Constraint erzwungen *(Review 2026-07-09)*
+
+Das Datenmodell definiert `Einladung 1—1 Teilnahme`, `Teilnahme 1—1 Abrechnung` und faktisch eine Einladung pro Partei und Event — auf DB-Ebene erzwingt das nichts: kein `unique` auf `teilnahme.einladung_id`, `abrechnung.teilnahme_id` oder `einladung(event_id, partei_id)`. Der POST-Upsert-Pfad (REST-001) und die Bulk-Einladungserstellung im Frontend machen Duplikate realistisch. Zudem haben die `BigDecimal`-Geldfelder keine explizite `precision`/`scale` — Hibernate wählt den Spaltentyp selbst.
+
+**Empfehlung:** Im Zuge der Flyway-Baseline (DB-001), nach Prüfung/Bereinigung des Bestands:
+- `ALTER TABLE teilnahme ADD CONSTRAINT uk_teilnahme_einladung UNIQUE (einladung_id);` analog `abrechnung.teilnahme_id` und `einladung (event_id, partei_id)`
+- Entities nachführen: `@OneToOne` + `@JoinColumn(unique = true)` bzw. `@Table(uniqueConstraints = ...)`, damit `ddl-auto=validate` konsistent bleibt
+- Geldbeträge explizit als `numeric(10,2)` (`@Column(precision = 10, scale = 2)`) auf `Konsumationsangebot.preis`, `Allgemeinausgabe.betrag`, `Abrechnung.*`, `Zahlung.betrag`
+- Constraint-Verletzung liefert dann 409 via ERROR-001-Handler (`DataIntegrityViolationException`)
 
 ---
 
@@ -30,7 +63,40 @@ JPA-Entities sind direkt der API-Contract (inkl. verschachtelter Beziehungen wie
 
 Die E2E-Suite (UC-001..016, wertvollste Absicherung des Frontend↔Backend-Zusammenspiels) läuft nur lokal. Contract- oder Integrationsfehler zwischen den Repos werden von keiner Pipeline erkannt.
 
-**Empfehlung:** Eigener Workflow im Frontend-Repo (Push/PR oder Nightly): PostgreSQL-16-Service-Container (wie Backend-CI) → Backend-Repo via `actions/checkout` (`repository: davidrossier/quartierfest-backend`) auschecken und mit `./mvnw spring-boot:run` im Hintergrund starten → `npm start` im Hintergrund → `npx playwright install chromium --with-deps` → `npm run e2e`. Auf Backend-Readiness warten (z.B. `curl --retry` auf `/api/persons`). Playwright-Report als Artifact hochladen. Falls Laufzeit stört: als Nightly-`schedule` statt pro Push.
+**Empfehlung:** Eigener Workflow im Frontend-Repo (Push/PR oder Nightly): PostgreSQL-16-Service-Container (wie Backend-CI) → Backend-Repo via `actions/checkout` (`repository: davidrossier/quartierfest-backend`) auschecken und mit `./mvnw spring-boot:run` im Hintergrund starten → `npm start` im Hintergrund → `npx playwright install chromium --with-deps` → `npm run e2e`. Auf Backend-Readiness warten — sauber via `/actuator/health` (→ OPS-001; `curl --retry` auf `/api/persons` funktioniert nur, weil `spring-boot:run` das `dev`-Profil setzt — fail-closed liefert dort 401). Playwright-Report als Artifact hochladen. Falls Laufzeit stört: als Nightly-`schedule` statt pro Push.
+
+---
+
+### SEC-002 – Kein Brute-Force-Schutz auf `POST /api/auth/login` *(Review 2026-07-09; hochgestuft aus UC-014-Open-Item)*
+
+Der Login-Endpunkt ist `permitAll()` und unter `https://davidrossier.ch` internet-exponiert; Passwörter dürfen nur min. 10 Zeichen haben, es gibt keinerlei Drosselung. Credential-Stuffing/Brute-Force ist damit unbeschränkt möglich. In AUTH-002 als «bewusst offen» akzeptiert — für den Prod-Betrieb im Internet ist das nicht mehr vertretbar (MAJOR).
+
+**Empfehlung:** Einfacher In-Memory-Ansatz genügt (Single-Instance-Deployment): Fehlversuchs-Zähler pro E-Mail **und** pro Client-IP (z.B. Caffeine-Cache mit TTL), nach 5 Fehlversuchen 15 Minuten sperren → 429 mit generischer Meldung; erfolgreicher Login setzt den Zähler zurück. Alternativ Bucket4j. Fehlversuche mit WARN loggen (ohne Passwort). Umsetzung in `AuthService.login()` bzw. als vorgeschalteter Check im `AuthController`; IT-Testfall ergänzen (TC-041, `testdesign.md` nachführen). UC-014-Open-Item danach schliessen.
+
+---
+
+### BIZ-001 – UC-011: Abrechnungs-Berechnungslogik fehlt (fachlich wichtigste Lücke) *(Review 2026-07-09)*
+
+`anteilAllgemeinkosten`, `totalKonsumation` und `totalBetrag` werden manuell erfasst — die Abrechnung ist aber der Kern des Nutzenversprechens der Nachbearbeitung, und die manuelle Rechnung ist genau der fehleranfällige Schritt, den die Software abnehmen soll. Bisher nur als Traceability-Lücke geführt (UC-011, UC-009); hier konsolidiert, weil die fachliche Priorität über mehreren technischen MAJORs liegt.
+
+**Empfehlung:**
+- `AbrechnungService.berechneFuerEvent(eventId)`: pro Teilnahme `totalKonsumation = Σ(konsumation.anzahl × angebot.preis)`, `anteilAllgemeinkosten = Σ(allgemeinausgaben des Events) ÷ Verteilschlüssel`, `totalBetrag` als Summe. **Verteilschlüssel vorab mit dem Organisator klären** (pro Teilnahme vs. pro effektive Person) und im UC-011 festhalten.
+- Endpunkt z.B. `POST /api/events/{id}/abrechnungen/berechnen` (erstellt/aktualisiert alle Abrechnungen des Events); manuelle Übersteuerung via bestehendem POST erhalten.
+- Rundung: `BigDecimal` mit `RoundingMode.HALF_UP` auf 0.05 (Schweizer Rappenrundung) — mit Organisator klären.
+- Unit-Tests für den `AbrechnungService` gleichzeitig einführen (→ TEST-003).
+- UC-009 analog: `GET /api/events/{id}/konsumationsliste` schliesst die zweite Teilimplementierung.
+
+---
+
+### OPS-001 – Deployment-Prozess undokumentiert, keine Backup-Strategie, kein Health-Endpoint *(Review 2026-07-09)*
+
+Es gibt kein Dockerfile, kein Deploy-Skript und keine Beschreibung, wie Jar + Angular-Build hinter Nginx auf `davidrossier.ch` landen — das Wissen existiert nur im Kopf des Betreibers. Für die Prod-DB (Personen- und Zahlungsdaten des Vereins) ist keine Backup-Strategie dokumentiert. `spring-boot-starter-actuator` fehlt, daher kein `/actuator/health` für Readiness-Checks (betrifft auch CI-001).
+
+**Empfehlung:**
+1. `DEPLOYMENT.md` im Backend-Repo: Build-Schritte, benötigte Umgebungsvariablen (`AUTH_JWT_SECRET`, `AUTH_INITIAL_ADMIN_*`, `DB_*`), Nginx-Routing (`/api` → 8080, Rest → Angular-`dist/`), Startkommando mit `--spring.profiles.active=prod`
+2. Backups: täglicher `pg_dump` per Cron + gelegentlicher Restore-Test; Aufbewahrung dokumentieren (→ DATA-001)
+3. `spring-boot-starter-actuator` ergänzen; in `SecurityConfig` nur `/actuator/health` freigeben (`requestMatchers("/actuator/health").permitAll()`), Rest der Actuator-Endpunkte gesperrt lassen
+4. Optional: Dockerfile + Compose (App + PostgreSQL + Nginx) für reproduzierbares Deployment
 
 ---
 
@@ -104,7 +170,7 @@ Referenzen auf nicht-existierende FK-IDs liefern HTTP 500 (`DataIntegrityViolati
 
 `TeilnahmenVerwaltungComponent.speichern()` sendet beim Bearbeiten `POST /api/teilnahmen` mit gesetzter `id` (JPA-`save()` wirkt als Upsert) statt den vorhandenen `PUT /api/teilnahmen/{id}` zu nutzen. Gleiches Upsert-Muster bei UC-006/UC-012 (`bestaetigungVersendet`, `zustellungsDatum`). Der POST-Endpunkt umgeht damit faktisch die UC-016-Whitelist-Semantik des PUT.
 
-**Empfehlung:** Frontend auf `teilnahmeService.update(id, dto)` umstellen; POST-Upsert unterbinden (im Controller `id != null` → 400 oder `id` vor `save()` nullen). Für UC-006/UC-012 dedizierte PATCH/PUT-Endpunkte erwägen (bestehendes TODO in den IT-Klassen).
+**Empfehlung:** Frontend auf `teilnahmeService.update(id, dto)` umstellen; POST-Upsert unterbinden (im Controller `id != null` → 400 oder `id` vor `save()` nullen). Für UC-006/UC-012 dedizierte PATCH/PUT-Endpunkte erwägen (bestehendes TODO in den IT-Klassen). Security-Einordnung (Review 2026-07-09): In der gesicherten Chain ist POST ORGANISATOR-only, der Whitelist-Bypass ist also nicht durch PARTEI ausnutzbar — trotzdem beheben, zwei Update-Pfade mit unterschiedlichen Regeln bleiben ein Fehlerherd.
 
 ---
 
@@ -128,7 +194,7 @@ SonarQube lief einmalig manuell (2026-05-01). Frontend hat kein ESLint; Prettier
 
 Das Muster `ladevorgang/fehler/erfolg`-Signals + `setTimeout(3–4s)` zum Ausblenden + `laden()`-Reload ist in allen ~12 Verwaltungs-Komponenten kopiert (Pendant zu REFACT-001 im Backend). Querschnittsänderungen am Meldungsverhalten erfordern ~12 gleichlautende Edits.
 
-**Empfehlung:** (1) `MeldungService` (oder Composable `createMeldungen()`) für Erfolg/Fehler inkl. Auto-Ausblenden extrahieren; (2) generischen `CrudService<T, P>` als Basis der 11 HTTP-Services einführen. Komponenten-Templates bewusst individuell lassen.
+**Empfehlung:** (1) `MeldungService` (oder Composable `createMeldungen()`) für Erfolg/Fehler inkl. Auto-Ausblenden extrahieren — dabei die Meldungs-UX/a11y-Punkte aus UX-001 gleich mitlösen (ein Refactoring, ein Verhalten); (2) generischen `CrudService<T, P>` als Basis der 11 HTTP-Services einführen. Komponenten-Templates bewusst individuell lassen.
 
 ---
 
@@ -145,6 +211,34 @@ Citrus 4.9.4 liegt auf dem Test-Classpath, ist aber dokumentiert inkompatibel mi
 `BestaetigungVerwaltenIT.tc013_bestaetigungVersendetViаUpsert()` und `AbrechnungZustellenIT.tc032_zustellungsDatumViаUpsert()` enthalten ein kyrillisches «а» (U+0430) statt eines lateinischen «a» in «Viа» (kompiliert, aber bricht Textsuche, `-Dtest`-Filter und Copy-Paste). Die Traceability-Tabelle in `testdesign.md` hat das Zeichen mitkopiert.
 
 **Empfehlung:** Beide Methoden auf lateinisches «a» umbenennen (`...ViaUpsert`), `testdesign.md`-Tabelle nachführen. Optional: Checkstyle/Editor-Regel gegen Nicht-ASCII-Identifier.
+
+---
+
+### UX-001 – Meldungs-UX, a11y und Mobile-Tauglichkeit *(Review 2026-07-09)*
+
+Vier zusammenhängende Befunde:
+1. Erfolgs-/Fehlermeldungen verschwinden nach 3–4 s (`setTimeout`) — für die Zielgruppe (Quartierverein, breite Altersspanne) zu schnell, und ohne `aria-live` für Screenreader unsichtbar.
+2. Native `confirm()`/`prompt()`-Dialoge; insbesondere zeigt `window.prompt` beim Passwort-Reset (`BenutzerVerwaltungComponent`) die Eingabe **unmaskiert** — UX- und Security-Problem zugleich.
+3. Fehlermeldungen bei 500ern generisch («konnte nicht gespeichert werden») — Folge von ERROR-001, löst sich mit dessen einheitlichem `{status, message}`-Format.
+4. Die Konsumationserfassung (UC-010, Matrix Teilnahmen × Angebote) passiert real am Fest auf dem Smartphone — responsive Verhalten ist ungeprüft.
+
+**Empfehlung:** (1)+(2) im Zuge von REFACT-002 lösen: `MeldungService` rendert in eine zentrale Region mit `role="status"`/`aria-live="polite"`, Erfolgsmeldungen ≥ 8 s oder abweisbar, Fehler bleiben stehen; Passwort-Reset als Inline-Formular mit `<input type="password">` statt `window.prompt`. (4) Mobile-Durchstich von UC-010 vor dem nächsten Fest (Playwright mit `devices['iPhone 15']`-Projekt wäre der billigste dauerhafte Check).
+
+---
+
+### SEC-003 – Kein Audit-Trail für finanzrelevante Änderungen *(Review 2026-07-09)*
+
+Abrechnungen, Zahlungen und Mahnungen sind ohne Nachvollziehbarkeit änder- und löschbar (wer, wann). Für die Vereinsrevision potenziell relevant.
+
+**Empfehlung:** Entweder bewusst als Nicht-Anforderung hier dokumentieren (bei einem Quartierverein vertretbar) — oder günstig nachrüsten: Spring Data Auditing (`@EnableJpaAuditing`, `@CreatedDate`/`@LastModifiedDate`/`@CreatedBy`/`@LastModifiedBy` als `@Embeddable`/`@MappedSuperclass` auf `Abrechnung`, `Zahlung`, `Mahnung`; `AuditorAware<String>` liest die E-Mail aus dem JWT). Neue Spalten via Flyway-Migration (setzt DB-001 voraus).
+
+---
+
+### DATA-001 – Kein Löschkonzept für Personendaten (revDSG) *(Review 2026-07-09)*
+
+Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quartierbewohnern unbefristet; eine Aufbewahrungs-/Löschregel ist nirgends spezifiziert.
+
+**Empfehlung:** Mit dem Organisator eine einfache Betriebsregel festlegen und dokumentieren (z.B. «Event-Daten inkl. Konsumationen/Abrechnungen x Jahre nach dem Event löschen; Stammdaten von Personen/Parteien beim Wegzug entfernen»). Technisch reicht vorerst manuelles Löschen über die bestehende UI (Kaskaden prüfen!); ein automatisierter Job ist erst nötig, wenn die Regel steht. Als Abschnitt in `DEPLOYMENT.md` (→ OPS-001) oder eigenem Betriebs-Dokument festhalten.
 
 ---
 
