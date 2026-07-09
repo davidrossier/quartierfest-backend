@@ -15,7 +15,7 @@
 **Hoher Nutzen, geringer Aufwand (nächster Sprint):**
 3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren)
 4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen
-5. **CODE-001 + DEP-001** — Quick Wins (je < 1 h)
+5. **CODE-001 + DEP-001** — Quick Wins (je < 1 h) — ✅ beide behoben 2026-07-09
 6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check
 
 **Mittelfristig:**
@@ -198,14 +198,6 @@ Das Muster `ladevorgang/fehler/erfolg`-Signals + `setTimeout(3–4s)` zum Ausble
 
 ---
 
-### DEP-001 – Ungenutzte `citrus-bom` in der `pom.xml`
-
-Citrus 4.9.4 liegt auf dem Test-Classpath, ist aber dokumentiert inkompatibel mit Spring Framework 7.x und ungenutzt. Zieht Jackson 2.x in den Test-Scope und erzeugt so die in CLAUDE.md dokumentierte `ObjectMapper`-Verwechslungsfalle (Jackson 2 vs. 3).
-
-**Empfehlung:** `citrus-bom` und zugehörige Dependencies aus der `pom.xml` entfernen; Hinweise dazu in CLAUDE.md (Tech-Stack, Jackson-3.x-Warnung) zurückbauen.
-
----
-
 ### UX-001 – Meldungs-UX, a11y und Mobile-Tauglichkeit *(Review 2026-07-09)*
 
 Vier zusammenhängende Befunde:
@@ -235,6 +227,14 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 ---
 
 ## Behoben
+
+### DEP-001 – Ungenutzte `citrus-bom` in der `pom.xml` ✅ `2026-07-09`
+
+Citrus 4.9.4 lag auf dem Test-Classpath, war aber dokumentiert inkompatibel mit Spring Framework 7.x und ungenutzt; zog Jackson 2.x in den Test-Scope und erzeugte so die `ObjectMapper`-Verwechslungsfalle (Jackson 2 vs. 3).
+
+`citrus-bom` (dependencyManagement) sowie `citrus-spring`, `citrus-http` und `citrus-junit5` aus der `pom.xml` entfernt. CLAUDE.md zurückgebaut: Citrus-Zeile im Tech-Stack gestrichen, Jackson-Warnung abgeschwächt — `com.fasterxml.jackson.annotation.*` (`@JsonIgnore`, `@JsonProperty`) bleibt legitim im Einsatz, nur der Jackson-2-`ObjectMapper` ist als Falle vom Classpath verschwunden. Verifiziert: `./mvnw verify` grün; kein Test importiert `com.fasterxml.jackson.databind`.
+
+---
 
 ### CODE-001 – Kyrillische Homoglyphen in zwei IT-Methodennamen ✅ `2026-07-09`
 

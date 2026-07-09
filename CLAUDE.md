@@ -52,7 +52,6 @@ SQL logging is enabled via `spring.jpa.show-sql=true`.
 Test scope:
 - `spring-boot-starter-data-jpa-test` + `spring-boot-starter-webmvc-test`
 - `spring-security-test` — Mock-JWT-Support für Slice-Tests (aktuell v. a. als Reserve; die Auth-ITs nutzen echte Tokens via `POST /api/auth/login`)
-- `citrus-bom 4.9.4` (on classpath but **not used** — incompatible with Spring Framework 7.x; `HttpHeaders` no longer implements `MultiValueMap`)
 - **maven-failsafe-plugin** runs `*IT.java` classes during `verify`
 
 ## Architecture
@@ -120,7 +119,7 @@ Enums sind als innere Klassen in der jeweiligen Entity definiert:
 **Controller-Tests** (`*ControllerTest.java`, 13 Klassen unter `src/test/java/ch/quartierfest/backend/<domäne>/`):
 - Verwende `@WebMvcTest(<Controller>.class)` — lädt nur die Web-Schicht, kein PostgreSQL nötig
 - `@MockitoBean` für den Service; `@Autowired MockMvc` für Requests
-- **Jackson 3.x:** Spring Boot 4.x konfiguriert `tools.jackson.databind.ObjectMapper` als Bean — `@Autowired ObjectMapper` muss diesen Typ importieren, **nicht** `com.fasterxml.jackson.databind.ObjectMapper` (Jackson 2.x, nur im Test-Scope via Citrus vorhanden und nicht als Spring Bean registriert)
+- **Jackson 3.x:** Spring Boot 4.x konfiguriert `tools.jackson.databind.ObjectMapper` als Bean — `@Autowired ObjectMapper` muss diesen Typ importieren, nicht `com.fasterxml.jackson.databind.ObjectMapper` (Jackson 2.x, nicht auf dem Classpath). Die Annotations `com.fasterxml.jackson.annotation.*` (`@JsonIgnore`, `@JsonProperty`) bleiben dagegen legitim im Einsatz — Jackson 3 liest sie weiterhin
 - Traceability via `@DisplayName("UC-XXX: ...")`
 - 49 Testmethoden
 - **Einschränkung:** `@AuthenticationPrincipal`-Parameter sind im MVC-Slice nicht auflösbar (Resolver fehlt) — `GET /api/teilnahmen/meine` wird deshalb nur via IT getestet (TC-036)

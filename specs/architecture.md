@@ -224,7 +224,7 @@ erDiagram
 | TEST-004 | Tests | Frontend: kaum Unit-Tests ausserhalb `auth/` (Komponenten/Services ungetestet) | MINOR | Offen |
 | QUAL-001 | CI/CD | Kein ESLint/Prettier-Check in CI, keine Coverage, kein Dependabot | MINOR | Offen |
 | REFACT-002 | Code-Qualität | Frontend: `laden/fehler/erfolg`+`setTimeout`-Muster in ~12 Komponenten dupliziert | MINOR | Offen |
-| DEP-001 | Code-Qualität | Ungenutzte `citrus-bom` in `pom.xml` (zieht Jackson 2.x in den Test-Scope) | MINOR | Offen |
+| DEP-001 | Code-Qualität | Ungenutzte `citrus-bom` in `pom.xml` (zieht Jackson 2.x in den Test-Scope) | MINOR | ✅ Behoben 2026-07-09 |
 | DOCS-001 | Dokumentation | Drift zwischen CLAUDE.md/README/architecture.md (TC-Range, alte Security-Tabelle) | MINOR | ✅ Behoben 2026-07-06 |
 | CODE-001 | Code-Qualität | Kyrillisches «а» (U+0430) in zwei IT-Methodennamen (`...ViаUpsert`) | MINOR | ✅ Behoben 2026-07-09 |
 | DB-002 | Datenmodell | Fachliche 1:1-Kardinalitäten (Teilnahme/Abrechnung/Einladung) ohne Unique-Constraints; Geldfelder ohne `precision/scale` | MAJOR | Offen |

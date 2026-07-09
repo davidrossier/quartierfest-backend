@@ -36,17 +36,6 @@
 			${project.build.directory}/site/jacoco-it/jacoco.xml
 		</sonar.coverage.jacoco.xmlReportPaths>
 	</properties>
-	<dependencyManagement>
-		<dependencies>
-			<dependency>
-				<groupId>org.citrusframework</groupId>
-				<artifactId>citrus-bom</artifactId>
-				<version>4.9.4</version>
-				<type>pom</type>
-				<scope>import</scope>
-			</dependency>
-		</dependencies>
-	</dependencyManagement>
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
@@ -94,21 +83,6 @@
 		<dependency>
 			<groupId>org.springframework.security</groupId>
 			<artifactId>spring-security-test</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.citrusframework</groupId>
-			<artifactId>citrus-spring</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.citrusframework</groupId>
-			<artifactId>citrus-http</artifactId>
-			<scope>test</scope>
-		</dependency>
-		<dependency>
-			<groupId>org.citrusframework</groupId>
-			<artifactId>citrus-junit5</artifactId>
 			<scope>test</scope>
 		</dependency>
 	</dependencies>
