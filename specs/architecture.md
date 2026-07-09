@@ -220,7 +220,7 @@ erDiagram
 | API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Offen |
 | CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | Offen |
 | ERROR-001 | Code-Qualität | Kein `@RestControllerAdvice` — FK-Fehler liefern 500, kein einheitliches Fehler-JSON | MINOR | ✅ Behoben 2026-07-09 |
-| REST-001 | Architektur | Frontend aktualisiert Teilnahmen via POST-Upsert statt `PUT /api/teilnahmen/{id}` | MINOR | Offen |
+| REST-001 | Architektur | Frontend aktualisiert Teilnahmen via POST-Upsert statt `PUT /api/teilnahmen/{id}` | MINOR | ✅ Behoben 2026-07-09 (Teilnahme-Pfad) |
 | TEST-004 | Tests | Frontend: kaum Unit-Tests ausserhalb `auth/` (Komponenten/Services ungetestet) | MINOR | Offen |
 | QUAL-001 | CI/CD | Kein ESLint/Prettier-Check in CI, keine Coverage, kein Dependabot | MINOR | Offen |
 | REFACT-002 | Code-Qualität | Frontend: `laden/fehler/erfolg`+`setTimeout`-Muster in ~12 Komponenten dupliziert | MINOR | Offen |

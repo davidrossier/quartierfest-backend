@@ -83,12 +83,26 @@ class TeilnahmeControllerTest {
         Teilnahme t = buildTeilnahme();
         when(teilnahmeService.save(any(Teilnahme.class))).thenReturn(t);
 
+        Teilnahme request = buildTeilnahme();
+        request.setId(null); // REST-001: Create-Request trägt keine id
         mockMvc.perform(post("/api/teilnahmen")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(t)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(4))
                 .andExpect(jsonPath("$.anzahlPersonenEffektiv").value(2));
+    }
+
+    @Test
+    @DisplayName("UC-005: POST /api/teilnahmen mit id wird abgelehnt (REST-001)")
+    void create_withId_returnsBadRequest() throws Exception {
+        mockMvc.perform(post("/api/teilnahmen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildTeilnahme())))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.message").value(
+                        org.hamcrest.Matchers.containsString("PUT /api/teilnahmen/")));
     }
 
     @Test
@@ -101,9 +115,12 @@ class TeilnahmeControllerTest {
                 new TeilnahmeBuffetBeitrag(BuffetBeitrag.DESSERT, "Mousse au chocolat")));
         when(teilnahmeService.save(any(Teilnahme.class))).thenReturn(t);
 
+        Teilnahme request = buildTeilnahme();
+        request.setId(null); // REST-001: Create-Request trägt keine id
+        request.setBuffetBeitraege(t.getBuffetBeitraege());
         mockMvc.perform(post("/api/teilnahmen")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(t)))
+                        .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.buffetBeitraege.length()").value(2));
     }

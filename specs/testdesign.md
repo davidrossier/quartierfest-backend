@@ -8,7 +8,7 @@
 | UC-002 Parteien verwalten | Yes | TC-004..005, TC-030 |
 | UC-003 Event anlegen | Yes | TC-006..007, TC-031 — inkl. `PUT /api/events/{id}` bearbeiten |
 | UC-004 Einladung verwalten | Yes | TC-008..010 |
-| UC-005 Teilnahme verwalten | Yes | TC-011..012, TC-033 – explizite Erstellung via POST bestätigt; kein Auto-Create gewünscht; mehrere Buffet-Beiträge je Teilnahme |
+| UC-005 Teilnahme verwalten | Yes | TC-011..012, TC-033, TC-041 – explizite Erstellung via POST bestätigt; kein Auto-Create gewünscht; mehrere Buffet-Beiträge je Teilnahme; POST mit `id` abgelehnt (REST-001) |
 | UC-006 Bestätigung verwalten | Yes | TC-013 – `bestaetigungVersendet` via POST/Upsert nachträglich setzbar; kein PATCH benötigt |
 | UC-007 Allgemeinausgabe verwalten | Yes | TC-014..015 |
 | UC-008 Konsumationsangebot verwalten | Yes | TC-016 |
@@ -382,6 +382,14 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
   5. GET `/api/persons` mit ORGANISATOR-Token → HTTP 200
 - **Citrus actions**: Sequenz aus `send`/`receive` gemäss When/Then
 
+### TC-041 – UC-005 Teilnahme erstellen: POST mit id wird abgelehnt (REST-001)
+- **Source**: REST-001 (POST-Upsert unterbunden; Updates nur via Whitelist-PUT aus UC-016)
+- **Type**: Error scenario
+- **Given**: Teilnahme existiert (im Test via POST ohne `id` angelegt)
+- **When**: POST `/api/teilnahmen` mit gesetzter `id` der bestehenden Teilnahme
+- **Then**: HTTP 400 + Fehler-JSON `{status: 400, message}` mit Verweis auf `PUT /api/teilnahmen/{id}`
+- **Citrus actions**: `send POST /api/teilnahmen`, `receive 200`, `send POST /api/teilnahmen (mit id)`, `receive 400`
+
 ---
 
 ## Traceability-Status
@@ -430,8 +438,9 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 | TC-038 | UC-014 Login Happy Path und falsches Passwort | BenutzerAnmeldenIT | tc038_loginHappyPathUndFalschesPasswort | ✅ |
 | TC-039 | UC-015 Letzter ORGANISATOR nicht löschbar | BenutzerVerwaltenIT | tc039_letzterOrganisatorNichtLoeschbar | ✅ |
 | TC-040 | AUTH-002 Autorisierungsmatrix (security-test) | SecurityMatrixIT | tc040_autorisierungsmatrix | ✅ |
+| TC-041 | UC-005 POST mit id abgelehnt (REST-001) | TeilnahmeVerwaltenIT | tc041_teilnahmeErstellenMitIdAbgelehnt | ✅ |
 
-**38 TCs implementiert (TC-001..TC-040, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
+**39 TCs implementiert (TC-001..TC-041, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
 
 ---
 

@@ -130,7 +130,7 @@ Enums sind als innere Klassen in der jeweiligen Entity definiert:
 - `@MockitoBean` für den Service; `@Autowired MockMvc` für Requests
 - **Jackson 3.x:** Spring Boot 4.x konfiguriert `tools.jackson.databind.ObjectMapper` als Bean — `@Autowired ObjectMapper` muss diesen Typ importieren, nicht `com.fasterxml.jackson.databind.ObjectMapper` (Jackson 2.x, nicht auf dem Classpath). Die Annotations `com.fasterxml.jackson.annotation.*` (`@JsonIgnore`, `@JsonProperty`) bleiben dagegen legitim im Einsatz — Jackson 3 liest sie weiterhin
 - Traceability via `@DisplayName("UC-XXX: ...")`
-- 49 Testmethoden
+- 50 Testmethoden
 - **Einschränkung:** `@AuthenticationPrincipal`-Parameter sind im MVC-Slice nicht auflösbar (Resolver fehlt) — `GET /api/teilnahmen/meine` wird deshalb nur via IT getestet (TC-036)
 
 ```java
@@ -164,7 +164,7 @@ class PersonControllerTest {
 17 `*IT.java` Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`).
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
 Alle ITs ausser `SecurityMatrixIT` tragen `@ActiveProfiles("dev")` (offene Security-Chain, SEC-001) — byte-identisch, damit alle denselben gecachten Spring-Context teilen.
-**38 Testmethoden (TC-001..TC-040, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
+**39 Testmethoden (TC-001..TC-041, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Auth-Besonderheiten:
 - `TeilnahmeBestaetigenIT` (TC-036/037) holt sich echte JWTs via `POST /api/auth/login` — die Ownership-403-Fälle laufen im dev-Profil (Methoden-Security)
@@ -224,7 +224,6 @@ Bekannte Einschränkungen (als TODO in den IT-Klassen markiert):
 - Kein PATCH-Endpunkt (z.B. für `bestaetigungVersendet`, `zustellungsDatum`)
 - Kein `GET /api/events/{id}/konsumationsliste` (UC-009 nur teilweise abgedeckt)
 - Kein Auto-Kalkulationsendpunkt für Abrechnungen (UC-011 manuell)
-- TC-012 / TC-023: Referenz auf nicht-existierende FK-ID liefert weiterhin `500` (kein EntityNotFound-Handler)
 
 Vollständige technische Schulden → `specs/TODO.md`
 
@@ -236,7 +235,7 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 16 Use Cases |
 | `UC-001` .. `UC-016` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme, UC-014..016 = Auth/Eigenbau-Login) |
-| `testdesign.md` | Testdesign mit TC-001..TC-040, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign mit TC-001..TC-041, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |

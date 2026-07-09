@@ -14,7 +14,7 @@
 
 **Hoher Nutzen, geringer Aufwand (nächster Sprint):**
 3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren) — ✅ behoben 2026-07-09 (empirisch: 409 statt 404)
-4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen
+4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen — ✅ behoben 2026-07-09 (Teilnahme-Pfad; UC-006/UC-012-PUT-Endpunkte als Folgearbeit offen)
 5. **CODE-001 + DEP-001** — Quick Wins (je < 1 h) — ✅ beide behoben 2026-07-09
 6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check
 
@@ -39,7 +39,7 @@
 
 ### DB-002 – Fachliche Kardinalitäten nicht per DB-Constraint erzwungen *(Review 2026-07-09)*
 
-Das Datenmodell definiert `Einladung 1—1 Teilnahme`, `Teilnahme 1—1 Abrechnung` und faktisch eine Einladung pro Partei und Event — auf DB-Ebene erzwingt das nichts: kein `unique` auf `teilnahme.einladung_id`, `abrechnung.teilnahme_id` oder `einladung(event_id, partei_id)`. Der POST-Upsert-Pfad (REST-001) und die Bulk-Einladungserstellung im Frontend machen Duplikate realistisch. Zudem haben die `BigDecimal`-Geldfelder keine explizite `precision`/`scale` — Hibernate wählt den Spaltentyp selbst.
+Das Datenmodell definiert `Einladung 1—1 Teilnahme`, `Teilnahme 1—1 Abrechnung` und faktisch eine Einladung pro Partei und Event — auf DB-Ebene erzwingt das nichts: kein `unique` auf `teilnahme.einladung_id`, `abrechnung.teilnahme_id` oder `einladung(event_id, partei_id)`. Doppelte POSTs (der Upsert-Pfad aus REST-001 ist seit 2026-07-09 geblockt, ein zweites POST ohne `id` legt aber weiterhin ein Duplikat an) und die Bulk-Einladungserstellung im Frontend machen Duplikate realistisch. Zudem haben die `BigDecimal`-Geldfelder keine explizite `precision`/`scale` — Hibernate wählt den Spaltentyp selbst.
 
 **Empfehlung:** Im Zuge der Flyway-Baseline (DB-001), nach Prüfung/Bereinigung des Bestands:
 - `ALTER TABLE teilnahme ADD CONSTRAINT uk_teilnahme_einladung UNIQUE (einladung_id);` analog `abrechnung.teilnahme_id` und `einladung (event_id, partei_id)`
@@ -158,14 +158,6 @@ Die übrigen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Te
 
 ---
 
-### REST-001 – Frontend aktualisiert Teilnahmen via POST-Upsert statt PUT
-
-`TeilnahmenVerwaltungComponent.speichern()` sendet beim Bearbeiten `POST /api/teilnahmen` mit gesetzter `id` (JPA-`save()` wirkt als Upsert) statt den vorhandenen `PUT /api/teilnahmen/{id}` zu nutzen. Gleiches Upsert-Muster bei UC-006/UC-012 (`bestaetigungVersendet`, `zustellungsDatum`). Der POST-Endpunkt umgeht damit faktisch die UC-016-Whitelist-Semantik des PUT.
-
-**Empfehlung:** Frontend auf `teilnahmeService.update(id, dto)` umstellen; POST-Upsert unterbinden (im Controller `id != null` → 400 oder `id` vor `save()` nullen). Für UC-006/UC-012 dedizierte PATCH/PUT-Endpunkte erwägen (bestehendes TODO in den IT-Klassen). Security-Einordnung (Review 2026-07-09): In der gesicherten Chain ist POST ORGANISATOR-only, der Whitelist-Bypass ist also nicht durch PARTEI ausnutzbar — trotzdem beheben, zwei Update-Pfade mit unterschiedlichen Regeln bleiben ein Fehlerherd.
-
----
-
 ### TEST-004 – Frontend: kaum Unit-Tests ausserhalb Auth
 
 Nur 7 Spec-Dateien (~31 Tests), fast ausschliesslich `auth/` + `app`. Die 20+ Feature-Komponenten und 11 HTTP-Services haben keine Unit-Tests — insbesondere die `computed`-Logik (Event-Filterung, `einladungenOhneTeilnahme`, Sortierung via `shared/sortierung.ts`) wäre günstig testbar.
@@ -219,6 +211,16 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 ---
 
 ## Behoben
+
+### REST-001 – Frontend aktualisiert Teilnahmen via POST-Upsert statt PUT ✅ `2026-07-09`
+
+`TeilnahmenVerwaltungComponent.speichern()` sendete beim Bearbeiten `POST /api/teilnahmen` mit gesetzter `id` (JPA-`save()` wirkt als Upsert) statt den vorhandenen `PUT /api/teilnahmen/{id}` — der POST umging damit die UC-016-Whitelist-Semantik des PUT.
+
+Behoben auf dem Teilnahme-Pfad: Frontend nutzt `teilnahmeService.update(id, dto)` mit `TeilnahmeUpdatePayload` (Whitelist ohne `einladung`; `id` aus `TeilnahmePayload` entfernt); Backend lehnt `POST /api/teilnahmen` mit gesetzter `id` mit 400 ab (Fehlerformat aus ERROR-001, Verweis auf den PUT). Neu TC-041 in `TeilnahmeVerwaltenIT` + Slice-Test in `TeilnahmeControllerTest`; Playwright UC-005/UC-016 lokal grün (6/6).
+
+**Folgearbeit offen:** UC-006/UC-012 nutzen dasselbe Upsert-Muster (`bestaetigungVersendet`, `zustellungsDatum`), haben aber keinen PUT-Endpunkt — dedizierte PUT/PATCH-Endpunkte nötig, bevor dort geblockt werden kann (bestehende TODOs in den IT-Klassen).
+
+---
 
 ### ERROR-001 – Kein globaler Exception-Handler (500 statt 404, kein einheitliches Fehler-JSON) ✅ `2026-07-09`
 

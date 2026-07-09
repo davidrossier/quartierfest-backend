@@ -33,6 +33,12 @@ public class TeilnahmeController {
 
     @PostMapping
     public Teilnahme create(@Valid @RequestBody Teilnahme teilnahme) {
+        // REST-001: kein Upsert via POST — Updates laufen über den Whitelist-PUT (UC-016),
+        // sonst umgeht der POST dessen einladung-Schutz
+        if (teilnahme.getId() != null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Bestehende Teilnahme via PUT /api/teilnahmen/{id} aktualisieren.");
+        }
         return teilnahmeService.save(teilnahme);
     }
 

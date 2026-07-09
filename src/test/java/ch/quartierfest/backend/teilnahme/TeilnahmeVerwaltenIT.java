@@ -3,8 +3,8 @@ package ch.quartierfest.backend.teilnahme;
 /**
  * Traceability:
  *   UC: UC-005 (Teilnahmen verwalten)
- *   TCs: TC-011, TC-012, TC-033
- *   Last traced: 2026-05-01
+ *   TCs: TC-011, TC-012, TC-033, TC-041
+ *   Last traced: 2026-07-09
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -26,7 +26,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-005 – Teilnahmen verwalten. TC-011, TC-012, TC-033. */
+/** Integration tests for UC-005 – Teilnahmen verwalten. TC-011, TC-012, TC-033, TC-041. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")
 class TeilnahmeVerwaltenIT {
@@ -109,6 +109,30 @@ class TeilnahmeVerwaltenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody().get("status")).isEqualTo(409);
         assertThat((String) response.getBody().get("message")).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("TC-041 – UC-005 Teilnahme erstellen: POST mit id wird abgelehnt (REST-001)")
+    @SuppressWarnings("unchecked")
+    void tc041_teilnahmeErstellenMitIdAbgelehnt() {
+        ResponseEntity<Map> angelegt = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "einladung", Map.of("id", einladungId),
+                        "anzahlPersonenEffektiv", 2), json), Map.class);
+        assertThat(angelegt.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Number teilnahmeId = (Number) angelegt.getBody().get("id");
+
+        ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "id", teilnahmeId,
+                        "einladung", Map.of("id", einladungId),
+                        "anzahlPersonenEffektiv", 3), json), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().get("status")).isEqualTo(400);
+        assertThat((String) response.getBody().get("message")).contains("PUT /api/teilnahmen/");
+
+        tryDelete("http://localhost:" + port + "/api/teilnahmen/" + teilnahmeId);
     }
 
     @Test
