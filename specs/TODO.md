@@ -22,7 +22,7 @@
 7. **CI-001** — E2E-Workflow (Nightly), Actuator-Health als Readiness (→ OPS-001)
 8. **BIZ-001** — UC-011-Berechnungslogik (fachlich wichtigste Lücke) inkl. `AbrechnungServiceTest`; UC-009-Endpunkt
 9. **QUAL-001** — angular-eslint, Prettier-Check, Dependabot, Coverage
-10. **REFACT-001/002 + TEST-001/002** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen
+10. **REFACT-001/002 + TEST-001/002** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen; REST-002 (PUT-404) als Beifang, CODE-002 (`@Data` → `@Getter`/`@Setter`) spätestens mit API-001 Stufe 2
 11. **OPS-001, DATA-001, SEC-003** — Deployment/Backups dokumentieren, Löschkonzept, Audit-Trail-Entscheid
 
 ---
@@ -207,6 +207,22 @@ Abrechnungen, Zahlungen und Mahnungen sind ohne Nachvollziehbarkeit änder- und 
 Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quartierbewohnern unbefristet; eine Aufbewahrungs-/Löschregel ist nirgends spezifiziert.
 
 **Empfehlung:** Mit dem Organisator eine einfache Betriebsregel festlegen und dokumentieren (z.B. «Event-Daten inkl. Konsumationen/Abrechnungen x Jahre nach dem Event löschen; Stammdaten von Personen/Parteien beim Wegzug entfernen»). Technisch reicht vorerst manuelles Löschen über die bestehende UI (Kaskaden prüfen!); ein automatisierter Job ist erst nötig, wenn die Regel steht. Als Abschnitt in `DEPLOYMENT.md` (→ OPS-001) oder eigenem Betriebs-Dokument festhalten.
+
+---
+
+### REST-002 – PUT wirkt als Upsert: stilles Anlegen bei nicht-existenter id *(Clean-Code-Review 2026-07-09)*
+
+`PersonController`, `ParteiController` und `EventController` implementieren `update()` als `entity.setId(id); service.save(entity)` — ein `PUT` auf eine nicht-existente id legt still einen neuen Datensatz an, statt 404 zu liefern (JPA-`merge`-Semantik). Nebeneffekt: Das Request-Objekt wird im Controller mutiert. `TeilnahmeController` (Whitelist-DTO mit Existenzprüfung → 404) und `BenutzerController` machen es korrekt vor.
+
+**Empfehlung:** In den drei Services eine Update-Methode mit Existenzprüfung einführen (`findById(id).orElseThrow(→ 404 via ResponseStatusException)`), Controller darauf umstellen. Der `GlobalExceptionHandler` (ERROR-001) liefert das einheitliche Fehler-JSON. Je ein IT-Fall «PUT auf nicht-existente id → 404» (analog TC-041). Passt als Beifang zu REFACT-001.
+
+---
+
+### CODE-002 – Lombok `@Data` auf allen 13 JPA-Entities *(Clean-Code-Review 2026-07-09)*
+
+`@Data` generiert `equals`/`hashCode`/`toString` über **alle** Felder — bei `Partei.personen` (`@OneToMany`) und `Teilnahme.buffetBeitraege` (`@ElementCollection`) also über Kollektionen. Klassische JPA-Fallen: `toString` in Logs kann Lazy-Loading auslösen (`LazyInitializationException` ausserhalb der Session), `hashCode` ist über den Entity-Lebenszyklus instabil (id `null` → gesetzt), Entities in `Set`/`Map` verhalten sich dadurch falsch. Bisher folgenlos, weil Entities kaum in Sets landen — es ist aber eine stille Mine.
+
+**Empfehlung:** `@Data` durch `@Getter`/`@Setter` ersetzen; `equals`/`hashCode` id-basiert (oder weglassen), `toString` ohne Beziehungsfelder (`@ToString.Exclude`). Mechanische Änderung über alle 13 Entities in einem Commit, `./mvnw verify` deckt Regressionen ab. Spätestens im Zuge von API-001 Stufe 2 (DTO-Layer) erledigen.
 
 ---
 

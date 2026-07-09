@@ -234,6 +234,8 @@ erDiagram
 | UX-001 | Usability | Meldungen nach 3–4 s weg, kein `aria-live`, `window.prompt` unmaskiert, UC-010-Matrix mobil ungeprüft | MINOR | Offen |
 | SEC-003 | Sicherheit | Kein Audit-Trail für Abrechnungen/Zahlungen/Mahnungen | MINOR | Offen |
 | DATA-001 | Datenschutz | Kein Löschkonzept/Aufbewahrungsregel für Personendaten (revDSG) | MINOR | Offen |
+| REST-002 | Architektur | `PUT` auf Person/Partei/Event legt bei nicht-existenter id still an statt 404 (`setId` + `save`) | MINOR | Offen |
+| CODE-002 | Code-Qualität | Lombok `@Data` auf allen 13 JPA-Entities — `equals`/`hashCode`/`toString` über Kollektionen (Lazy-Loading-/Set-Fallen) | MINOR | Offen |
 
 ---
 
