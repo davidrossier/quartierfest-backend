@@ -109,7 +109,7 @@ npm start        # http://localhost:4200
 ### Sicherheit & CORS
 `SecurityConfig.java` kapselt CORS und Authentifizierung:
 - **CORS:** erlaubter Origin via Property `cors.allowed-origins` (Dev-Default `http://localhost:4200`) für alle `/api/**`-Endpunkte (`GET`, `POST`, `PUT`, `DELETE`)
-- **Auth (AUTH-002, Eigenbau):** `POST /api/auth/login` stellt ein HS256-JWT aus (12 h); im `prod`-Profil gilt die Autorisierungsmatrix (Rollen `ORGANISATOR`/`PARTEI`), im Dev-Default `permitAll()` mit Token-Verarbeitung. Details → `specs/architecture.md`
+- **Auth (AUTH-002, Eigenbau):** `POST /api/auth/login` stellt ein HS256-JWT aus (12 h); die Autorisierungsmatrix (Rollen `ORGANISATOR`/`PARTEI`) ist der Default (fail-closed, SEC-001) — `permitAll()` mit Token-Verarbeitung nur bei explizitem `dev`-Profil, das `./mvnw spring-boot:run` automatisch setzt. Details → `specs/architecture.md`
 - **Dev-Login:** `admin@quartierfest.local` / `quartierfest-admin` (Bootstrap-Admin, wird beim Start angelegt, falls kein ORGANISATOR existiert)
 
 ### Backend-Domänen

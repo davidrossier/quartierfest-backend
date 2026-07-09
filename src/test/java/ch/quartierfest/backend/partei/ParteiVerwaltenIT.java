@@ -18,6 +18,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -26,6 +27,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /** Integration tests for UC-002 – Parteien verwalten. TC-004, TC-005, TC-030. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+@ActiveProfiles("dev")
 class ParteiVerwaltenIT {
 
     private RestTemplate http;

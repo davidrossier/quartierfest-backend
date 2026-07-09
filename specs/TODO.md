@@ -16,14 +16,6 @@
 
 ---
 
-### SEC-001 – Security-Default ist fail-open
-
-Die Default-Filter-Chain (`@Profile("!prod & !security-test")`) ist `permitAll()`. Die Autorisierungsmatrix greift nur, wenn beim Start explizit `--spring.profiles.active=prod` gesetzt ist — ein vergessenes Profil beim Deployment öffnet die komplette API unbemerkt.
-
-**Empfehlung:** Default umkehren (fail-closed): gesicherte Chain als Default, offene Chain nur bei explizitem `@Profile("dev")`. Lokale Entwicklung und ITs starten dann mit `dev`-Profil (ein Eintrag in `application.properties` bzw. `@ActiveProfiles`). Alternativ minimal: beim Start ohne `prod`-Profil einen deutlichen WARN-Log ausgeben und im Deployment-Runbook das Profil verifizieren.
-
----
-
 ### API-001 – API-Contract nur implizit (kein OpenAPI, kein DTO-Layer)
 
 JPA-Entities sind direkt der API-Contract (inkl. verschachtelter Beziehungen wie `Teilnahme → Einladung → Partei → Personen`); die TypeScript-Interfaces im Frontend werden von Hand synchron gehalten. Es gibt keine OpenAPI-Spec, keine generierten Typen und keine Contract-Tests — Drift zwischen Entity und Frontend-Model fällt erst im lokal laufenden Playwright-E2E auf (das nicht in CI läuft, → CI-001). Folgeproblem: Entity-Serialisierung erzwingt die in PERF-001 dokumentierten verschachtelten Payloads.
@@ -157,6 +149,16 @@ Citrus 4.9.4 liegt auf dem Test-Classpath, ist aber dokumentiert inkompatibel mi
 ---
 
 ## Behoben
+
+### SEC-001 – Security-Default fail-open → fail-closed invertiert ✅ `2026-07-09`
+
+Die `@Profile`-Bedingungen in `SecurityConfig` wurden umgekehrt: gesicherte Chain (Autorisierungsmatrix) ist jetzt der Default (`@Profile("!dev")`), die offene `permitAll()`-Chain greift nur noch bei explizitem `dev`-Profil (`@Profile("dev")`) — `prod`, `security-test` und jeder Start ohne Profil sind fail-closed.
+
+- **Lokale Entwicklung:** `spring-boot-maven-plugin` in der `pom.xml` setzt für `spring-boot:run` automatisch das `dev`-Profil — lokaler Workflow und Playwright-E2E unverändert. Das gepackte Jar bleibt fail-closed (bewusste Abweichung von der ursprünglichen Empfehlung «Eintrag in `application.properties`», die fail-open fürs Jar wieder eingeführt hätte). IDE-Start der Main-Klasse braucht das Profil in der Run-Config.
+- **ITs:** Die 16 Nicht-Security-ITs tragen `@ActiveProfiles("dev")` (identisch → weiterhin ein gemeinsamer gecachter Context); `SecurityMatrixIT` bleibt auf `security-test`, `BackendApplicationTests` bleibt profilfrei und smoke-testet damit den fail-closed-Boot. CI (`./mvnw verify` ohne Profil) unverändert.
+- **WARN-Log** beim Aktivieren der offenen Chain («Offene Security-Chain aktiv…»).
+
+---
 
 ### DOCS-001 – Doku-Drift zwischen CLAUDE.md, README und architecture.md ✅ `2026-07-06`
 

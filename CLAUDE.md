@@ -8,7 +8,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 # Build (skip tests)
 ./mvnw clean install -DskipTests
 
-# Run application
+# Run application (aktiviert automatisch das dev-Profil → offene Security-Chain, SEC-001)
 ./mvnw spring-boot:run
 
 # Unit tests (Controller-, Service- und Smoke-Tests)
@@ -59,12 +59,14 @@ Test scope:
 
 ### Security & Auth (AUTH-001/AUTH-002, Eigenbau-Login)
 
-`SecurityConfig.java` definiert zwei profil-abhängige Filter-Chains plus CORS (Property `cors.allowed-origins`, Dev-Default `http://localhost:4200`):
+`SecurityConfig.java` definiert zwei profil-abhängige Filter-Chains plus CORS (Property `cors.allowed-origins`, Dev-Default `http://localhost:4200`). Der Default ist fail-closed (SEC-001):
 
 | Profil | Verhalten |
 |---|---|
-| `prod`, `security-test` | Autorisierungsmatrix: `POST /api/auth/login` offen; `/api/benutzer/**` nur `ORGANISATOR`; `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}` für `ORGANISATOR`/`PARTEI`; alle übrigen `/api/**` nur `ORGANISATOR` |
-| Default (Dev/Tests) | `permitAll()`, aber Bearer-Tokens werden trotzdem verarbeitet — `/meine` und Ownership-Checks funktionieren auch lokal |
+| Default (kein Profil), `prod`, `security-test` | Autorisierungsmatrix: `POST /api/auth/login` offen; `/api/benutzer/**` nur `ORGANISATOR`; `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}` für `ORGANISATOR`/`PARTEI`; alle übrigen `/api/**` nur `ORGANISATOR` |
+| `dev` (explizit) | `permitAll()` mit WARN-Log, aber Bearer-Tokens werden trotzdem verarbeitet — `/meine` und Ownership-Checks funktionieren auch lokal |
+
+`./mvnw spring-boot:run` aktiviert das `dev`-Profil automatisch (pom.xml, `spring-boot-maven-plugin`). Das gepackte Jar und der IDE-Start der Main-Klasse sind fail-closed — dort das Profil bei Bedarf manuell setzen (`--spring.profiles.active=dev`).
 
 - **Eigenbau-JWT:** `POST /api/auth/login` (Package `auth`) prüft BCrypt-Hash und stellt ein HS256-JWT aus (Claims `sub` = Benutzer-ID, `email`, `rolle`; 12 h). Secret: `auth.jwt.secret` (prod: `AUTH_JWT_SECRET`, min. 32 Zeichen).
 - **Rollen-Mapping:** `JwtAuthenticationConverter` mappt den Claim `rolle` → `ROLE_*` (Spring-Default liest nur `scope`).
@@ -153,16 +155,18 @@ class PersonControllerTest {
 ### Integration tests
 17 `*IT.java` Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`).
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
+Alle ITs ausser `SecurityMatrixIT` tragen `@ActiveProfiles("dev")` (offene Security-Chain, SEC-001) — byte-identisch, damit alle denselben gecachten Spring-Context teilen.
 **38 Testmethoden (TC-001..TC-040, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Auth-Besonderheiten:
-- `TeilnahmeBestaetigenIT` (TC-036/037) holt sich echte JWTs via `POST /api/auth/login` — die Ownership-403-Fälle laufen im Default-Profil (Methoden-Security)
+- `TeilnahmeBestaetigenIT` (TC-036/037) holt sich echte JWTs via `POST /api/auth/login` — die Ownership-403-Fälle laufen im dev-Profil (Methoden-Security)
 - `SecurityMatrixIT` (TC-040) läuft als einziger IT mit `@ActiveProfiles("security-test")` (prod-gleiche URL-Matrix, `src/test/resources/application-security-test.properties`) und `RANDOM_PORT` (der Default-Context belegt 8080)
 - Der Bootstrap-ORGANISATOR (`admin@quartierfest.local`) existiert in allen IT-Läufen; `tc039` setzt via JUnit-Assumption genau einen ORGANISATOR voraus
 
 Verwendetes Muster:
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+@ActiveProfiles("dev")
 class XxxIT {
     private RestTemplate http;          // no-op error handler → wirft nie bei 4xx/5xx
     @LocalServerPort private int port;
