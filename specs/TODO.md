@@ -206,14 +206,6 @@ Citrus 4.9.4 liegt auf dem Test-Classpath, ist aber dokumentiert inkompatibel mi
 
 ---
 
-### CODE-001 – Kyrillische Homoglyphen in zwei IT-Methodennamen
-
-`BestaetigungVerwaltenIT.tc013_bestaetigungVersendetViаUpsert()` und `AbrechnungZustellenIT.tc032_zustellungsDatumViаUpsert()` enthalten ein kyrillisches «а» (U+0430) statt eines lateinischen «a» in «Viа» (kompiliert, aber bricht Textsuche, `-Dtest`-Filter und Copy-Paste). Die Traceability-Tabelle in `testdesign.md` hat das Zeichen mitkopiert.
-
-**Empfehlung:** Beide Methoden auf lateinisches «a» umbenennen (`...ViaUpsert`), `testdesign.md`-Tabelle nachführen. Optional: Checkstyle/Editor-Regel gegen Nicht-ASCII-Identifier.
-
----
-
 ### UX-001 – Meldungs-UX, a11y und Mobile-Tauglichkeit *(Review 2026-07-09)*
 
 Vier zusammenhängende Befunde:
@@ -243,6 +235,14 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 ---
 
 ## Behoben
+
+### CODE-001 – Kyrillische Homoglyphen in zwei IT-Methodennamen ✅ `2026-07-09`
+
+`BestaetigungVerwaltenIT.tc013_bestaetigungVersendetViаUpsert()` und `AbrechnungZustellenIT.tc032_zustellungsDatumViаUpsert()` enthielten ein kyrillisches «а» (U+0430) statt eines lateinischen «a» in «Viа» (kompilierte, brach aber Textsuche, `-Dtest`/`-Dit.test`-Filter und Copy-Paste).
+
+Beide Methoden auf lateinisches «a» umbenannt (`...ViaUpsert`), die mitkopierten Einträge in der `testdesign.md`-Traceability-Tabelle (TC-013, TC-032) nachgeführt. Verifiziert: `grep -P '\x{0430}'` über `src/` leer; Methoden-Filter `-Dit.test='BestaetigungVerwaltenIT#tc013_bestaetigungVersendetViaUpsert'` greift wieder. Auf eine Checkstyle-Regel gegen Nicht-ASCII-Identifier wurde verzichtet (Einzelfall).
+
+---
 
 ### SEC-001 – Security-Default fail-open → fail-closed invertiert ✅ `2026-07-09`
 

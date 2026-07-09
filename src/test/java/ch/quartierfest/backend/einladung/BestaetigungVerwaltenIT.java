@@ -82,7 +82,7 @@ class BestaetigungVerwaltenIT {
     @Test
     @DisplayName("TC-013 – UC-006 Bestätigung versendet via POST/Upsert nachträglich setzen")
     @SuppressWarnings("unchecked")
-    void tc013_bestaetigungVersendetViаUpsert() {
+    void tc013_bestaetigungVersendetViaUpsert() {
         // Given: Einladung mit bestaetigungVersendet=false anlegen
         ResponseEntity<Map> created = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(

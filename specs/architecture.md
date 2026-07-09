@@ -226,7 +226,7 @@ erDiagram
 | REFACT-002 | Code-Qualität | Frontend: `laden/fehler/erfolg`+`setTimeout`-Muster in ~12 Komponenten dupliziert | MINOR | Offen |
 | DEP-001 | Code-Qualität | Ungenutzte `citrus-bom` in `pom.xml` (zieht Jackson 2.x in den Test-Scope) | MINOR | Offen |
 | DOCS-001 | Dokumentation | Drift zwischen CLAUDE.md/README/architecture.md (TC-Range, alte Security-Tabelle) | MINOR | ✅ Behoben 2026-07-06 |
-| CODE-001 | Code-Qualität | Kyrillisches «а» (U+0430) in zwei IT-Methodennamen (`...ViаUpsert`) | MINOR | Offen |
+| CODE-001 | Code-Qualität | Kyrillisches «а» (U+0430) in zwei IT-Methodennamen (`...ViаUpsert`) | MINOR | ✅ Behoben 2026-07-09 |
 | DB-002 | Datenmodell | Fachliche 1:1-Kardinalitäten (Teilnahme/Abrechnung/Einladung) ohne Unique-Constraints; Geldfelder ohne `precision/scale` | MAJOR | Offen |
 | SEC-002 | Sicherheit | Kein Brute-Force-Schutz auf `POST /api/auth/login` (internet-exponiert) | MAJOR | Offen |
 | BIZ-001 | Fachlichkeit | UC-011: Abrechnungsbeträge werden manuell erfasst statt berechnet; UC-009 ohne Konsumationslisten-Endpunkt | MAJOR | Offen |

@@ -404,7 +404,7 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 | TC-011 | UC-005 Teilnahme erfassen und löschen | TeilnahmeVerwaltenIT | tc011_teilnahmeErstellenHappyPath | ✅ |
 | TC-012 | UC-005 Teilnahme ohne Einladung wird abgelehnt | TeilnahmeVerwaltenIT | tc012_teilnahmeErstellenEinladungFehlt | ✅ |
 | TC-033 | UC-005 Teilnahme mit mehreren Buffet-Beiträgen | TeilnahmeVerwaltenIT | tc033_teilnahmeErstellenMehrereBeitraege | ✅ |
-| TC-013 | UC-006 Bestätigung versendet via POST/Upsert | BestaetigungVerwaltenIT | tc013_bestaetigungVersendetViаUpsert | ✅ |
+| TC-013 | UC-006 Bestätigung versendet via POST/Upsert | BestaetigungVerwaltenIT | tc013_bestaetigungVersendetViaUpsert | ✅ |
 | TC-014 | UC-007 Allgemeinausgabe anlegen und löschen | AllgemeinausgabeVerwaltenIT | tc014_allgemeinausgabeAnlegen | ✅ |
 | TC-015 | UC-007 Allgemeinausgabe ohne Beschreibung wird abgelehnt | AllgemeinausgabeVerwaltenIT | tc015_allgemeinausgabeOhneBeschreibung | ✅ |
 | TC-016 | UC-008 Konsumationsangebot anlegen und löschen | KonsumationsangebotVerwaltenIT | tc016_konsumationsangebotAnlegen | ✅ |
@@ -422,7 +422,7 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 | TC-029 | UC-001 Person bearbeiten | PersonVerwaltenIT | tc029_personBearbeiten | ✅ |
 | TC-030 | UC-002 Partei ohne Bezeichnung wird abgelehnt | ParteiVerwaltenIT | tc030_parteiOhneBezeichnung | ✅ |
 | TC-031 | UC-003 Event bearbeiten | EventAnlegenIT | tc031_eventBearbeiten | ✅ |
-| TC-032 | UC-012 Zustellungsdatum via POST/Upsert | AbrechnungZustellenIT | tc032_zustellungsDatumViаUpsert | ✅ |
+| TC-032 | UC-012 Zustellungsdatum via POST/Upsert | AbrechnungZustellenIT | tc032_zustellungsDatumViaUpsert | ✅ |
 | TC-034 | UC-015 Benutzer anlegen und löschen | BenutzerVerwaltenIT | tc034_benutzerAnlegen | ✅ |
 | TC-035 | UC-015 Benutzer mit doppelter E-Mail wird abgelehnt | BenutzerVerwaltenIT | tc035_benutzerDuplikatEmail | ✅ |
 | TC-036 | UC-016 PARTEI bestätigt eigene Teilnahme | TeilnahmeBestaetigenIT | tc036_parteiBestaetigtEigeneTeilnahme | ✅ |

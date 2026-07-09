@@ -163,7 +163,7 @@ class AbrechnungZustellenIT {
     @Test
     @DisplayName("TC-032 – UC-012 Zustellungsdatum nachträglich via POST/Upsert setzen")
     @SuppressWarnings("unchecked")
-    void tc032_zustellungsDatumViаUpsert() {
+    void tc032_zustellungsDatumViaUpsert() {
         // Given: Abrechnung ohne zustellungsDatum anlegen
         ResponseEntity<Map> created = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
