@@ -39,20 +39,20 @@ Andere Origins werden vom Browser blockiert. Server-seitige Clients (z.B. `RestT
 
 ### Sicherheit (JWT / Spring Security)
 
-Alle `/api/**`-Endpunkte sind über Spring Security 7.x abgesichert. Die Absicherung ist profil-abhängig:
+Alle `/api/**`-Endpunkte sind über Spring Security 7.x abgesichert. Die Absicherung ist profil-abhängig und fail-closed (SEC-001, behoben 2026-07-09):
 
 | Profil | SecurityFilterChain | Beschreibung |
 |--------|---------------------|--------------|
-| `prod`, `security-test` | Autorisierungsmatrix | `POST /api/auth/login` offen; `/api/benutzer/**` nur `ORGANISATOR`; `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}` für `ORGANISATOR`/`PARTEI`; alle übrigen `/api/**` nur `ORGANISATOR` |
-| kein / `test` / `dev` | `permitAll()` | Kein Token erforderlich — für lokale Entwicklung und Tests. Bearer-Tokens werden trotzdem verarbeitet, damit `/meine` und die Ownership-Prüfung (`@PreAuthorize`) auch ohne gesicherte Matrix funktionieren |
+| Default (kein Profil), `prod`, `security-test` | Autorisierungsmatrix | `POST /api/auth/login` offen; `/api/benutzer/**` nur `ORGANISATOR`; `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}` für `ORGANISATOR`/`PARTEI`; alle übrigen `/api/**` nur `ORGANISATOR` |
+| `dev` (explizit) | `permitAll()` | Kein Token erforderlich — für lokale Entwicklung und Tests; `./mvnw spring-boot:run` setzt das Profil automatisch (pom.xml), Aktivierung wird mit WARN geloggt. Bearer-Tokens werden trotzdem verarbeitet, damit `/meine` und die Ownership-Prüfung (`@PreAuthorize`) auch ohne gesicherte Matrix funktionieren |
 
 **Eigenbau-Login (AUTH-002, implementiert 2026-06-12 — UC-014/UC-015/UC-016):**
 - Das Backend stellt das JWT selbst aus: `POST /api/auth/login` prüft E-Mail/Passwort (BCrypt) und signiert mit HS256 (`JwtEncoder`; Secret via `auth.jwt.secret`, prod `AUTH_JWT_SECRET`; Gültigkeit 12 h; Claims `sub` = Benutzer-ID, `email`, `rolle`)
 - Validierung als OAuth2 Resource Server (AUTH-001), `JwtDecoder` mit symmetrischem Schlüssel statt JWKS/issuer-uri
 - `JwtAuthenticationConverter` mappt den Claim `rolle` auf `ROLE_ORGANISATOR`/`ROLE_PARTEI` (der Spring-Default liest nur `scope`-Claims)
-- Autorisierungsmatrix (Profile `prod` und `security-test`): Login offen; `/api/benutzer/**` nur ORGANISATOR; PARTEI ausschliesslich `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}`; alle übrigen `/api/**` nur ORGANISATOR
+- Autorisierungsmatrix (Default; gilt für `prod`, `security-test` und jeden Start ohne explizites `dev`-Profil): Login offen; `/api/benutzer/**` nur ORGANISATOR; PARTEI ausschliesslich `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}`; alle übrigen `/api/**` nur ORGANISATOR
 - Ownership: `@PreAuthorize` + `TeilnahmeZugriff`-Bean (JWT `sub` → `Benutzer` → `Partei` → Teilnahme-Lookup) — Methoden-Security, wirkt in allen Profilen
-- Die offene Dev/Test-Chain verarbeitet Bearer-Tokens trotzdem (`oauth2ResourceServer`), bleibt aber `permitAll()` — lokale Entwicklung und bestehende ITs unverändert
+- Die offene Chain greift nur bei explizitem `dev`-Profil (SEC-001) und verarbeitet Bearer-Tokens trotzdem (`oauth2ResourceServer`) — lokale Entwicklung (`spring-boot:run` setzt `dev` automatisch) und ITs (`@ActiveProfiles("dev")`) unverändert
 - `Benutzer`-Domain (UC-015): `email` unique, `passwortHash` (BCrypt, nie in API-Antworten), `rolle`, optionaler Partei-FK; letzter ORGANISATOR nicht löschbar (409); Bootstrap des ersten ORGANISATOR-Accounts beim Start (`auth.bootstrap.*`, Dev-Default `admin@quartierfest.local`)
 - Frontend-Login (UC-014): eigenes Formular unter `/login`, Token in `sessionStorage`, HTTP-Interceptor (Bearer + 401-Redirect), Route Guards, rollenbasiertes Routing — keine externe Library
 - Self-Registration ist explizit **nicht vorgesehen** — Accounts werden durch den Organisator in der Admin-UI (`/admin/benutzer`) angelegt; Passwort-Reset nur durch den Organisator
@@ -216,7 +216,7 @@ erDiagram
 | DEPLOY-003 | CI/CD | Kein GitHub Actions Workflow — Tests laufen nur lokal | MAJOR | ✅ Behoben 2026-07-06 |
 | TEST-001 | Tests | 17 IT-Klassen duplizieren `setUp()`-Boilerplate (14 davon zusätzlich `tryDelete()`) | MINOR | Offen |
 | DB-001 | Deployment | `ddl-auto=update` gilt auch in prod — keine Flyway/Liquibase-Migrationen | MAJOR | Offen |
-| SEC-001 | Sicherheit | Security-Default fail-open: ohne `prod`-Profil ist die API komplett offen | MAJOR | Offen |
+| SEC-001 | Sicherheit | Security-Default fail-open: ohne `prod`-Profil ist die API komplett offen | MAJOR | ✅ Behoben 2026-07-09 |
 | API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Offen |
 | CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | Offen |
 | ERROR-001 | Code-Qualität | Kein `@RestControllerAdvice` — FK-Fehler liefern 500, kein einheitliches Fehler-JSON | MINOR | Offen |

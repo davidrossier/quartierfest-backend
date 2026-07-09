@@ -19,6 +19,7 @@ import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.Map;
@@ -34,6 +35,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Kein PATCH-Endpunkt notwendig.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
+@ActiveProfiles("dev")
 class AbrechnungZustellenIT {
 
     private RestTemplate http;

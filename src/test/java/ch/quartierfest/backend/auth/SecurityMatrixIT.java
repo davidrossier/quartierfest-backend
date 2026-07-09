@@ -28,11 +28,12 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration test for the AUTH-002 authorization matrix (TC-040).
- * Einziger IT mit aktiver Security: Profil security-test spiegelt die prod-Chain
- * (Konfiguration in src/test/resources/application-security-test.properties).
+ * Einziger IT mit aktiver Security: Profil security-test läuft auf der gesicherten
+ * Default-Chain (SEC-001: fail-closed; Konfiguration in
+ * src/test/resources/application-security-test.properties).
  * Alle Fixtures laufen über die API mit dem Token des Bootstrap-ORGANISATORs.
  * RANDOM_PORT statt DEFINED_PORT: der security-test-Context koexistiert mit dem
- * gecachten Default-Context der übrigen ITs, die Port 8080 belegen.
+ * gecachten dev-Context der übrigen ITs, die Port 8080 belegen.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @ActiveProfiles("security-test")

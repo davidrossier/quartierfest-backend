@@ -181,6 +181,11 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+					<!-- SEC-001: spring-boot:run startet lokal mit dev-Profil (offene Chain);
+					     das gepackte Jar bleibt fail-closed. -->
+					<profiles>
+						<profile>dev</profile>
+					</profiles>
 				</configuration>
 			</plugin>
 		</plugins>

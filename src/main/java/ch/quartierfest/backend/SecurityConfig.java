@@ -4,6 +4,8 @@ package ch.quartierfest.backend;
 // stellt JWTs selbst aus (HS256, symmetrischer Schlüssel) und validiert sie als
 // OAuth2 Resource Server. Rollen-Claim "rolle" → ROLE_ORGANISATOR / ROLE_PARTEI.
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -38,6 +40,8 @@ import java.util.List;
 @EnableMethodSecurity
 public class SecurityConfig {
 
+    private static final Logger log = LoggerFactory.getLogger(SecurityConfig.class);
+
     @Value("${cors.allowed-origins:http://localhost:4200}")
     private String allowedOrigins;
 
@@ -45,12 +49,14 @@ public class SecurityConfig {
     private String jwtSecret;
 
     /**
-     * Autorisierungsmatrix (prod und security-test): Login offen, Benutzerverwaltung
-     * nur ORGANISATOR, PARTEI ausschliesslich auf den eigenen Teilnahme-Endpunkten
-     * (Ownership zusätzlich via Methoden-Security), alles übrige nur ORGANISATOR.
+     * Autorisierungsmatrix — Default (fail-closed, SEC-001): Login offen,
+     * Benutzerverwaltung nur ORGANISATOR, PARTEI ausschliesslich auf den eigenen
+     * Teilnahme-Endpunkten (Ownership zusätzlich via Methoden-Security), alles
+     * übrige nur ORGANISATOR. Gilt für prod, security-test und jeden Start ohne
+     * explizites dev-Profil.
      */
     @Bean
-    @Profile({"prod", "security-test"})
+    @Profile("!dev")
     public SecurityFilterChain securityFilterChain(HttpSecurity http,
                                                    JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
         http
@@ -69,14 +75,15 @@ public class SecurityConfig {
     }
 
     /**
-     * Dev/Test: alles erlaubt, aber Bearer-Tokens werden trotzdem verarbeitet —
-     * damit funktionieren GET /api/teilnahmen/meine und die Ownership-Prüfung
-     * (@PreAuthorize) auch lokal und in den Default-Profil-ITs.
+     * Nur bei explizitem dev-Profil (SEC-001): alles erlaubt, aber Bearer-Tokens
+     * werden trotzdem verarbeitet — damit funktionieren GET /api/teilnahmen/meine
+     * und die Ownership-Prüfung (@PreAuthorize) auch lokal und in den dev-ITs.
      */
     @Bean
-    @Profile("!prod & !security-test")
+    @Profile("dev")
     public SecurityFilterChain openFilterChain(HttpSecurity http,
                                                JwtAuthenticationConverter jwtAuthenticationConverter) throws Exception {
+        log.warn("Offene Security-Chain aktiv (Profil 'dev'): alle Endpunkte permitAll() — nur für lokale Entwicklung!");
         http
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .csrf(AbstractHttpConfigurer::disable)
