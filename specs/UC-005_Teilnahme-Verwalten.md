@@ -8,14 +8,16 @@ traceability:
   endpoints:
     - "GET /api/teilnahmen"
     - "POST /api/teilnahmen"
+    - "PUT /api/teilnahmen/{id}"
     - "DELETE /api/teilnahmen/{id}"
   test_ids:
     - TC-011
     - TC-012
     - TC-033
+    - TC-041
   it_classes:
     - TeilnahmeVerwaltenIT
-  last_traced: "2026-05-01"
+  last_traced: "2026-07-09"
 ---
 
 # UC-005 – Teilnahmen verwalten
@@ -49,6 +51,7 @@ traceability:
 
 - **"Teilnahmen aus Einladungen erstellen"** (`teilnahmenAusEinladungenErstellen()`): erstellt via `forkJoin` für alle ANGEMELDET-Einladungen des Events, die noch **keine Teilnahme** haben, einen Teilnahme-Datensatz. `anzahlPersonenEffektiv` wird dabei aus `einladung.anzahlPersonen` übernommen.
 - Das Formular erlaubt ausschliesslich das **Bearbeiten** bestehender Teilnahmen — eine manuelle Neuerstellung ohne Einladungsbasis ist über die UI nicht möglich.
+- **Bearbeiten** läuft über den Whitelist-PUT `PUT /api/teilnahmen/{id}` mit `TeilnahmeUpdatePayload` (nur `anzahlPersonenEffektiv`, `hilftAufstellen`, `hilftAufraumen`, `buffetBeitraege`; die `einladung` ist nie änderbar). `POST /api/teilnahmen` dient ausschliesslich der Neuerstellung — mit gesetzter `id` lehnt das Backend den Request mit HTTP 400 ab (REST-001, TC-041).
 - Buffet-Beiträge (`buffetBeitraege`) sind als Liste gespeichert: eine Partei kann **mehrere Beiträge** anbieten, jeder mit einer Art (SALAT, BROT_ZOPF, DESSERT, WEITERE) und einer optionalen Beschreibung. Im Formular können Beiträge dynamisch hinzugefügt und entfernt werden.
 - Beim Erstellen aus Einladungen wird ein vorhandener Einladungs-Buffetbeitrag (sofern nicht KEINER) als einzelner Listeneintrag übernommen.
 - Löschen öffnet `confirm()`-Dialog.
@@ -153,4 +156,4 @@ Scenario: Mehrere Buffet-Beiträge erfassen
 ## Dependencies & References
 
 - **Depends on**: UC-004 (Einladung erstellen und verwalten)
-- **Erweitert durch**: UC-016 (Teilnahme bestätigen) — führt `PUT /api/teilnahmen/{id}` ein und erlaubt der Partei, ihre eigenen Teilnahmedaten direkt zu pflegen; der Organisator behält Überschreibrecht
+- **Erweitert durch**: UC-016 (Teilnahme bestätigen) — führte `PUT /api/teilnahmen/{id}` ein und erlaubt der Partei, ihre eigenen Teilnahmedaten direkt zu pflegen; der Organisator behält Überschreibrecht. Seit REST-001 (2026-07-09) nutzt auch die Organisator-Bearbeitung in UC-005 diesen Whitelist-PUT.

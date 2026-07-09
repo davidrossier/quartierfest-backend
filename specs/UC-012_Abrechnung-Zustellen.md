@@ -140,6 +140,7 @@ Scenario: Zustellungskanal vor Versand ändern
 - [x] ~~OPEN: Bulk-Markierung?~~ → **Beantwortet:** Keine Bulk-Markierung für Zustellung implementiert (Einzelaktion via `alsZugestelltMarkieren()`). Bulk existiert nur für `bestaetigungVersendet` in UC-006.
 - [x] ~~REVIEW: Partei als `Human`-Aktor?~~ → **Beantwortet (analog UC-004):** Partei ist externer Stakeholder. Typ auf `External` korrigiert.
 - [x] ~~REVIEW: `zustellungsDatum` und Kanalanpassung ohne PATCH-Endpunkt?~~ → **Beantwortet:** Frontend nutzt POST als Upsert für beide Felder. Kein PATCH-Endpunkt benötigt.
+- [ ] **OPEN (REST-001-Folgearbeit, 2026-07-09):** Der Architekturentscheid aus REST-001 revidiert das obige Review: POST-Upsert soll generell unterbunden werden (auf dem Teilnahme-Pfad bereits geschehen, POST mit `id` → 400). Für `zustellungsDatum`/Kanalanpassung braucht es dafür zuerst einen dedizierten `PUT`/`PATCH`-Endpunkt auf `/api/abrechnungen` — bis dahin bleibt der POST-Upsert hier bewusst bestehen (Hinweis im Klassenkommentar von `AbrechnungZustellenIT`; → `specs/TODO.md`, REST-001 «Behoben»-Eintrag).
 
 ---
 

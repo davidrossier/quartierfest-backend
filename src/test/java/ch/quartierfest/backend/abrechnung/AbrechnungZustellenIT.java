@@ -32,7 +32,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  *
  * UC-012: zustellungsDatum und Zustellungskanal werden via POST/Upsert gesetzt.
  * POST /api/abrechnungen mit id im Body agiert als Upsert (JPA save() mit vorhandener ID).
- * Kein PATCH-Endpunkt notwendig.
+ * REST-001-Folgearbeit (2026-07-09): Upsert soll durch einen dedizierten PUT/PATCH-Endpunkt
+ * ersetzt werden (auf dem Teilnahme-Pfad bereits geblockt) — bis dahin bleibt er hier bewusst bestehen.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")

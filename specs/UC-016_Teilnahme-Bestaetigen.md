@@ -161,7 +161,7 @@ Scenario: Noch keine Teilnahme vorhanden
 
 - [x] RESOLVED (2026-06-12): «Nächster Event» = frühestes Event-Datum ≥ heute (Entscheid 2026-06-12); umgesetzt in `TeilnahmeRepository.findEigeneAbStichtag`. Event-Auswahl durch die Partei bei Bedarf später.
 - [ ] OPEN: Soll die Partei zusätzlich zur Teilnahme auch ihre Einladung (UC-004) und Abrechnung (UC-011) einsehen können?
-- [x] RESOLVED (2026-06-12): Whitelist umgesetzt — `PUT /api/teilnahmen/{id}` nimmt das DTO `TeilnahmeUpdateRequest` (nur `anzahlPersonenEffektiv`, `hilftAufstellen`, `hilftAufraumen`, `buffetBeitraege`) für beide Rollen entgegen; die `einladung` ist über diesen Endpunkt nie änderbar (ORGANISATOR nutzt weiterhin POST/Upsert, UC-005).
+- [x] RESOLVED (2026-06-12): Whitelist umgesetzt — `PUT /api/teilnahmen/{id}` nimmt das DTO `TeilnahmeUpdateRequest` (nur `anzahlPersonenEffektiv`, `hilftAufstellen`, `hilftAufraumen`, `buffetBeitraege`) für beide Rollen entgegen; die `einladung` ist über diesen Endpunkt nie änderbar. Seit REST-001 (2026-07-09) nutzt auch die ORGANISATOR-Bearbeitung (UC-005) diesen PUT; der frühere POST/Upsert-Pfad ist geblockt (POST mit `id` → 400).
 - [x] RESOLVED (2026-06-12): Testbarkeit gelöst — TC-036/TC-037 laufen mit echten JWTs im Default-Profil (Methoden-Security wirkt auch dort); die URL-Matrix wird separat durch TC-040 (`SecurityMatrixIT`, `@ActiveProfiles("security-test")`) abgedeckt.
 
 ---
@@ -169,4 +169,4 @@ Scenario: Noch keine Teilnahme vorhanden
 ## Dependencies & References
 
 - **Depends on**: UC-005 (Teilnahmen verwalten), UC-014 (Benutzer anmelden), UC-015 (Benutzer verwalten)
-- **Erweitert**: UC-005 — fügt Schreibzugriff für Rolle PARTEI via `PUT /api/teilnahmen/{id}` hinzu; dieser Endpunkt existiert noch nicht und muss neu implementiert werden
+- **Erweitert**: UC-005 — fügt Schreibzugriff für Rolle PARTEI via `PUT /api/teilnahmen/{id}` hinzu (implementiert 2026-06-12; seit REST-001 2026-07-09 der einzige Update-Pfad für Teilnahmen, auch für ORGANISATOR)

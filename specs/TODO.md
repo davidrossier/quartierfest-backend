@@ -218,7 +218,7 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 
 Behoben auf dem Teilnahme-Pfad: Frontend nutzt `teilnahmeService.update(id, dto)` mit `TeilnahmeUpdatePayload` (Whitelist ohne `einladung`; `id` aus `TeilnahmePayload` entfernt); Backend lehnt `POST /api/teilnahmen` mit gesetzter `id` mit 400 ab (Fehlerformat aus ERROR-001, Verweis auf den PUT). Neu TC-041 in `TeilnahmeVerwaltenIT` + Slice-Test in `TeilnahmeControllerTest`; Playwright UC-005/UC-016 lokal grün (6/6).
 
-**Folgearbeit offen:** UC-006/UC-012 nutzen dasselbe Upsert-Muster (`bestaetigungVersendet`, `zustellungsDatum`), haben aber keinen PUT-Endpunkt — dedizierte PUT/PATCH-Endpunkte nötig, bevor dort geblockt werden kann (bestehende TODOs in den IT-Klassen).
+**Folgearbeit offen:** UC-006/UC-012 nutzen dasselbe Upsert-Muster (`bestaetigungVersendet`, `zustellungsDatum`), haben aber keinen PUT-Endpunkt — dedizierte PUT/PATCH-Endpunkte nötig, bevor dort geblockt werden kann (Hinweise in den Klassenkommentaren von `BestaetigungVerwaltenIT`/`AbrechnungZustellenIT`; Open Items in UC-006/UC-012).
 
 ---
 

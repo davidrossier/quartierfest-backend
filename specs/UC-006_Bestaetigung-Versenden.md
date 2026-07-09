@@ -129,6 +129,7 @@ Scenario: Bestätigung ohne Konsumationsangebot zeigt Warnung
 - [x] ~~OPEN: Individuell oder Rundschreiben?~~ → **Beantwortet:** Das Frontend markiert jede Einladung **individuell** (`markiereVersendet()`), bietet aber auch eine Bulk-Markierung aller unversendeten Bestätigungen (`alleMarkieren()`).
 - [x] ~~REVIEW: Partei als `Human`-Aktor?~~ → **Beantwortet (analog UC-004):** Partei ist externer Stakeholder, kein primärer Systemakteur. Typ auf `External` korrigiert.
 - [x] ~~REVIEW: `bestaetigungVersendet` ohne PATCH-Endpunkt?~~ → **Beantwortet:** Das Frontend nutzt den bestehenden `POST`-Endpunkt als Upsert (`einladungService.save({id: ..., bestaetigungVersendet: true, ...})`). Kein PATCH-Endpunkt benötigt.
+- [ ] **OPEN (REST-001-Folgearbeit, 2026-07-09):** Der Architekturentscheid aus REST-001 revidiert das obige Review: POST-Upsert soll generell unterbunden werden (auf dem Teilnahme-Pfad bereits geschehen, POST mit `id` → 400). Für das Setzen von `bestaetigungVersendet` braucht es dafür zuerst einen dedizierten `PUT`/`PATCH`-Endpunkt auf `/api/einladungen` — bis dahin bleibt der POST-Upsert hier bewusst bestehen (Hinweis im Klassenkommentar von `BestaetigungVerwaltenIT`; → `specs/TODO.md`, REST-001 «Behoben»-Eintrag).
 
 ---
 

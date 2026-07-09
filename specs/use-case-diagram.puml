@@ -26,7 +26,13 @@ skinparam note {
 
 ' ── Akteure ───────────────────────────────────────────────
 actor "Organisator" as ORG
-actor "Partei\n(extern)" as PARTEI
+actor "Partei" as PARTEI
+note bottom of PARTEI
+  In UC-001–013 externer Stakeholder
+  (empfängt/liefert ausserhalb des Systems);
+  ab UC-014 (AUTH-002) direkter
+  Systemakteur mit eigenem Login.
+end note
 
 ' ── Systemgrenze ──────────────────────────────────────────
 rectangle "Quartierfest-System" {
@@ -59,6 +65,13 @@ rectangle "Quartierfest-System" {
     usecase "UC-012\nAbrechnung\nzustellen"               as UC012
     usecase "UC-013\nInkasso\nsicherstellen"              as UC013
   }
+
+  ' ── Auth / Querschnitt (AUTH-002) ───────────────────────
+  package "Auth / Querschnitt" {
+    usecase "UC-014\nBenutzer\nanmelden"                  as UC014
+    usecase "UC-015\nBenutzer\nverwalten"                 as UC015
+    usecase "UC-016\nTeilnahme\nbestätigen"               as UC016
+  }
 }
 
 ' ── Akteur-Assoziationen ──────────────────────────────────
@@ -76,11 +89,16 @@ ORG --> UC010
 ORG --> UC011
 ORG --> UC012
 ORG --> UC013
+ORG --> UC014
+ORG --> UC015
+ORG --> UC016 : Überschreibrecht
 
 PARTEI --> UC004 : Rückmeldung\nübermitteln
 PARTEI --> UC006 : empfängt\nBestätigung
 PARTEI --> UC012 : empfängt\nAbrechnung
 PARTEI --> UC013 : leistet\nZahlung
+PARTEI --> UC014 : meldet sich an
+PARTEI --> UC016 : bestätigt eigene\nTeilnahme
 
 ' ── Prozessketten (<<precedes>>) ─────────────────────────
 ' Stammdaten → Planung
@@ -101,6 +119,11 @@ UC007 .down.> UC011  : <<precedes>>
 UC010 .down.> UC011  : <<precedes>>
 UC011 .right.> UC012 : <<precedes>>
 UC012 .right.> UC013 : <<precedes>>
+
+' Auth / Querschnitt (Bootstrap-Account löst das Henne-Ei-Problem UC-014/UC-015)
+UC015 .right.> UC014 : <<precedes>>
+UC014 .right.> UC016 : <<precedes>>
+UC016 .up.> UC005   : <<extend>>
 
 ' ── Legende ───────────────────────────────────────────────
 note "Legende:\n──────────────\n──  Akteur-Assoziation\n..  <<precedes>> Prozesskette\n    (Vorbedingung erfüllt)" as LEGEND

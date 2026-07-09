@@ -1,13 +1,13 @@
 # Use-Case-Diagramm Quartierfest
 
-> Stand: 2026-04-10
+> Stand: 2026-07-09
 
 ## Aktoren
 
 | Aktor | Typ | Beschreibung |
 |-------|-----|-------------|
 | Organisator | Human | Plant und verwaltet das Quartierfest |
-| Partei | External | Haushalt / Gruppe, die eine Einladung erhält |
+| Partei | External (UC-001–013) / Human (ab UC-014) | Haushalt / Gruppe, die eine Einladung erhält; seit AUTH-002 direkter Systemakteur mit eigenem Login (UC-014, UC-016) |
 
 ---
 
@@ -16,7 +16,7 @@
 ```mermaid
 graph TD
     Org([Organisator])
-    Par([Partei\nexternal])
+    Par([Partei])
 
     subgraph Stammdaten
         UC001[UC-001\nPersonendaten verwalten]
@@ -43,6 +43,12 @@ graph TD
         UC013[UC-013\nInkasso sicherstellen]
     end
 
+    subgraph Auth["Auth / Querschnitt"]
+        UC014[UC-014\nBenutzer anmelden]
+        UC015[UC-015\nBenutzer verwalten]
+        UC016[UC-016\nTeilnahme bestätigen]
+    end
+
     Org --> UC001
     Org --> UC002
     Org --> UC003
@@ -56,12 +62,21 @@ graph TD
     Org --> UC011
     Org --> UC012
     Org --> UC013
+    Org --> UC014
+    Org --> UC015
+    Org -->|Überschreibrecht| UC016
 
     Par -.->|erhält Einladung| UC004
     Par -.->|erhält Bestätigung| UC006
     Par -.->|erhält Abrechnung| UC012
     Par -.->|zahlt / wird gemahnt| UC013
+    Par -->|meldet sich an| UC014
+    Par -->|bestätigt eigene Teilnahme| UC016
+
+    UC016 -.->|erweitert| UC005
 ```
+
+> Gestrichelte Partei-Pfeile: Partei als externer Stakeholder (UC-001–013). Durchgezogene Pfeile: Partei als direkter Systemakteur mit Login (ab UC-014, AUTH-002).
 
 ---
 
@@ -80,7 +95,7 @@ graph TD
 | UC-ID | Name | Endpunkte | Status |
 |-------|------|-----------|--------|
 | UC-004 | Einladung verwalten | GET/POST/DELETE `/api/einladungen` | ✅ Vollständig |
-| UC-005 | Teilnahme erfassen | GET/POST/DELETE `/api/teilnahmen` | ✅ Vollständig |
+| UC-005 | Teilnahme erfassen | GET/POST/DELETE `/api/teilnahmen`, PUT `/api/teilnahmen/{id}` (Whitelist-Update; POST mit `id` → 400, REST-001) | ✅ Vollständig |
 | UC-006 | Bestätigung versenden | POST `/api/einladungen` (Upsert) | ✅ Vollständig |
 | UC-007 | Allgemeinausgaben verwalten | GET/POST/DELETE `/api/allgemeinausgaben` | ✅ Vollständig |
 | UC-008 | Konsumationsangebot verwalten | GET/POST/DELETE `/api/konsumationsangebote` | ✅ Vollständig |
@@ -99,6 +114,14 @@ graph TD
 | UC-011 | Abrechnung erstellen | GET/POST/DELETE `/api/abrechnungen` | ⚠ Teilimpl. |
 | UC-012 | Abrechnung zustellen | POST `/api/abrechnungen` (Upsert) | ✅ Vollständig |
 | UC-013 | Inkasso sicherstellen | GET/POST/DELETE `/api/zahlungen`, `/api/mahnungen` | ✅ Vollständig |
+
+### Auth / Querschnitt (AUTH-002)
+
+| UC-ID | Name | Endpunkte | Status |
+|-------|------|-----------|--------|
+| UC-014 | Benutzer anmelden | POST `/api/auth/login` → `{token}` (HS256-JWT, 12 h) | ✅ Vollständig |
+| UC-015 | Benutzer verwalten | GET/POST/DELETE `/api/benutzer`, PUT `/api/benutzer/{id}/passwort` | ✅ Vollständig |
+| UC-016 | Teilnahme bestätigen | GET `/api/teilnahmen/meine`, PUT `/api/teilnahmen/{id}` (Whitelist-DTO) | ✅ Vollständig |
 
 ---
 
@@ -121,4 +144,7 @@ graph LR
     UC010 --> UC011
     UC011 --> UC012
     UC011 --> UC013
+    UC015 --> UC014
+    UC014 --> UC016
+    UC016 -.->|erweitert| UC005
 ```
