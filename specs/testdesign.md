@@ -179,8 +179,8 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - **Type**: Error scenario
 - **Given**: Keine Voraussetzung
 - **When**: POST `/api/teilnahmen` mit ungültiger `einladung.id` (999999)
-- **Then**: HTTP 500
-- **Citrus actions**: `send POST /api/teilnahmen`, `receive 500`
+- **Then**: HTTP 409 + Fehler-JSON `{status: 409, message}` (ERROR-001: FK-Verletzung → `DataIntegrityViolationException` → Handler)
+- **Citrus actions**: `send POST /api/teilnahmen`, `receive 409`
 
 ### TC-033 – UC-005 Teilnahme mit mehreren Buffet-Beiträgen erstellen
 - **Source**: UC-005, neues Acceptance Criterion "Mehrere Buffet-Beiträge erfassen"
@@ -270,8 +270,8 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - **Type**: Error scenario
 - **Given**: Keine Voraussetzung
 - **When**: POST `/api/abrechnungen` mit ungültiger `teilnahme.id` (999999)
-- **Then**: HTTP 500
-- **Citrus actions**: `send POST /api/abrechnungen`, `receive 500`
+- **Then**: HTTP 409 + Fehler-JSON `{status: 409, message}` (ERROR-001: FK-Verletzung → `DataIntegrityViolationException` → Handler)
+- **Citrus actions**: `send POST /api/abrechnungen`, `receive 409`
 
 ### TC-024 – UC-012 Abrechnung zustellen und löschen: Kanal EMAIL
 - **Source**: UC-012, Gherkin "Abrechnung via E-Mail zustellen"
@@ -437,7 +437,8 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 
 ## Open items
 
-- [x] **Controller-Validierung implementiert**: `@Valid` + Bean Validation (`@NotBlank`/`@NotNull`) auf allen Entities und Controllern. Pflichtfeld-Fehler liefern nun HTTP 400 (TC-002, TC-005, TC-007, TC-015, TC-021, TC-027, TC-030). TC-012/TC-023 (FK-ID nicht gefunden) liefern weiterhin 500.
+- [x] **Controller-Validierung implementiert**: `@Valid` + Bean Validation (`@NotBlank`/`@NotNull`) auf allen Entities und Controllern. Pflichtfeld-Fehler liefern nun HTTP 400 (TC-002, TC-005, TC-007, TC-015, TC-021, TC-027, TC-030).
+- [x] **Globaler Exception-Handler (ERROR-001)**: `GlobalExceptionHandler` (`@RestControllerAdvice`) liefert einheitliches Fehler-JSON `{status, message}`. TC-012/TC-023 (FK-ID nicht gefunden) liefern seither 409 statt 500 (empirisch: FK-Verletzung wirft `DataIntegrityViolationException`, nicht `EntityNotFoundException` — deshalb 409, nicht die ursprünglich vermuteten 404); Bean-Validation-400er enthalten die Feldliste in `message`.
 - [x] **TC-031 Event bearbeiten ergänzt**: `PUT /api/events/{id}` implementiert + TC-031 in `EventAnlegenIT` (analog TC-029 für Person).
 - [ ] **Keine Berechnungslogik-API**: UC-011 Abrechnungsberechnung ist nicht im API implementiert (TC-022, TC-023).
 - [ ] **Kein Konsumationslisten-Endpunkt**: UC-009 hat keinen dedizierten Endpunkt für die Listenansicht (TC-018, TC-019).

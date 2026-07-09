@@ -13,7 +13,7 @@
 2. **SEC-002** — Brute-Force-Drosselung auf `/api/auth/login` (internet-exponiert)
 
 **Hoher Nutzen, geringer Aufwand (nächster Sprint):**
-3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren)
+3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren) — ✅ behoben 2026-07-09 (empirisch: 409 statt 404)
 4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen
 5. **CODE-001 + DEP-001** — Quick Wins (je < 1 h) — ✅ beide behoben 2026-07-09
 6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check
@@ -158,14 +158,6 @@ Die übrigen 10 Services haben 0% Unit-Test-Abdeckung und werden nur durch IT-Te
 
 ---
 
-### ERROR-001 – Kein globaler Exception-Handler (500 statt 404, kein einheitliches Fehler-JSON)
-
-Referenzen auf nicht-existierende FK-IDs liefern HTTP 500 (`DataIntegrityViolation`/`EntityNotFound` ungefangen — TC-012, TC-023). Es gibt kein einheitliches Fehler-JSON; das Frontend zeigt `err.error?.message` an und bekommt bei 500ern nichts Brauchbares.
-
-**Empfehlung:** Einen `@RestControllerAdvice` einführen: `EntityNotFoundException`/`ResponseStatusException(404)` → 404, `DataIntegrityViolationException` → 409, Fallback → 500 mit generischer Meldung; einheitliches Format `{status, message}`. TC-012/TC-023 danach auf 404 anpassen (Erwartung in `testdesign.md` nachführen).
-
----
-
 ### REST-001 – Frontend aktualisiert Teilnahmen via POST-Upsert statt PUT
 
 `TeilnahmenVerwaltungComponent.speichern()` sendet beim Bearbeiten `POST /api/teilnahmen` mit gesetzter `id` (JPA-`save()` wirkt als Upsert) statt den vorhandenen `PUT /api/teilnahmen/{id}` zu nutzen. Gleiches Upsert-Muster bei UC-006/UC-012 (`bestaetigungVersendet`, `zustellungsDatum`). Der POST-Endpunkt umgeht damit faktisch die UC-016-Whitelist-Semantik des PUT.
@@ -203,7 +195,7 @@ Das Muster `ladevorgang/fehler/erfolg`-Signals + `setTimeout(3–4s)` zum Ausble
 Vier zusammenhängende Befunde:
 1. Erfolgs-/Fehlermeldungen verschwinden nach 3–4 s (`setTimeout`) — für die Zielgruppe (Quartierverein, breite Altersspanne) zu schnell, und ohne `aria-live` für Screenreader unsichtbar.
 2. Native `confirm()`/`prompt()`-Dialoge; insbesondere zeigt `window.prompt` beim Passwort-Reset (`BenutzerVerwaltungComponent`) die Eingabe **unmaskiert** — UX- und Security-Problem zugleich.
-3. Fehlermeldungen bei 500ern generisch («konnte nicht gespeichert werden») — Folge von ERROR-001, löst sich mit dessen einheitlichem `{status, message}`-Format.
+3. ~~Fehlermeldungen bei 500ern generisch («konnte nicht gespeichert werden»)~~ — durch ERROR-001 behoben (2026-07-09): das Backend liefert jetzt einheitlich `{status, message}`, `err.error?.message` greift bei allen Fehlerstatus.
 4. Die Konsumationserfassung (UC-010, Matrix Teilnahmen × Angebote) passiert real am Fest auf dem Smartphone — responsive Verhalten ist ungeprüft.
 
 **Empfehlung:** (1)+(2) im Zuge von REFACT-002 lösen: `MeldungService` rendert in eine zentrale Region mit `role="status"`/`aria-live="polite"`, Erfolgsmeldungen ≥ 8 s oder abweisbar, Fehler bleiben stehen; Passwort-Reset als Inline-Formular mit `<input type="password">` statt `window.prompt`. (4) Mobile-Durchstich von UC-010 vor dem nächsten Fest (Playwright mit `devices['iPhone 15']`-Projekt wäre der billigste dauerhafte Check).
@@ -227,6 +219,16 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 ---
 
 ## Behoben
+
+### ERROR-001 – Kein globaler Exception-Handler (500 statt 404, kein einheitliches Fehler-JSON) ✅ `2026-07-09`
+
+Referenzen auf nicht-existierende FK-IDs lieferten HTTP 500 (TC-012, TC-023); es gab kein einheitliches Fehler-JSON, das Frontend bekam bei 500ern nichts Brauchbares in `err.error?.message`.
+
+`GlobalExceptionHandler` (`@RestControllerAdvice`, erbt von `ResponseEntityExceptionHandler`) eingeführt — einheitliches Format `{status, message}` für alle Fehlerpfade: `ResponseStatusException` behält Status + Reason (401/404/409 aus Auth-/Benutzer-/TeilnahmeService), `EntityNotFoundException`/`JpaObjectRetrievalFailureException` → 404, `DataIntegrityViolationException` → 409 mit generischer Meldung (keine DB-Details), `MethodArgumentNotValidException` → 400 mit Feldliste, Fallback → 500 generisch + ERROR-Log. `AccessDeniedException` aus `@PreAuthorize` wird durchgereicht (403 via Security-Kette, kein 500). Die von Spring MVC vorbehandelten Fälle (kaputtes JSON → 400, unbekannter Pfad → 404, 405/415) behalten via `handleExceptionInternal`-Override ihren Status im selben Format.
+
+Empirischer Befund: Die FK-Verletzung wirft `DataIntegrityViolationException` → TC-012/TC-023 liefern **409** (nicht die ursprünglich vermuteten 404); Tests + `testdesign.md` entsprechend nachgeführt. Verifiziert per curl gegen die laufende App: 401-Login, 409-FK, 400-Validierung mit Feldliste, 400 bei kaputtem JSON, 404 — alle im Format `{status, message}`.
+
+---
 
 ### DEP-001 – Ungenutzte `citrus-bom` in der `pom.xml` ✅ `2026-07-09`
 

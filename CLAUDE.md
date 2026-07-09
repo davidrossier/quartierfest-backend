@@ -112,6 +112,15 @@ Ausnahmen:
 Enums sind als innere Klassen in der jeweiligen Entity definiert:
 `Einladung.EinladungStatus`, `Einladung.BuffetBeitrag`, `Abrechnung.Zustellungskanal`, `Zahlung.Zahlungskanal`, `Benutzer.Rolle`
 
+### Fehlerbehandlung (ERROR-001)
+
+`GlobalExceptionHandler` (`@RestControllerAdvice` im Root-Package, erbt von `ResponseEntityExceptionHandler`) liefert für alle Fehlerpfade einheitliches JSON `{status, message}` — kein Fehler-Handling in einzelnen Controllern nötig:
+- `ResponseStatusException` behält Status + Reason (Services werfen weiterhin 401/403/404/409 damit)
+- FK-/Constraint-Verletzung (`DataIntegrityViolationException`) → `409` mit generischer Meldung
+- `EntityNotFoundException`/`JpaObjectRetrievalFailureException` → `404`
+- Bean-Validation (`@Valid`) → `400` mit alphabetischer Feldliste in `message`
+- Fallback → `500` generisch + ERROR-Log; `AccessDeniedException` aus `@PreAuthorize` wird an die Security-Kette durchgereicht (403, kein 500)
+
 ## Tests
 
 ### Unit tests

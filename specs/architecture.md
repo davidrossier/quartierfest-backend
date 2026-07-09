@@ -219,7 +219,7 @@ erDiagram
 | SEC-001 | Sicherheit | Security-Default fail-open: ohne `prod`-Profil ist die API komplett offen | MAJOR | ✅ Behoben 2026-07-09 |
 | API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Offen |
 | CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | Offen |
-| ERROR-001 | Code-Qualität | Kein `@RestControllerAdvice` — FK-Fehler liefern 500, kein einheitliches Fehler-JSON | MINOR | Offen |
+| ERROR-001 | Code-Qualität | Kein `@RestControllerAdvice` — FK-Fehler liefern 500, kein einheitliches Fehler-JSON | MINOR | ✅ Behoben 2026-07-09 |
 | REST-001 | Architektur | Frontend aktualisiert Teilnahmen via POST-Upsert statt `PUT /api/teilnahmen/{id}` | MINOR | Offen |
 | TEST-004 | Tests | Frontend: kaum Unit-Tests ausserhalb `auth/` (Komponenten/Services ungetestet) | MINOR | Offen |
 | QUAL-001 | CI/CD | Kein ESLint/Prettier-Check in CI, keine Coverage, kein Dependabot | MINOR | Offen |

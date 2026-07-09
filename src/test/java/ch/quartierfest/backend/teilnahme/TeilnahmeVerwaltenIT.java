@@ -105,7 +105,10 @@ class TeilnahmeVerwaltenIT {
                         "einladung", Map.of("id", 999999),
                         "anzahlPersonenEffektiv", 2), json), Map.class);
 
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.INTERNAL_SERVER_ERROR);
+        // ERROR-001: FK-Verletzung → 409 mit einheitlichem Fehler-JSON {status, message}
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(response.getBody().get("status")).isEqualTo(409);
+        assertThat((String) response.getBody().get("message")).isNotBlank();
     }
 
     @Test
