@@ -36,7 +36,7 @@ PostgreSQL is required. The app connects to:
 - Database: `quartierfest`
 - Username: `qfuser` / Password: `qfpass`
 
-Schema is auto-managed via `spring.jpa.hibernate.ddl-auto=update`.
+Schema-Verwaltung (DB-001): **Flyway-Migrationen** in `src/main/resources/db/migration` (`V1__baseline.sql` = eingefrorenes Hibernate-Schema, `V2__…` = DB-002-Constraints). Hibernate läuft mit `spring.jpa.hibernate.ddl-auto=validate` — jede Entity-Änderung braucht ein neues `V<n>__<beschreibung>.sql` im selben PR, sonst schlägt der Start mit `SchemaManagementException` fehl. Bestehende DBs werden via `spring.flyway.baseline-on-migrate=true` beim ersten Start auf V1 baselined; leere DBs (CI) bauen V1+V2 auf.
 SQL logging is enabled via `spring.jpa.show-sql=true`.
 
 ## Tech Stack
@@ -46,6 +46,7 @@ SQL logging is enabled via `spring.jpa.show-sql=true`.
 - **Lombok** (`@Data`, `@RequiredArgsConstructor`) — never write boilerplate manually
 - **Spring WebMVC** (synchronous) — not WebFlux
 - **spring-boot-starter-validation** — Bean Validation (`@NotBlank`, `@NotNull` auf Entities; `@Valid` auf `@RequestBody`)
+- **spring-boot-starter-flyway** + `flyway-database-postgresql` — Schema-Migrationen (DB-001); Spring Boot 4 aktiviert Flyway nur über den Starter, `flyway-core` allein reicht nicht
 - **spring-boot-starter-oauth2-resource-server** — JWT-Validierung; Eigenbau-Login (AUTH-002): Backend stellt HS256-JWTs selbst aus (`JwtEncoder`/`NimbusJwtDecoder.withSecretKey`), kein externer IdP
 - **spring-boot-devtools** (runtime, optional)
 
@@ -116,7 +117,7 @@ Enums sind als innere Klassen in der jeweiligen Entity definiert:
 
 `GlobalExceptionHandler` (`@RestControllerAdvice` im Root-Package, erbt von `ResponseEntityExceptionHandler`) liefert für alle Fehlerpfade einheitliches JSON `{status, message}` — kein Fehler-Handling in einzelnen Controllern nötig:
 - `ResponseStatusException` behält Status + Reason (Services werfen weiterhin 401/403/404/409 damit)
-- FK-/Constraint-Verletzung (`DataIntegrityViolationException`) → `409` mit generischer Meldung
+- Constraint-Verletzung (`DataIntegrityViolationException`) → `409`: Unique-Verletzung (DB-002, `ConstraintKind.UNIQUE`) → «Datensatz existiert bereits.», FK-Verletzung → «Referenzierter Datensatz existiert nicht oder wird noch verwendet.»
 - `EntityNotFoundException`/`JpaObjectRetrievalFailureException` → `404`
 - Bean-Validation (`@Valid`) → `400` mit alphabetischer Feldliste in `message`
 - Fallback → `500` generisch + ERROR-Log; `AccessDeniedException` aus `@PreAuthorize` wird an die Security-Kette durchgereicht (403, kein 500)
@@ -164,7 +165,7 @@ class PersonControllerTest {
 17 `*IT.java` Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`).
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
 Alle ITs ausser `SecurityMatrixIT` tragen `@ActiveProfiles("dev")` (offene Security-Chain, SEC-001) — byte-identisch, damit alle denselben gecachten Spring-Context teilen.
-**39 Testmethoden (TC-001..TC-041, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
+**42 Testmethoden (TC-001..TC-044, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Auth-Besonderheiten:
 - `TeilnahmeBestaetigenIT` (TC-036/037) holt sich echte JWTs via `POST /api/auth/login` — die Ownership-403-Fälle laufen im dev-Profil (Methoden-Security)
@@ -235,7 +236,7 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 16 Use Cases |
 | `UC-001` .. `UC-016` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme, UC-014..016 = Auth/Eigenbau-Login) |
-| `testdesign.md` | Testdesign mit TC-001..TC-041, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign mit TC-001..TC-044, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |

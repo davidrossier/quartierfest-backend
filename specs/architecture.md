@@ -59,6 +59,17 @@ Alle `/api/**`-Endpunkte sind über Spring Security 7.x abgesichert. Die Absiche
 
 ---
 
+### Schema-Verwaltung (Flyway, DB-001)
+
+Das DB-Schema wird ausschliesslich über Flyway-Migrationen in `src/main/resources/db/migration` verwaltet; Hibernate läuft mit `ddl-auto=validate` und prüft beim Start nur noch, dass Entities und Schema zusammenpassen.
+
+| Skript | Inhalt |
+|---|---|
+| `V1__baseline.sql` | Ist-Stand des Hibernate-Schemas (Stand 2026-09-08). Läuft nur auf leeren DBs (CI, neue Dev-DBs); bestehende DBs werden via `spring.flyway.baseline-on-migrate=true` auf V1 baselined. |
+| `V2__db002_unique_constraints_geldpraezision.sql` | DB-002: `uk_einladung_event_partei`, `uk_teilnahme_einladung`, `uk_abrechnung_teilnahme`, `uk_benutzer_email`; Geldbeträge `numeric(10,2)`. Idempotent gegenüber Hibernate-benannten Constraints (Umbenennung). |
+
+Regel: Jede Entity-Änderung bekommt ein neues `V<n>__<beschreibung>.sql` im selben PR. `db/check/duplikate-vor-v2.sql` prüft einen Bestand vor der Erstmigration auf Duplikate (Runbook → `README.md`).
+
 ## Domänenmodell (Entity-Beziehungen)
 
 ```mermaid
@@ -215,7 +226,7 @@ erDiagram
 | REFACT-001 | Code-Qualität | 8 Controller + 10 Services mit identischem CRUD-Boilerplate, kein `BaseCrud*` | MINOR | Offen |
 | DEPLOY-003 | CI/CD | Kein GitHub Actions Workflow — Tests laufen nur lokal | MAJOR | ✅ Behoben 2026-07-06 |
 | TEST-001 | Tests | 17 IT-Klassen duplizieren `setUp()`-Boilerplate (14 davon zusätzlich `tryDelete()`) | MINOR | Offen |
-| DB-001 | Deployment | `ddl-auto=update` gilt auch in prod — keine Flyway/Liquibase-Migrationen | MAJOR | Offen |
+| DB-001 | Deployment | `ddl-auto=update` gilt auch in prod — keine Flyway/Liquibase-Migrationen | MAJOR | ✅ Behoben 2026-09-08 (Flyway, `ddl-auto=validate`) |
 | SEC-001 | Sicherheit | Security-Default fail-open: ohne `prod`-Profil ist die API komplett offen | MAJOR | ✅ Behoben 2026-07-09 |
 | API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Offen |
 | CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | Offen |
@@ -227,7 +238,7 @@ erDiagram
 | DEP-001 | Code-Qualität | Ungenutzte `citrus-bom` in `pom.xml` (zieht Jackson 2.x in den Test-Scope) | MINOR | ✅ Behoben 2026-07-09 |
 | DOCS-001 | Dokumentation | Drift zwischen CLAUDE.md/README/architecture.md (TC-Range, alte Security-Tabelle) | MINOR | ✅ Behoben 2026-07-06 |
 | CODE-001 | Code-Qualität | Kyrillisches «а» (U+0430) in zwei IT-Methodennamen (`...ViаUpsert`) | MINOR | ✅ Behoben 2026-07-09 |
-| DB-002 | Datenmodell | Fachliche 1:1-Kardinalitäten (Teilnahme/Abrechnung/Einladung) ohne Unique-Constraints; Geldfelder ohne `precision/scale` | MAJOR | Offen |
+| DB-002 | Datenmodell | Fachliche 1:1-Kardinalitäten (Teilnahme/Abrechnung/Einladung) ohne Unique-Constraints; Geldfelder ohne `precision/scale` | MAJOR | ✅ Behoben 2026-09-08 (V2-Migration, TC-042..044) |
 | SEC-002 | Sicherheit | Kein Brute-Force-Schutz auf `POST /api/auth/login` (internet-exponiert) | MAJOR | Offen |
 | BIZ-001 | Fachlichkeit | UC-011: Abrechnungsbeträge werden manuell erfasst statt berechnet; UC-009 ohne Konsumationslisten-Endpunkt | MAJOR | Offen |
 | OPS-001 | Betrieb | Deployment-Prozess undokumentiert, keine Backup-Strategie, kein Actuator-Health-Endpoint | MAJOR | Offen |

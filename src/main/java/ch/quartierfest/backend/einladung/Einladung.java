@@ -8,14 +8,14 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "einladung")
+// DB-002: eine Einladung pro Event und Partei (UC-004 E1) — DB-Constraint uk_einladung_event_partei (V2)
+@Table(name = "einladung", uniqueConstraints = @UniqueConstraint(name = "uk_einladung_event_partei", columnNames = {"event_id", "partei_id"}))
 public class Einladung {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // TODO [UC-004]: Kein @UniqueConstraint auf (event_id, partei_id) — Duplikat-Einladungen möglich – siehe specs/UC-004_Einladung-Verwalten.md
     @NotNull
     @ManyToOne(optional = false)
     private Event event;

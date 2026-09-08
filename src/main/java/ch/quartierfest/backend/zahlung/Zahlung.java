@@ -29,8 +29,9 @@ public class Zahlung {
     @Column(nullable = false)
     private LocalDate datum;
 
+    // DB-002: Geldbetrag explizit numeric(10,2)
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal betrag;
 
     public enum Zahlungskanal {

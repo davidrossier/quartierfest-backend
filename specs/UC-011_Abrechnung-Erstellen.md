@@ -150,7 +150,7 @@ Scenario: Zustellungskanal automatisch setzen
 
 - [x] ~~REVIEW: Verhindert das System die Erstellung einer zweiten Abrechnung für dieselbe Teilnahme?~~ → **Beantwortet:** Das Frontend verhindert dies durch `neuBerechnen()`: alle bestehenden Abrechnungen des Events werden vor der Neuerstellung gelöscht. Ein Backend-Unique-Constraint ist nicht vorhanden; die Verhinderung von Duplikaten liegt in der UI-Logik.
 - [ ] **OPEN (impl_status: teilweise):** Berechnungslogik liegt vollständig im Frontend (`abrechnungenErstellen()` in `AbrechnungenVerwaltungComponent`). Das Backend validiert nicht, ob `totalBetrag == anteilAllgemeinkosten + totalKonsumation`. Inkonsistente Beträge können direkt via `POST /api/abrechnungen` gespeichert werden. Empfehlung: Validierung oder Berechnung in den `AbrechnungService` verlagern.
-- [ ] **OPEN:** Kein Backend-seitiger Unique-Constraint auf `(teilnahme_id)` in `Abrechnung` — eine Teilnahme könnte mehrfach abgerechnet werden, wenn die UI-Logik umgangen wird.
+- [x] ~~**OPEN:** Kein Backend-seitiger Unique-Constraint auf `(teilnahme_id)` in `Abrechnung`~~ → **Behoben (DB-002, 2026-09-08):** `uk_abrechnung_teilnahme UNIQUE (teilnahme_id)` per Flyway-Migration V2 (Hibernate hatte für `@OneToOne` bereits einen hash-benannten Unique-Constraint angelegt — jetzt sprechend benannt und per `@UniqueConstraint` dokumentiert); zweiter POST → 409 (TC-044). `neuBerechnen()` löscht weiterhin vor der Neuanlage.
 
 ---
 

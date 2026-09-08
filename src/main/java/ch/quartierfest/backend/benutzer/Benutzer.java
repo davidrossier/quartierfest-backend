@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
+import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -22,7 +23,7 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "benutzer")
+@Table(name = "benutzer", uniqueConstraints = @UniqueConstraint(name = "uk_benutzer_email", columnNames = "email"))
 public class Benutzer {
 
     @Id
@@ -30,7 +31,7 @@ public class Benutzer {
     private Long id;
 
     @NotBlank
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false)
     private String email;
 
     @JsonIgnore

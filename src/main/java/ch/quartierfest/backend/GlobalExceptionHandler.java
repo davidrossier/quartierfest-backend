@@ -1,6 +1,7 @@
 package ch.quartierfest.backend;
 
 import jakarta.persistence.EntityNotFoundException;
+import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -38,10 +39,28 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         return error(HttpStatus.NOT_FOUND, "Datensatz nicht gefunden.");
     }
 
-    /** 409 — DB-Constraint verletzt (FK auf nicht-existente ID, Löschen eines referenzierten Datensatzes). */
+    /**
+     * 409 — DB-Constraint verletzt. Unique-Verletzung (DB-002: Duplikat-Einladung/-Teilnahme/-Abrechnung)
+     * und FK-Verletzung (nicht-existente ID, Löschen eines referenzierten Datensatzes) bekommen
+     * unterschiedliche, aber DB-detailfreie Meldungen.
+     */
     @ExceptionHandler(DataIntegrityViolationException.class)
     ResponseEntity<ApiError> handleDataIntegrity(DataIntegrityViolationException e) {
+        if (istUniqueVerletzung(e)) {
+            return error(HttpStatus.CONFLICT, "Datensatz existiert bereits.");
+        }
         return error(HttpStatus.CONFLICT, "Referenzierter Datensatz existiert nicht oder wird noch verwendet.");
+    }
+
+    private static boolean istUniqueVerletzung(Throwable e) {
+        for (Throwable t = e; t != null; t = t.getCause()) {
+            if (t instanceof ConstraintViolationException cve
+                    && cve.getKind() == ConstraintViolationException.ConstraintKind.UNIQUE) {
+                return true;
+            }
+            if (t.getCause() == t) break;
+        }
+        return false;
     }
 
     /**

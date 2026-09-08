@@ -7,14 +7,14 @@
 | UC-001 Person verwalten | Yes | TC-001..002, TC-029 |
 | UC-002 Parteien verwalten | Yes | TC-004..005, TC-030 |
 | UC-003 Event anlegen | Yes | TC-006..007, TC-031 — inkl. `PUT /api/events/{id}` bearbeiten |
-| UC-004 Einladung verwalten | Yes | TC-008..010 |
-| UC-005 Teilnahme verwalten | Yes | TC-011..012, TC-033, TC-041 – explizite Erstellung via POST bestätigt; kein Auto-Create gewünscht; mehrere Buffet-Beiträge je Teilnahme; POST mit `id` abgelehnt (REST-001) |
+| UC-004 Einladung verwalten | Yes | TC-008..010, TC-042 (Duplikat-Einladung → 409, E1 via DB-Constraint) |
+| UC-005 Teilnahme verwalten | Yes | TC-011..012, TC-033, TC-041, TC-043 – explizite Erstellung via POST bestätigt; kein Auto-Create gewünscht; mehrere Buffet-Beiträge je Teilnahme; POST mit `id` abgelehnt (REST-001); zweite Teilnahme je Einladung → 409 (DB-002) |
 | UC-006 Bestätigung verwalten | Yes | TC-013 – `bestaetigungVersendet` via POST/Upsert nachträglich setzbar; kein PATCH benötigt |
 | UC-007 Allgemeinausgabe verwalten | Yes | TC-014..015 |
 | UC-008 Konsumationsangebot verwalten | Yes | TC-016 |
 | UC-009 Konsumationsliste erstellen | Partial | TC-018..019 – kein dedizierter Listengenerierungs-Endpunkt; nur Datenbasis testbar |
 | UC-010 Konsumation übernehmen | Yes | TC-020..021 |
-| UC-011 Abrechnung erstellen | Partial | TC-022..023 – keine Berechnungslogik im API; manuelle Eingabe aller Felder |
+| UC-011 Abrechnung erstellen | Partial | TC-022..023, TC-044 – keine Berechnungslogik im API; manuelle Eingabe aller Felder; zweite Abrechnung je Teilnahme → 409 (DB-002) |
 | UC-012 Abrechnung zustellen | Yes | TC-024..025, TC-032 – `zustellungsDatum` und Kanal via POST/Upsert nachträglich setzbar |
 | UC-013 Inkasso sicherstellen | Yes | TC-026..028 |
 | UC-014 Benutzer anmelden | Yes | TC-038 (Login), TC-040 (Autorisierungsmatrix, Profil `security-test`); Frontend-Flow zusätzlich via Playwright-E2E (`UC-014_Benutzer-Anmelden.spec.ts`) |
@@ -164,7 +164,7 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - **When**: POST `/api/einladungen` mit `status: "ABGEMELDET"`, dann DELETE
 - **Then**: POST → HTTP 200, `status: "ABGEMELDET"`; DELETE → HTTP 200
 - **Citrus actions**: `send POST /api/einladungen`, `receive 200`, `send DELETE /api/einladungen/{id}`, `receive 200`
-- **TODO**: UC-004 E1 (Duplikat-Prüfung) ist nicht implementiert; DB hat keinen Unique-Constraint auf `(event, partei)`
+- **Hinweis**: UC-004 E1 (Duplikat-Prüfung) ist seit DB-002 per DB-Constraint abgesichert → TC-042
 
 ### TC-011 – UC-005 Teilnahme erstellen und löschen: happy path
 - **Source**: UC-005, Hauptfluss
@@ -390,6 +390,30 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - **Then**: HTTP 400 + Fehler-JSON `{status: 400, message}` mit Verweis auf `PUT /api/teilnahmen/{id}`
 - **Citrus actions**: `send POST /api/teilnahmen`, `receive 200`, `send POST /api/teilnahmen (mit id)`, `receive 400`
 
+### TC-042 – UC-004 E1: zweite Einladung für dieselbe Partei zum selben Event wird abgelehnt (DB-002)
+- **Source**: UC-004, Exception E1; DB-002 (`uk_einladung_event_partei`)
+- **Type**: Error scenario
+- **Given**: Event und Partei existieren (Setup); erste Einladung im Test via POST angelegt
+- **When**: zweiter POST `/api/einladungen` mit demselben `event.id`/`partei.id`
+- **Then**: HTTP 409 + Fehler-JSON `{status: 409, message}` mit «existiert bereits» (Unique-Verletzung → `GlobalExceptionHandler`); Cleanup der ersten Einladung via DELETE → 200
+- **Citrus actions**: `send POST /api/einladungen`, `receive 200`, `send POST /api/einladungen`, `receive 409`, `send DELETE /api/einladungen/{id}`, `receive 200`
+
+### TC-043 – UC-005 Teilnahme erstellen: zweite Teilnahme zur selben Einladung wird abgelehnt (DB-002)
+- **Source**: UC-005 (Einladung 1—1 Teilnahme); DB-002 (`uk_teilnahme_einladung`)
+- **Type**: Error scenario
+- **Given**: Einladung existiert (Setup); erste Teilnahme im Test via POST angelegt
+- **When**: zweiter POST `/api/teilnahmen` mit derselben `einladung.id`
+- **Then**: HTTP 409 + Fehler-JSON mit «existiert bereits»; Cleanup der ersten Teilnahme via DELETE → 200
+- **Citrus actions**: `send POST /api/teilnahmen`, `receive 200`, `send POST /api/teilnahmen`, `receive 409`, `send DELETE /api/teilnahmen/{id}`, `receive 200`
+
+### TC-044 – UC-011 Abrechnung erstellen: zweite Abrechnung zur selben Teilnahme wird abgelehnt (DB-002)
+- **Source**: UC-011 (Teilnahme 1—1 Abrechnung); DB-002 (`uk_abrechnung_teilnahme`)
+- **Type**: Error scenario
+- **Given**: Teilnahme existiert (Setup); erste Abrechnung im Test via POST angelegt
+- **When**: zweiter POST `/api/abrechnungen` mit derselben `teilnahme.id`
+- **Then**: HTTP 409 + Fehler-JSON mit «existiert bereits»; Cleanup der ersten Abrechnung via DELETE → 200
+- **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`, `send POST /api/abrechnungen`, `receive 409`, `send DELETE /api/abrechnungen/{id}`, `receive 200`
+
 ---
 
 ## Traceability-Status
@@ -439,8 +463,11 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 | TC-039 | UC-015 Letzter ORGANISATOR nicht löschbar | BenutzerVerwaltenIT | tc039_letzterOrganisatorNichtLoeschbar | ✅ |
 | TC-040 | AUTH-002 Autorisierungsmatrix (security-test) | SecurityMatrixIT | tc040_autorisierungsmatrix | ✅ |
 | TC-041 | UC-005 POST mit id abgelehnt (REST-001) | TeilnahmeVerwaltenIT | tc041_teilnahmeErstellenMitIdAbgelehnt | ✅ |
+| TC-042 | UC-004 E1 Duplikat-Einladung abgelehnt (DB-002) | EinladungVerwaltenIT | tc042_einladungDuplikatEventParteiAbgelehnt | ✅ |
+| TC-043 | UC-005 Duplikat-Teilnahme abgelehnt (DB-002) | TeilnahmeVerwaltenIT | tc043_teilnahmeDuplikatEinladungAbgelehnt | ✅ |
+| TC-044 | UC-011 Duplikat-Abrechnung abgelehnt (DB-002) | AbrechnungErstellenIT | tc044_abrechnungDuplikatTeilnahmeAbgelehnt | ✅ |
 
-**39 TCs implementiert (TC-001..TC-041, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
+**42 TCs implementiert (TC-001..TC-044, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
 
 ---
 
@@ -459,4 +486,5 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - [x] **UC-005 Mehrere Buffet-Beiträge**: `buffetBeitrag`/`buffetBeitragBeschreibung` durch `buffetBeitraege: List<TeilnahmeBuffetBeitrag>` ersetzt (`@ElementCollection`, Tabelle `teilnahme_buffet_beitrag`). TC-033 neu ergänzt.
 - [x] **UC-006 PATCH für `bestaetigungVersendet`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-013 aktualisiert.
 - [x] **UC-012 PATCH für `zustellungsDatum`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-032 ergänzt.
+- [x] **DB-002 Unique-Constraints** (2026-09-08): `uk_einladung_event_partei`, `uk_teilnahme_einladung`, `uk_abrechnung_teilnahme` per Flyway-Migration V2; TC-042..TC-044 prüfen den 409-Pfad (Meldung «Datensatz existiert bereits.»). UC-004 E1 damit auch API-seitig abgesichert.
 - [x] **UC-014–016 (AUTH-002) implementiert** (2026-06-12): TC-034..TC-040 umgesetzt. TC-036/TC-037 laufen mit echten JWTs (via `POST /api/auth/login`) im Default-Profil — die Ownership-Prüfung ist Methoden-Security und wirkt auch dort. Die URL-Autorisierungsmatrix testet `SecurityMatrixIT` (TC-040) mit `@ActiveProfiles("security-test")` und prod-gleicher Chain; Konfiguration in `src/test/resources/application-security-test.properties`.

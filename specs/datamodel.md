@@ -86,6 +86,8 @@ Verbindet eine Partei mit einem Event. Enthält die Rückmeldung der Partei.
 - `Einladung` → `Event`: n:1
 - `Einladung` → `Partei`: n:1
 
+**Constraints:** `uk_einladung_event_partei UNIQUE (event_id, partei_id)` — eine Einladung pro Partei und Event (UC-004 E1, DB-002).
+
 ---
 
 ### Teilnahme
@@ -108,19 +110,19 @@ Konsolidierte, editierbare Sicht der tatsächlichen Teilnahme einer Partei an ei
 | beschreibung| String                                         | nein    |
 
 **Beziehungen:**
-- `Teilnahme` → `Einladung`: 1:1
+- `Teilnahme` → `Einladung`: 1:1 — DB-Constraint `uk_teilnahme_einladung UNIQUE (einladung_id)` (DB-002)
 
 ---
 
 ### Konsumationsangebot
 Ein Getränk/Produkt, das an einem Event individuell konsumiert und verrechnet wird.
 
-| Feld       | Typ           | Pflicht |
-|------------|---------------|---------|
-| id         | Long          | ja      |
-| event      | Event         | ja      |
-| bezeichnung| String        | ja      |
-| preis      | BigDecimal    | ja      |
+| Feld       | Typ           | Pflicht | Hinweis |
+|------------|---------------|---------|---------|
+| id         | Long          | ja      | — |
+| event      | Event         | ja      | — |
+| bezeichnung| String        | ja      | — |
+| preis      | BigDecimal    | ja      | `numeric(10,2)` (DB-002) |
 
 **Beziehungen:**
 - `Konsumationsangebot` → `Event`: n:1
@@ -146,13 +148,13 @@ Erfasste Konsumation einer Partei für ein bestimmtes Angebot an einem Event.
 ### Allgemeinausgabe
 Gemeinschaftliche Ausgabe für einen Event, die auf alle Teilnehmenden aufgeteilt wird.
 
-| Feld        | Typ        | Pflicht |
-|-------------|------------|---------|
-| id          | Long       | ja      |
-| event       | Event      | ja      |
-| beschreibung| String     | ja      |
-| herkunft    | String     | nein    |
-| betrag      | BigDecimal | ja      |
+| Feld        | Typ        | Pflicht | Hinweis |
+|-------------|------------|---------|---------|
+| id          | Long       | ja      | — |
+| event       | Event      | ja      | — |
+| beschreibung| String     | ja      | — |
+| herkunft    | String     | nein    | — |
+| betrag      | BigDecimal | ja      | `numeric(10,2)` (DB-002) |
 
 **Beziehungen:**
 - `Allgemeinausgabe` → `Event`: n:1
@@ -162,31 +164,31 @@ Gemeinschaftliche Ausgabe für einen Event, die auf alle Teilnehmenden aufgeteil
 ### Abrechnung
 Individuelle Abrechnung je Partei für einen Event.
 
-| Feld                    | Typ        | Pflicht |
-|-------------------------|------------|---------|
-| id                      | Long       | ja      |
-| teilnahme               | Teilnahme  | ja      |
-| anteilAllgemeinkosten   | BigDecimal | ja      |
-| totalKonsumation        | BigDecimal | ja      |
-| totalBetrag             | BigDecimal | ja      |
-| zustellungskanal        | Enum (TWINT, EMAIL, PAPIER) | ja |
-| zustellungsDatum        | LocalDate  | nein    |
+| Feld                    | Typ        | Pflicht | Hinweis |
+|-------------------------|------------|---------|---------|
+| id                      | Long       | ja      | — |
+| teilnahme               | Teilnahme  | ja      | — |
+| anteilAllgemeinkosten   | BigDecimal | ja      | `numeric(10,2)` (DB-002) |
+| totalKonsumation        | BigDecimal | ja      | `numeric(10,2)` (DB-002) |
+| totalBetrag             | BigDecimal | ja      | `numeric(10,2)` (DB-002) |
+| zustellungskanal        | Enum (TWINT, EMAIL, PAPIER) | ja | — |
+| zustellungsDatum        | LocalDate  | nein    | — |
 
 **Beziehungen:**
-- `Abrechnung` → `Teilnahme`: 1:1
+- `Abrechnung` → `Teilnahme`: 1:1 — DB-Constraint `uk_abrechnung_teilnahme UNIQUE (teilnahme_id)` (DB-002)
 
 ---
 
 ### Zahlung
 Erfassung einer eingegangenen Zahlung zu einer Abrechnung.
 
-| Feld          | Typ        | Pflicht |
-|---------------|------------|---------|
-| id            | Long       | ja      |
-| abrechnung    | Abrechnung | ja      |
-| zahlungskanal | Enum (TWINT, UEBERWEISUNG, BAR) | ja |
-| datum         | LocalDate  | ja      |
-| betrag        | BigDecimal | ja      |
+| Feld          | Typ        | Pflicht | Hinweis |
+|---------------|------------|---------|---------|
+| id            | Long       | ja      | — |
+| abrechnung    | Abrechnung | ja      | — |
+| zahlungskanal | Enum (TWINT, UEBERWEISUNG, BAR) | ja | — |
+| datum         | LocalDate  | ja      | — |
+| betrag        | BigDecimal | ja      | `numeric(10,2)` (DB-002) |
 
 **Beziehungen:**
 - `Zahlung` → `Abrechnung`: n:1
