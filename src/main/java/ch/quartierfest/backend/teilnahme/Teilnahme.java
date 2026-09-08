@@ -10,7 +10,8 @@ import java.util.List;
 
 @Data
 @Entity
-@Table(name = "teilnahme")
+// DB-002: Einladung 1—1 Teilnahme — DB-Constraint uk_teilnahme_einladung (V2)
+@Table(name = "teilnahme", uniqueConstraints = @UniqueConstraint(name = "uk_teilnahme_einladung", columnNames = "einladung_id"))
 public class Teilnahme {
 
     @Id

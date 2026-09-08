@@ -1,6 +1,6 @@
 # Technische Schulden
 
-> Stand: 2026-07-09. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09.
+> Stand: 2026-09-08. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
@@ -9,7 +9,7 @@
 ## Konsolidierte Priorisierung (Review 2026-07-09)
 
 **Vor dem nächsten Prod-Deployment (blockierend):**
-1. **DB-001 + DB-002** — Flyway-Baseline inkl. fehlender Unique-Constraints und Geld-Präzision
+1. **DB-001 + DB-002** — Flyway-Baseline inkl. fehlender Unique-Constraints und Geld-Präzision — ✅ behoben 2026-09-08 (Prod-Erstmigration: Runbook in `README.md`, Duplikat-Check `db/check/duplikate-vor-v2.sql` vorher ausführen)
 2. **SEC-002** — Brute-Force-Drosselung auf `/api/auth/login` (internet-exponiert)
 
 **Hoher Nutzen, geringer Aufwand (nächster Sprint):**
@@ -28,26 +28,6 @@
 ---
 
 ## MAJOR
-
-### DB-001 – `ddl-auto=update` auch in Production, keine Schema-Migrationen
-
-`spring.jpa.hibernate.ddl-auto=update` steht in `application.properties` und wird von `application-prod.properties` **nicht** überschrieben — Hibernate migriert das Prod-Schema still bei jedem Start. Schemaänderungen sind dadurch weder reviewbar noch reproduzierbar; destruktive Änderungen (Spalte umbenennen/löschen) führen zu Schema-Drift, weil `update` nichts entfernt.
-
-**Empfehlung:** Flyway (oder Liquibase) einführen: `flyway-core` + `flyway-database-postgresql` in die `pom.xml`, bestehendes Schema als `V1__baseline.sql` einfrieren (`spring.flyway.baseline-on-migrate=true` für bestehende DBs), danach `ddl-auto=validate` setzen. Jede künftige Entity-Änderung bekommt ein nummeriertes Migrationsskript im PR. Vor ernsthaftem Prod-Betrieb umsetzen. Fehlende Constraints (DB-002) im selben Zug einziehen.
-
----
-
-### DB-002 – Fachliche Kardinalitäten nicht per DB-Constraint erzwungen *(Review 2026-07-09)*
-
-Das Datenmodell definiert `Einladung 1—1 Teilnahme`, `Teilnahme 1—1 Abrechnung` und faktisch eine Einladung pro Partei und Event — auf DB-Ebene erzwingt das nichts: kein `unique` auf `teilnahme.einladung_id`, `abrechnung.teilnahme_id` oder `einladung(event_id, partei_id)`. Doppelte POSTs (der Upsert-Pfad aus REST-001 ist seit 2026-07-09 geblockt, ein zweites POST ohne `id` legt aber weiterhin ein Duplikat an) und die Bulk-Einladungserstellung im Frontend machen Duplikate realistisch. Zudem haben die `BigDecimal`-Geldfelder keine explizite `precision`/`scale` — Hibernate wählt den Spaltentyp selbst.
-
-**Empfehlung:** Im Zuge der Flyway-Baseline (DB-001), nach Prüfung/Bereinigung des Bestands:
-- `ALTER TABLE teilnahme ADD CONSTRAINT uk_teilnahme_einladung UNIQUE (einladung_id);` analog `abrechnung.teilnahme_id` und `einladung (event_id, partei_id)`
-- Entities nachführen: `@OneToOne` + `@JoinColumn(unique = true)` bzw. `@Table(uniqueConstraints = ...)`, damit `ddl-auto=validate` konsistent bleibt
-- Geldbeträge explizit als `numeric(10,2)` (`@Column(precision = 10, scale = 2)`) auf `Konsumationsangebot.preis`, `Allgemeinausgabe.betrag`, `Abrechnung.*`, `Zahlung.betrag`
-- Constraint-Verletzung liefert dann 409 via ERROR-001-Handler (`DataIntegrityViolationException`)
-
----
 
 ### API-001 – API-Contract nur implizit (kein OpenAPI, kein DTO-Layer)
 
@@ -227,6 +207,26 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 ---
 
 ## Behoben
+
+### DB-001 – Flyway-Migrationen statt `ddl-auto=update` ✅ `2026-09-08`
+
+`spring.jpa.hibernate.ddl-auto=update` galt in allen Profilen inkl. `prod` — Hibernate migrierte das Prod-Schema still bei jedem Start.
+
+- `spring-boot-starter-flyway` + `flyway-database-postgresql` (Spring Boot 4 liefert die Flyway-Autokonfiguration nur noch über den Starter — `flyway-core` allein wird nicht aktiviert).
+- `V1__baseline.sql`: Ist-Stand des Hibernate-Schemas (aus `pg_dump` der Dev-DB, mit sprechenden Constraint-Namen). `spring.flyway.baseline-on-migrate=true` + `baseline-version=1`: bestehende DBs (Prod, lokale Dev-DB) werden beim ersten Start auf V1 baselined und laufen ab V2 normal; leere DBs (CI) bauen V1+V2 von null auf.
+- `ddl-auto=validate` in allen Profilen — jede Entity-Änderung braucht ein neues `V<n>__*.sql` im selben PR.
+- Verifiziert: `./mvnw verify` gegen die bestehende Dev-DB (Baseline + V2) und gegen eine leere DB (V1 + V2) — beide grün (64 Unit-, 42 IT-Methoden).
+
+### DB-002 – Unique-Constraints und Geld-Präzision ✅ `2026-09-08`
+
+Befund beim Umsetzen: Hibernate hatte für die `@OneToOne`-Beziehungen (`teilnahme.einladung_id`, `abrechnung.teilnahme_id`) bereits Unique-Constraints mit Hash-Namen angelegt — tatsächlich fehlte nur `einladung(event_id, partei_id)`; die Geldfelder waren `numeric(38,2)`.
+
+- `V2__db002_unique_constraints_geldpraezision.sql`: `uk_einladung_event_partei` (neu), `uk_teilnahme_einladung`, `uk_abrechnung_teilnahme`, `uk_benutzer_email` (bestehende Hibernate-Constraints werden umbenannt, fehlende angelegt — idempotent gegenüber Prod- und V1-Schema); alle Geldbeträge auf `numeric(10,2)`.
+- Entities: `@Table(uniqueConstraints = …)` und `@Column(precision = 10, scale = 2)` nachgeführt; Entity-TODO-Kommentare entfernt.
+- `GlobalExceptionHandler`: Unique-Verletzung (`ConstraintViolationException.ConstraintKind.UNIQUE`) → 409 «Datensatz existiert bereits.», FK-Verletzung → 409 wie bisher.
+- Neue ITs TC-042 (Duplikat-Einladung), TC-043 (Duplikat-Teilnahme), TC-044 (Duplikat-Abrechnung); TC-022 prüft die Betragspräzision. UC-004 E1 und das UC-011-Open-Item sind damit geschlossen.
+- Frontend-Beifang: `AbrechnungenVerwaltungComponent` rundet `anteil`/`konsumation` vor dem POST auf 2 Nachkommastellen, damit `totalBetrag = anteil + konsumation` auch nach der DB-Rundung stimmt (Rappenrundung auf 0.05 bleibt BIZ-001).
+- **Prod-Erstmigration:** V2 schlägt bei Duplikaten im Bestand fehl (App startet nicht) — vorher `src/main/resources/db/check/duplikate-vor-v2.sql` ausführen; Runbook im `README.md`.
 
 ### REST-001 – Frontend aktualisiert Teilnahmen via POST-Upsert statt PUT ✅ `2026-07-09`
 

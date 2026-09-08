@@ -3,8 +3,8 @@ package ch.quartierfest.backend.abrechnung;
 /**
  * Traceability:
  *   UC: UC-011 (Abrechnung erstellen)
- *   TCs: TC-022, TC-023
- *   Last traced: 2026-05-01
+ *   TCs: TC-022, TC-023, TC-044
+ *   Last traced: 2026-09-08
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -109,6 +109,8 @@ class AbrechnungErstellenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().get("id")).isNotNull();
+        // DB-002: Beträge kommen als numeric(10,2) unverändert zurück
+        assertThat(((Number) response.getBody().get("totalBetrag")).doubleValue()).isEqualTo(57.00);
 
         // Cleanup als Lösch-Test (vor @AfterEach-Teilnahme-Cleanup: Abrechnung referenziert Teilnahme)
         String url = "http://localhost:" + port + "/api/abrechnungen/" + response.getBody().get("id");
@@ -132,5 +134,33 @@ class AbrechnungErstellenIT {
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
         assertThat(response.getBody().get("status")).isEqualTo(409);
         assertThat((String) response.getBody().get("message")).isNotBlank();
+    }
+
+    @Test
+    @DisplayName("TC-044 – UC-011 Abrechnung erstellen: zweite Abrechnung zur selben Teilnahme wird abgelehnt (DB-002)")
+    @SuppressWarnings("unchecked")
+    void tc044_abrechnungDuplikatTeilnahmeAbgelehnt() {
+        Map<String, Object> body = Map.of(
+                "teilnahme", Map.of("id", teilnahmeId),
+                "anteilAllgemeinkosten", 40.00,
+                "totalKonsumation", 17.00,
+                "totalBetrag", 57.00,
+                "zustellungskanal", "EMAIL");
+        ResponseEntity<Map> erste = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
+                new HttpEntity<>(body, json), Map.class);
+        assertThat(erste.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Number abrechnungId = (Number) erste.getBody().get("id");
+
+        // Unique-Constraint uk_abrechnung_teilnahme → 409 mit einheitlichem Fehler-JSON (ERROR-001)
+        ResponseEntity<Map> duplikat = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
+                new HttpEntity<>(body, json), Map.class);
+        assertThat(duplikat.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(duplikat.getBody().get("status")).isEqualTo(409);
+        assertThat((String) duplikat.getBody().get("message")).contains("existiert bereits");
+
+        // Cleanup als Lösch-Test (vor @AfterEach-Teilnahme-Cleanup)
+        ResponseEntity<Void> del = http.exchange("http://localhost:" + port + "/api/abrechnungen/" + abrechnungId,
+                HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

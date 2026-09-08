@@ -27,7 +27,23 @@ Verbindungsparameter:
 - Datenbank: `quartierfest`
 - User/Password: `qfuser` / `qfpass`
 
-Das Schema wird automatisch via `spring.jpa.hibernate.ddl-auto=update` verwaltet.
+Das Schema wird über **Flyway-Migrationen** (`src/main/resources/db/migration`) verwaltet; Hibernate läuft mit `ddl-auto=validate` (DB-001). Beim ersten Start gegen eine leere DB legt Flyway das Schema an (V1 + V2), eine bestehende, von Hibernate erzeugte DB wird automatisch auf V1 baselined und ab V2 migriert.
+
+### Schema-Migrationen
+
+| Skript | Inhalt |
+|---|---|
+| `V1__baseline.sql` | Ist-Stand des Hibernate-Schemas (Stand 2026-09-08) |
+| `V2__db002_unique_constraints_geldpraezision.sql` | Unique-Constraints (Einladung je Event+Partei, Teilnahme je Einladung, Abrechnung je Teilnahme, Benutzer-E-Mail), Geldbeträge `numeric(10,2)` |
+
+Regel: Jede Entity-Änderung bekommt ein neues `V<n>__<beschreibung>.sql` im selben PR — Hibernate `validate` bricht den Start ab, wenn Entities und Schema nicht zusammenpassen.
+
+### Prod-Erstmigration (einmalig, beim ersten Deployment mit Flyway)
+
+1. **Backup:** `pg_dump -Fc -U <user> <db> > quartierfest-$(date +%F).dump`
+2. **Duplikat-Check:** `psql -U <user> -d <db> -f src/main/resources/db/check/duplikate-vor-v2.sql` — alle Abfragen müssen 0 Zeilen liefern. Treffer (mehrere Einladungen derselben Partei zum selben Event, mehrere Teilnahmen je Einladung, mehrere Abrechnungen je Teilnahme) vorher über die UI oder per SQL bereinigen, sonst schlägt V2 fehl und die App startet nicht (DDL wird zurückgerollt, die DB bleibt unverändert).
+3. **Deploy + Start:** Flyway legt `flyway_schema_history` an, baselined auf V1 und führt V2 aus; Hibernate validiert das Schema.
+4. **Kontrolle:** `SELECT version, description, success FROM flyway_schema_history;` → Zeilen `1` (Baseline) und `2` mit `success = t`.
 
 ---
 
@@ -69,12 +85,12 @@ npm start        # http://localhost:4200
 ./mvnw verify -Dit.test=PersonVerwaltenIT
 ```
 
-**Unit-Tests** (`./mvnw test`): 62 Testmethoden.
-- 13 `*ControllerTest`-Klassen mit `@WebMvcTest` (49 Tests) — decken die HTTP-Schicht aller Domänen ab, ohne Datenbankabhängigkeit
+**Unit-Tests** (`./mvnw test`): 64 Testmethoden.
+- 13 `*ControllerTest`-Klassen mit `@WebMvcTest` (50 Tests) — decken die HTTP-Schicht aller Domänen ab, ohne Datenbankabhängigkeit
 - 3 Service-Tests mit Mockito (13 Tests): `ParteiServiceTest` (`personenIds`-Auflösung), `BenutzerServiceTest` (BCrypt, Duplikat-E-Mail, letzter ORGANISATOR), `AuthServiceTest` (Token-Claims, 401)
 - `BackendApplicationTests` — Spring-Kontext-Smoke-Test (braucht PostgreSQL)
 
-**Integrationstests** (`./mvnw verify`): 38 Testmethoden (TC-001..TC-040, ohne TC-003 und TC-017) in 17 `*IT`-Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/`, laufen gegen echte PostgreSQL.
+**Integrationstests** (`./mvnw verify`): 42 Testmethoden (TC-001..TC-044, ohne TC-003 und TC-017) in 17 `*IT`-Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/`, laufen gegen echte PostgreSQL.
 
 **CI:** GitHub Actions (`.github/workflows/ci.yml`) führt `./mvnw verify` bei Push/PR auf `main` gegen einen PostgreSQL-16-Service-Container aus.
 
@@ -91,7 +107,7 @@ npm start        # http://localhost:4200
 | Spring Data JPA + PostgreSQL | — |
 | Lombok | `@Data`, `@RequiredArgsConstructor` |
 | Spring WebMVC (synchronous) | — |
-| Citrus BOM (Test-Scope) | 4.9.4 |
+| Flyway (Schema-Migrationen) | 11.x (Spring-Boot-managed) |
 
 ### Frontend
 | Technologie | Version |

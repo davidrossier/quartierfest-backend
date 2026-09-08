@@ -24,7 +24,8 @@ public class Konsumationsangebot {
     @Column(nullable = false)
     private String bezeichnung;
 
+    // DB-002: Geldbetrag explizit numeric(10,2)
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal preis;
 }

@@ -9,28 +9,29 @@ import java.time.LocalDate;
 
 @Data
 @Entity
-@Table(name = "abrechnung")
+// DB-002: Teilnahme 1—1 Abrechnung — DB-Constraint uk_abrechnung_teilnahme (V2)
+@Table(name = "abrechnung", uniqueConstraints = @UniqueConstraint(name = "uk_abrechnung_teilnahme", columnNames = "teilnahme_id"))
 public class Abrechnung {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // TODO [UC-011]: Kein @UniqueConstraint auf teilnahme_id — doppelte Abrechnung möglich wenn UI-Logik umgangen wird – siehe specs/UC-011_Abrechnung-Erstellen.md
     @NotNull
     @OneToOne(optional = false)
     private Teilnahme teilnahme;
 
+    // DB-002: Geldbeträge explizit numeric(10,2)
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal anteilAllgemeinkosten;
 
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalKonsumation;
 
     @NotNull
-    @Column(nullable = false)
+    @Column(nullable = false, precision = 10, scale = 2)
     private BigDecimal totalBetrag;
 
     @NotNull

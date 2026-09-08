@@ -3,8 +3,8 @@ package ch.quartierfest.backend.einladung;
 /**
  * Traceability:
  *   UC: UC-004 (Einladung erstellen und verwalten)
- *   TCs: TC-008, TC-009, TC-010
- *   Last traced: 2026-05-01
+ *   TCs: TC-008, TC-009, TC-010, TC-042
+ *   Last traced: 2026-09-08
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -26,7 +26,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-004 – Einladung erstellen und verwalten. TC-008, TC-009, TC-010. */
+/** Integration tests for UC-004 – Einladung erstellen und verwalten. TC-008, TC-009, TC-010, TC-042. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")
 class EinladungVerwaltenIT {
@@ -117,7 +117,6 @@ class EinladungVerwaltenIT {
     @DisplayName("TC-010 – UC-004 Rückmeldung ABGEMELDET erfassen (A1)")
     @SuppressWarnings("unchecked")
     void tc010_rueckmeldungAbgemeldetErfassen() {
-        // TODO: UC-004 E1 (Duplikat-Prüfung) fehlt – kein Unique-Constraint auf (event, partei)
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
                         "event", Map.of("id", eventId),
@@ -131,6 +130,33 @@ class EinladungVerwaltenIT {
         // Cleanup als Lösch-Test
         String url = "http://localhost:" + port + "/api/einladungen/" + response.getBody().get("id");
         ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("TC-042 – UC-004 E1: zweite Einladung für dieselbe Partei zum selben Event wird abgelehnt (DB-002)")
+    @SuppressWarnings("unchecked")
+    void tc042_einladungDuplikatEventParteiAbgelehnt() {
+        Map<String, Object> body = Map.of(
+                "event", Map.of("id", eventId),
+                "partei", Map.of("id", parteiId),
+                "status", "OFFEN",
+                "bestaetigungVersendet", false);
+        ResponseEntity<Map> erste = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
+                new HttpEntity<>(body, json), Map.class);
+        assertThat(erste.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Number einladungId = (Number) erste.getBody().get("id");
+
+        // Unique-Constraint uk_einladung_event_partei → 409 mit einheitlichem Fehler-JSON (ERROR-001)
+        ResponseEntity<Map> duplikat = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
+                new HttpEntity<>(body, json), Map.class);
+        assertThat(duplikat.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(duplikat.getBody().get("status")).isEqualTo(409);
+        assertThat((String) duplikat.getBody().get("message")).contains("existiert bereits");
+
+        // Cleanup als Lösch-Test
+        ResponseEntity<Void> del = http.exchange("http://localhost:" + port + "/api/einladungen/" + einladungId,
+                HttpMethod.DELETE, null, Void.class);
         assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

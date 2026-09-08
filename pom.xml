@@ -65,6 +65,16 @@
 			<artifactId>postgresql</artifactId>
 			<scope>runtime</scope>
 		</dependency>
+		<!-- DB-001: Schema-Migrationen via Flyway (src/main/resources/db/migration).
+		     Spring Boot 4 liefert die Flyway-Autokonfiguration im eigenen Starter — flyway-core allein reicht nicht. -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-flyway</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>org.flywaydb</groupId>
+			<artifactId>flyway-database-postgresql</artifactId>
+		</dependency>
 		<dependency>
 			<groupId>org.projectlombok</groupId>
 			<artifactId>lombok</artifactId>

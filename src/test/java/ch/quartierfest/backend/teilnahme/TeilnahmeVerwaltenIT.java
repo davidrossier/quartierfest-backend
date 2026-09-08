@@ -3,8 +3,8 @@ package ch.quartierfest.backend.teilnahme;
 /**
  * Traceability:
  *   UC: UC-005 (Teilnahmen verwalten)
- *   TCs: TC-011, TC-012, TC-033, TC-041
- *   Last traced: 2026-07-09
+ *   TCs: TC-011, TC-012, TC-033, TC-041, TC-043
+ *   Last traced: 2026-09-08
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -133,6 +133,31 @@ class TeilnahmeVerwaltenIT {
         assertThat((String) response.getBody().get("message")).contains("PUT /api/teilnahmen/");
 
         tryDelete("http://localhost:" + port + "/api/teilnahmen/" + teilnahmeId);
+    }
+
+    @Test
+    @DisplayName("TC-043 – UC-005 Teilnahme erstellen: zweite Teilnahme zur selben Einladung wird abgelehnt (DB-002)")
+    @SuppressWarnings("unchecked")
+    void tc043_teilnahmeDuplikatEinladungAbgelehnt() {
+        Map<String, Object> body = Map.of(
+                "einladung", Map.of("id", einladungId),
+                "anzahlPersonenEffektiv", 2);
+        ResponseEntity<Map> erste = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
+                new HttpEntity<>(body, json), Map.class);
+        assertThat(erste.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Number teilnahmeId = (Number) erste.getBody().get("id");
+
+        // Unique-Constraint uk_teilnahme_einladung → 409 mit einheitlichem Fehler-JSON (ERROR-001)
+        ResponseEntity<Map> duplikat = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
+                new HttpEntity<>(body, json), Map.class);
+        assertThat(duplikat.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+        assertThat(duplikat.getBody().get("status")).isEqualTo(409);
+        assertThat((String) duplikat.getBody().get("message")).contains("existiert bereits");
+
+        // Cleanup als Lösch-Test (vor @AfterEach-Einladungs-Cleanup)
+        ResponseEntity<Void> del = http.exchange("http://localhost:" + port + "/api/teilnahmen/" + teilnahmeId,
+                HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 
     @Test
