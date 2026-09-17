@@ -3,14 +3,15 @@ package ch.quartierfest.backend.auth;
 /**
  * Traceability:
  *   UC: UC-014 (Benutzer anmelden)
- *   TCs: TC-038
- *   Last traced: 2026-06-12
+ *   TCs: TC-038, TC-045
+ *   Last traced: 2026-09-17
  */
 
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpEntity;
@@ -26,7 +27,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-014 – Benutzer anmelden (AUTH-002). TC-038. */
+/** Integration tests for UC-014 – Benutzer anmelden (AUTH-002, SEC-002). TC-038, TC-045. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")
 class BenutzerAnmeldenIT {
@@ -34,6 +35,8 @@ class BenutzerAnmeldenIT {
     private RestTemplate http;
     @LocalServerPort
     private int port;
+    @Autowired
+    private LoginDrosselung loginDrosselung;
 
     private RestTemplate setup;
     private HttpHeaders json;
@@ -62,6 +65,8 @@ class BenutzerAnmeldenIT {
 
     @AfterEach
     void tearDown() {
+        // SEC-002: Zähler leeren, damit andere ITs im geteilten Context (alle von 127.0.0.1) nicht gesperrt werden
+        loginDrosselung.zuruecksetzen();
         if (benutzerId != null) tryDelete("http://localhost:" + port + "/api/benutzer/" + benutzerId);
         if (parteiId != null) tryDelete("http://localhost:" + port + "/api/parteien/" + parteiId);
     }
@@ -98,5 +103,35 @@ class BenutzerAnmeldenIT {
                 Map.class);
 
         assertThat(falsch.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("TC-045 – SEC-002 Login nach 5 Fehlversuchen für 15 Minuten gesperrt (429)")
+    @SuppressWarnings("unchecked")
+    void tc045_loginNachFuenfFehlversuchenGesperrt() {
+        String url = "http://localhost:" + port + "/api/auth/login";
+        HttpEntity<Map<String, String>> falsch = new HttpEntity<>(
+                Map.of("email", "tc038.login@quartier.ch", "passwort", "falsches-passwort"), json);
+        HttpEntity<Map<String, String>> korrekt = new HttpEntity<>(
+                Map.of("email", "tc038.login@quartier.ch", "passwort", "login-geheim-12"), json);
+
+        for (int i = 1; i <= 5; i++) {
+            ResponseEntity<Map> r = http.exchange(url, HttpMethod.POST, falsch, Map.class);
+            assertThat(r.getStatusCode()).as("Fehlversuch %d", i).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
+
+        ResponseEntity<Map> gesperrt = http.exchange(url, HttpMethod.POST, falsch, Map.class);
+        assertThat(gesperrt.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(gesperrt.getBody().get("message").toString()).contains("Zu viele Fehlversuche");
+
+        // Auch das korrekte Passwort wird während der Sperre abgewiesen
+        ResponseEntity<Map> korrektGesperrt = http.exchange(url, HttpMethod.POST, korrekt, Map.class);
+        assertThat(korrektGesperrt.getStatusCode()).isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        assertThat(korrektGesperrt.getBody()).doesNotContainKey("token");
+
+        // Andere Benutzer von derselben IP bleiben anmeldbar (IP-Limit 20 > E-Mail-Limit 5)
+        ResponseEntity<Map> admin = http.exchange(url, HttpMethod.POST, new HttpEntity<>(
+                Map.of("email", "admin@quartierfest.local", "passwort", "quartierfest-admin"), json), Map.class);
+        assertThat(admin.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

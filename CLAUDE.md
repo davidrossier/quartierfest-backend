@@ -46,6 +46,7 @@ SQL logging is enabled via `spring.jpa.show-sql=true`.
 - **Lombok** (`@Data`, `@RequiredArgsConstructor`) — never write boilerplate manually
 - **Spring WebMVC** (synchronous) — not WebFlux
 - **spring-boot-starter-validation** — Bean Validation (`@NotBlank`, `@NotNull` auf Entities; `@Valid` auf `@RequestBody`)
+- **caffeine** — In-Memory-Cache mit TTL für die Login-Drosselung (SEC-002)
 - **spring-boot-starter-flyway** + `flyway-database-postgresql` — Schema-Migrationen (DB-001); Spring Boot 4 aktiviert Flyway nur über den Starter, `flyway-core` allein reicht nicht
 - **spring-boot-starter-oauth2-resource-server** — JWT-Validierung; Eigenbau-Login (AUTH-002): Backend stellt HS256-JWTs selbst aus (`JwtEncoder`/`NimbusJwtDecoder.withSecretKey`), kein externer IdP
 - **spring-boot-devtools** (runtime, optional)
@@ -68,6 +69,7 @@ Test scope:
 
 `./mvnw spring-boot:run` aktiviert das `dev`-Profil automatisch (pom.xml, `spring-boot-maven-plugin`). Das gepackte Jar und der IDE-Start der Main-Klasse sind fail-closed — dort das Profil bei Bedarf manuell setzen (`--spring.profiles.active=dev`).
 
+- **Brute-Force-Drosselung (SEC-002):** `auth/LoginDrosselung` zählt Fehlversuche in-memory (Caffeine) pro E-Mail und pro Client-IP; `AuthService.login()` wirft bei Sperre `429` vor dem Credential-Check. Properties `auth.drosselung.max-fehlversuche-email=5`, `max-fehlversuche-ip=20`, `sperre-minuten=15` (0 = aus). Prod: `server.forward-headers-strategy=native` für die Client-IP hinter einem Reverse-Proxy. ITs, die Fehl-Logins provozieren, müssen `loginDrosselung.zuruecksetzen()` im `@AfterEach` aufrufen (geteilter Context).
 - **Eigenbau-JWT:** `POST /api/auth/login` (Package `auth`) prüft BCrypt-Hash und stellt ein HS256-JWT aus (Claims `sub` = Benutzer-ID, `email`, `rolle`; 12 h). Secret: `auth.jwt.secret` (prod: `AUTH_JWT_SECRET`, min. 32 Zeichen).
 - **Rollen-Mapping:** `JwtAuthenticationConverter` mappt den Claim `rolle` → `ROLE_*` (Spring-Default liest nur `scope`).
 - **Ownership (UC-016):** `@PreAuthorize("@teilnahmeZugriff.darfBearbeiten(...)")` auf `TeilnahmeService.update()` — Methoden-Security (`@EnableMethodSecurity`), wirkt in allen Profilen.
@@ -92,7 +94,7 @@ Ausnahmen:
 - `PersonController`, `ParteiController` und `EventController` haben zusätzlich `PUT /api/{resource}/{id}` — update, returns `200 OK` + updated entity.
 - `TeilnahmeController` (UC-016): `GET /api/teilnahmen/meine` (eigene Teilnahme via JWT `sub`, nächster Event) und `PUT /api/teilnahmen/{id}` mit Whitelist-DTO `TeilnahmeUpdateRequest` (`einladung` nie änderbar; PARTEI nur eigene → sonst 403).
 - `BenutzerController` (UC-015): zusätzlich `PUT /api/benutzer/{id}/passwort` (Reset); Duplikat-E-Mail und letzter-ORGANISATOR-Löschung → `409`.
-- `AuthController` (UC-014): nur `POST /api/auth/login` → `{token}`; falsche Credentials → `401`.
+- `AuthController` (UC-014): nur `POST /api/auth/login` → `{token}`; falsche Credentials → `401`; gesperrt (SEC-002) → `429`.
 
 | Domain | Endpoint | Beziehungen |
 |---|---|---|
@@ -131,7 +133,7 @@ Enums sind als innere Klassen in der jeweiligen Entity definiert:
 - `@MockitoBean` für den Service; `@Autowired MockMvc` für Requests
 - **Jackson 3.x:** Spring Boot 4.x konfiguriert `tools.jackson.databind.ObjectMapper` als Bean — `@Autowired ObjectMapper` muss diesen Typ importieren, nicht `com.fasterxml.jackson.databind.ObjectMapper` (Jackson 2.x, nicht auf dem Classpath). Die Annotations `com.fasterxml.jackson.annotation.*` (`@JsonIgnore`, `@JsonProperty`) bleiben dagegen legitim im Einsatz — Jackson 3 liest sie weiterhin
 - Traceability via `@DisplayName("UC-XXX: ...")`
-- 50 Testmethoden
+- 51 Testmethoden
 - **Einschränkung:** `@AuthenticationPrincipal`-Parameter sind im MVC-Slice nicht auflösbar (Resolver fehlt) — `GET /api/teilnahmen/meine` wird deshalb nur via IT getestet (TC-036)
 
 ```java
@@ -157,7 +159,8 @@ class PersonControllerTest {
 **Service-Tests** (`@ExtendWith(MockitoExtension.class)` — reine Mockito-Tests, kein Spring-Kontext):
 - `ParteiServiceTest` — `save()` löst `personenIds` via `PersonRepository` auf (4 Methoden)
 - `BenutzerServiceTest` — BCrypt-Hashing, Duplikat-E-Mail/letzter-ORGANISATOR → 409, Passwort-Reset (6 Methoden)
-- `AuthServiceTest` — Token-Claims, 401 bei falschen Credentials/unbekannter E-Mail (3 Methoden)
+- `AuthServiceTest` — Token-Claims, 401 bei falschen Credentials/unbekannter E-Mail, 429 bei Sperre, Zähler-Aufrufe (5 Methoden)
+- `LoginDrosselungTest` — SEC-002-Zähler mit gestellter Caffeine-`Ticker`-Uhr: Limits, Normalisierung, Ablauf, Reset (6 Methoden)
 
 **Smoke-Test**: `BackendApplicationTests.java` — Spring-Kontext-Ladetest (braucht PostgreSQL).
 
@@ -165,7 +168,7 @@ class PersonControllerTest {
 17 `*IT.java` Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`).
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
 Alle ITs ausser `SecurityMatrixIT` tragen `@ActiveProfiles("dev")` (offene Security-Chain, SEC-001) — byte-identisch, damit alle denselben gecachten Spring-Context teilen.
-**42 Testmethoden (TC-001..TC-044, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
+**43 Testmethoden (TC-001..TC-045, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Auth-Besonderheiten:
 - `TeilnahmeBestaetigenIT` (TC-036/037) holt sich echte JWTs via `POST /api/auth/login` — die Ownership-403-Fälle laufen im dev-Profil (Methoden-Security)
@@ -236,7 +239,7 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 16 Use Cases |
 | `UC-001` .. `UC-016` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme, UC-014..016 = Auth/Eigenbau-Login) |
-| `testdesign.md` | Testdesign mit TC-001..TC-044, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign mit TC-001..TC-045, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |

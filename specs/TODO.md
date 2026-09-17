@@ -1,6 +1,6 @@
 # Technische Schulden
 
-> Stand: 2026-09-08. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09.
+> Stand: 2026-09-17. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
@@ -10,7 +10,7 @@
 
 **Vor dem nächsten Prod-Deployment (blockierend):**
 1. **DB-001 + DB-002** — Flyway-Baseline inkl. fehlender Unique-Constraints und Geld-Präzision — ✅ behoben 2026-09-08 (Prod-Erstmigration: Runbook in `README.md`, Duplikat-Check `db/check/duplikate-vor-v2.sql` vorher ausführen)
-2. **SEC-002** — Brute-Force-Drosselung auf `/api/auth/login` (internet-exponiert)
+2. **SEC-002** — Brute-Force-Drosselung auf `/api/auth/login` (internet-exponiert) — ✅ behoben 2026-09-17 (Caffeine-Zähler pro E-Mail/IP, 429; TC-045)
 
 **Hoher Nutzen, geringer Aufwand (nächster Sprint):**
 3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren) — ✅ behoben 2026-07-09 (empirisch: 409 statt 404)
@@ -44,14 +44,6 @@ JPA-Entities sind direkt der API-Contract (inkl. verschachtelter Beziehungen wie
 Die E2E-Suite (UC-001..016, wertvollste Absicherung des Frontend↔Backend-Zusammenspiels) läuft nur lokal. Contract- oder Integrationsfehler zwischen den Repos werden von keiner Pipeline erkannt.
 
 **Empfehlung:** Eigener Workflow im Frontend-Repo (Push/PR oder Nightly): PostgreSQL-16-Service-Container (wie Backend-CI) → Backend-Repo via `actions/checkout` (`repository: davidrossier/quartierfest-backend`) auschecken und mit `./mvnw spring-boot:run` im Hintergrund starten → `npm start` im Hintergrund → `npx playwright install chromium --with-deps` → `npm run e2e`. Auf Backend-Readiness warten — sauber via `/actuator/health` (→ OPS-001; `curl --retry` auf `/api/persons` funktioniert nur, weil `spring-boot:run` das `dev`-Profil setzt — fail-closed liefert dort 401). Playwright-Report als Artifact hochladen. Falls Laufzeit stört: als Nightly-`schedule` statt pro Push.
-
----
-
-### SEC-002 – Kein Brute-Force-Schutz auf `POST /api/auth/login` *(Review 2026-07-09; hochgestuft aus UC-014-Open-Item)*
-
-Der Login-Endpunkt ist `permitAll()` und unter `https://davidrossier.ch` internet-exponiert; Passwörter dürfen nur min. 10 Zeichen haben, es gibt keinerlei Drosselung. Credential-Stuffing/Brute-Force ist damit unbeschränkt möglich. In AUTH-002 als «bewusst offen» akzeptiert — für den Prod-Betrieb im Internet ist das nicht mehr vertretbar (MAJOR).
-
-**Empfehlung:** Einfacher In-Memory-Ansatz genügt (Single-Instance-Deployment): Fehlversuchs-Zähler pro E-Mail **und** pro Client-IP (z.B. Caffeine-Cache mit TTL), nach 5 Fehlversuchen 15 Minuten sperren → 429 mit generischer Meldung; erfolgreicher Login setzt den Zähler zurück. Alternativ Bucket4j. Fehlversuche mit WARN loggen (ohne Passwort). Umsetzung in `AuthService.login()` bzw. als vorgeschalteter Check im `AuthController`; IT-Testfall ergänzen (TC-041, `testdesign.md` nachführen). UC-014-Open-Item danach schliessen.
 
 ---
 
@@ -207,6 +199,17 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 ---
 
 ## Behoben
+
+### SEC-002 – Brute-Force-Drosselung auf `POST /api/auth/login` ✅ `2026-09-17`
+
+Der Login-Endpunkt war `permitAll()` und internet-exponiert ohne jede Drosselung (Credential-Stuffing/Brute-Force unbeschränkt möglich).
+
+- `auth/LoginDrosselung` (`@Component`): In-Memory-Zähler (Caffeine, `expireAfterWrite`) pro E-Mail (normalisiert) **und** pro Client-IP; Limits und Sperrdauer via `auth.drosselung.max-fehlversuche-email=5`, `max-fehlversuche-ip=20`, `sperre-minuten=15` (0 = Prüfung aus). Jeder Fehlversuch verlängert die Sperre, erfolgreicher Login löscht beide Zähler. Single-Instance-Annahme wie in der Empfehlung.
+- `AuthService.login(email, passwort, clientIp)`: gesperrt → 429 «Zu viele Fehlversuche. Bitte später erneut versuchen.» **vor** dem BCrypt-Vergleich; Fehlversuche mit WARN geloggt (E-Mail + IP, nie Passwort). `AuthController` liefert `request.getRemoteAddr()`.
+- IP-Limit bewusst höher als E-Mail-Limit: mehrere Haushalte hinter einer NAT-IP und die ITs (alle von 127.0.0.1) sperren sich nicht gegenseitig.
+- Prod: `server.forward-headers-strategy=native` — Tomcat übernimmt `X-Forwarded-For` nur von Proxys aus privaten Netzen; ob ein Reverse-Proxy vor dem Backend läuft, ist noch unbekannt (→ OPS-001), die Einstellung ist in beiden Fällen korrekt (kein Spoofing von öffentlichen Clients).
+- Tests: `LoginDrosselungTest` (gestellte Uhr), `AuthServiceTest` (+2), `AuthControllerTest` (+1), TC-045 in `BenutzerAnmeldenIT` (5× 401 → 429, auch mit korrektem Passwort; Admin von derselben IP weiterhin anmeldbar; `@AfterEach` setzt die Zähler zurück). Frontend: `LoginComponent` mappt 429 auf «Zu viele Fehlversuche. Bitte versuchen Sie es in 15 Minuten erneut.»
+- Nicht gelöst: Sperre überlebt keinen Neustart (In-Memory) — für den Prod-Betrieb bewusst akzeptiert.
 
 ### DB-001 – Flyway-Migrationen statt `ddl-auto=update` ✅ `2026-09-08`
 

@@ -239,7 +239,7 @@ erDiagram
 | DOCS-001 | Dokumentation | Drift zwischen CLAUDE.md/README/architecture.md (TC-Range, alte Security-Tabelle) | MINOR | ✅ Behoben 2026-07-06 |
 | CODE-001 | Code-Qualität | Kyrillisches «а» (U+0430) in zwei IT-Methodennamen (`...ViаUpsert`) | MINOR | ✅ Behoben 2026-07-09 |
 | DB-002 | Datenmodell | Fachliche 1:1-Kardinalitäten (Teilnahme/Abrechnung/Einladung) ohne Unique-Constraints; Geldfelder ohne `precision/scale` | MAJOR | ✅ Behoben 2026-09-08 (V2-Migration, TC-042..044) |
-| SEC-002 | Sicherheit | Kein Brute-Force-Schutz auf `POST /api/auth/login` (internet-exponiert) | MAJOR | Offen |
+| SEC-002 | Sicherheit | Kein Brute-Force-Schutz auf `POST /api/auth/login` (internet-exponiert) | MAJOR | ✅ Behoben 2026-09-17 (`LoginDrosselung`, 429, TC-045) |
 | BIZ-001 | Fachlichkeit | UC-011: Abrechnungsbeträge werden manuell erfasst statt berechnet; UC-009 ohne Konsumationslisten-Endpunkt | MAJOR | Offen |
 | OPS-001 | Betrieb | Deployment-Prozess undokumentiert, keine Backup-Strategie, kein Actuator-Health-Endpoint | MAJOR | Offen |
 | UX-001 | Usability | Meldungen nach 3–4 s weg, kein `aria-live`, `window.prompt` unmaskiert, UC-010-Matrix mobil ungeprüft | MINOR | Offen |
@@ -272,7 +272,7 @@ erDiagram
 | UC-011 | Abrechnung erstellen | GET/POST/DELETE `/api/abrechnungen` | TC-022, TC-023 | AbrechnungErstellenIT | ⚠ Teilimpl. |
 | UC-012 | Abrechnung zustellen | POST `/api/abrechnungen` (Upsert, Felder `zustellungskanal`, `zustellungsDatum`) | TC-024, TC-025, TC-032 | AbrechnungZustellenIT | ✅ Vollständig |
 | UC-013 | Inkasso sicherstellen | GET/POST/DELETE `/api/zahlungen`, `/api/mahnungen` | TC-026, TC-027, TC-028 | InkassoSicherstellenIT | ✅ Vollständig |
-| UC-014 | Benutzer anmelden | POST `/api/auth/login` | TC-038, TC-040 | BenutzerAnmeldenIT, SecurityMatrixIT | ✅ Vollständig |
+| UC-014 | Benutzer anmelden | POST `/api/auth/login` | TC-038, TC-040, TC-045 | BenutzerAnmeldenIT, SecurityMatrixIT | ✅ Vollständig |
 | UC-015 | Benutzer verwalten | GET/POST/DELETE `/api/benutzer`, PUT `/api/benutzer/{id}/passwort` | TC-034, TC-035, TC-039 | BenutzerVerwaltenIT | ✅ Vollständig |
 | UC-016 | Teilnahme bestätigen | GET `/api/teilnahmen/meine`, PUT `/api/teilnahmen/{id}` | TC-036, TC-037 | TeilnahmeBestaetigenIT | ✅ Vollständig |
 
