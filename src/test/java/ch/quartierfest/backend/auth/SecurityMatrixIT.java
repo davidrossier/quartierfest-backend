@@ -3,8 +3,8 @@ package ch.quartierfest.backend.auth;
 /**
  * Traceability:
  *   UC: UC-014 (Benutzer anmelden) / AUTH-002 Autorisierungsmatrix
- *   TCs: TC-040
- *   Last traced: 2026-06-12
+ *   TCs: TC-040, TC-047
+ *   Last traced: 2026-09-17
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -150,5 +150,34 @@ class SecurityMatrixIT {
                 base + "/api/teilnahmen/meine", HttpMethod.GET, new HttpEntity<>(bearer(parteiToken)), String.class);
         assertThat(meine.getStatusCode()).isIn(HttpStatus.OK, HttpStatus.NOT_FOUND);
         assertThat(meine.getStatusCode()).isNotIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN);
+    }
+
+    @Test
+    @DisplayName("TC-047 – OPS-001 /actuator/health ohne Token erreichbar, übrige Actuator-Pfade gesperrt")
+    @SuppressWarnings("unchecked")
+    void tc047_actuatorHealthOffenRestGesperrt() {
+        // Readiness-Signal (CI-001): UP, ohne Details
+        ResponseEntity<String> health = http.exchange(
+                base + "/actuator/health", HttpMethod.GET, null, String.class);
+        assertThat(health.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(health.getBody()).contains("\"status\":\"UP\"");
+        assertThat(health.getBody()).doesNotContain("components");
+
+        // Alle anderen Actuator-Pfade bleiben hinter der Security-Chain (401, nicht 404 – die Chain greift zuerst)
+        ResponseEntity<String> env = http.exchange(
+                base + "/actuator/env", HttpMethod.GET, null, String.class);
+        assertThat(env.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+        ResponseEntity<String> root = http.exchange(
+                base + "/actuator", HttpMethod.GET, null, String.class);
+        assertThat(root.getStatusCode()).isEqualTo(HttpStatus.UNAUTHORIZED);
+
+        // Auch mit ORGANISATOR-Token ist nichts ausser health exponiert (404 – nicht freigeschaltet)
+        ResponseEntity<Map> login = http.exchange(base + "/api/auth/login", HttpMethod.POST,
+                new HttpEntity<>(Map.of("email", ADMIN_EMAIL, "passwort", ADMIN_PASSWORT), json), Map.class);
+        assertThat(login.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String token = (String) login.getBody().get("token");
+        ResponseEntity<String> envMitToken = http.exchange(
+                base + "/actuator/env", HttpMethod.GET, new HttpEntity<>(bearer(token)), String.class);
+        assertThat(envMitToken.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND);
     }
 }

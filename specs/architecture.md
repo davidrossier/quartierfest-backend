@@ -229,7 +229,7 @@ erDiagram
 | DB-001 | Deployment | `ddl-auto=update` gilt auch in prod — keine Flyway/Liquibase-Migrationen | MAJOR | ✅ Behoben 2026-09-08 (Flyway, `ddl-auto=validate`) |
 | SEC-001 | Sicherheit | Security-Default fail-open: ohne `prod`-Profil ist die API komplett offen | MAJOR | ✅ Behoben 2026-07-09 |
 | API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Stufe 1 ✅ 2026-09-17 (springdoc, `specs/openapi.json` + TC-046, Frontend-Typen generiert, CI-Drift-Check); Stufe 2 (DTO-Layer) offen |
-| CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | Offen |
+| CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | ✅ Behoben 2026-09-17 (Frontend `e2e.yml`: nächtlich + manuell, Backend-`main` oder `backend_ref`, Readiness `/actuator/health`) |
 | ERROR-001 | Code-Qualität | Kein `@RestControllerAdvice` — FK-Fehler liefern 500, kein einheitliches Fehler-JSON | MINOR | ✅ Behoben 2026-07-09 |
 | REST-001 | Architektur | Frontend aktualisiert Teilnahmen via POST-Upsert statt `PUT /api/teilnahmen/{id}` | MINOR | ✅ Behoben 2026-07-09 (Teilnahme-Pfad) |
 | TEST-004 | Tests | Frontend: kaum Unit-Tests ausserhalb `auth/` (Komponenten/Services ungetestet) | MINOR | Offen |
@@ -241,7 +241,7 @@ erDiagram
 | DB-002 | Datenmodell | Fachliche 1:1-Kardinalitäten (Teilnahme/Abrechnung/Einladung) ohne Unique-Constraints; Geldfelder ohne `precision/scale` | MAJOR | ✅ Behoben 2026-09-08 (V2-Migration, TC-042..044) |
 | SEC-002 | Sicherheit | Kein Brute-Force-Schutz auf `POST /api/auth/login` (internet-exponiert) | MAJOR | ✅ Behoben 2026-09-17 (`LoginDrosselung`, 429, TC-045) |
 | BIZ-001 | Fachlichkeit | UC-011: Abrechnungsbeträge werden manuell erfasst statt berechnet; UC-009 ohne Konsumationslisten-Endpunkt | MAJOR | Offen |
-| OPS-001 | Betrieb | Deployment-Prozess undokumentiert, keine Backup-Strategie, kein Actuator-Health-Endpoint | MAJOR | Offen |
+| OPS-001 | Betrieb | Deployment-Prozess undokumentiert, keine Backup-Strategie, kein Actuator-Health-Endpoint | MAJOR | Teilweise: `/actuator/health` ✅ 2026-09-17 (TC-047); Deployment-Doku und Backups offen |
 | UX-001 | Usability | Meldungen nach 3–4 s weg, kein `aria-live`, `window.prompt` unmaskiert, UC-010-Matrix mobil ungeprüft | MINOR | Offen |
 | SEC-003 | Sicherheit | Kein Audit-Trail für Abrechnungen/Zahlungen/Mahnungen | MINOR | Offen |
 | DATA-001 | Datenschutz | Kein Löschkonzept/Aufbewahrungsregel für Personendaten (revDSG) | MINOR | Offen |

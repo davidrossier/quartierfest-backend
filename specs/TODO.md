@@ -19,7 +19,7 @@
 6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check — ✅ behoben 2026-09-17 (Plan: `specs/API-001_Stufe-1_Plan.md`; Stufe 2 DTO-Layer bleibt als MAJOR offen)
 
 **Mittelfristig:**
-7. **CI-001** — E2E-Workflow (Nightly), Actuator-Health als Readiness (→ OPS-001)
+7. **CI-001** — E2E-Workflow (Nightly), Actuator-Health als Readiness (→ OPS-001) — ✅ behoben 2026-09-17 (Frontend `e2e.yml`, Backend `/actuator/health` + TC-047; OPS-001 Punkt 3 damit erledigt)
 8. **BIZ-001** — UC-011-Berechnungslogik (fachlich wichtigste Lücke) inkl. `AbrechnungServiceTest`; UC-009-Endpunkt
 9. **QUAL-001** — angular-eslint, Prettier-Check, Dependabot, Coverage
 10. **REFACT-001/002 + TEST-001/002** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen; REST-002 (PUT-404) als Beifang, CODE-002 (`@Data` → `@Getter`/`@Setter`) spätestens mit API-001 Stufe 2
@@ -39,11 +39,13 @@ JPA-Entities sind direkt der API-Contract (inkl. verschachtelter Beziehungen wie
 
 ---
 
-### CI-001 – Playwright-E2E läuft nicht in CI
+### CI-001 – Playwright-E2E läuft nicht in CI — ✅ `2026-09-17`
 
 Die E2E-Suite (UC-001..016, wertvollste Absicherung des Frontend↔Backend-Zusammenspiels) läuft nur lokal. Contract- oder Integrationsfehler zwischen den Repos werden von keiner Pipeline erkannt.
 
 **Empfehlung:** Eigener Workflow im Frontend-Repo (Push/PR oder Nightly): PostgreSQL-16-Service-Container (wie Backend-CI) → Backend-Repo via `actions/checkout` (`repository: davidrossier/quartierfest-backend`) auschecken und mit `./mvnw spring-boot:run` im Hintergrund starten → `npm start` im Hintergrund → `npx playwright install chromium --with-deps` → `npm run e2e`. Auf Backend-Readiness warten — sauber via `/actuator/health` (→ OPS-001; `curl --retry` auf `/api/persons` funktioniert nur, weil `spring-boot:run` das `dev`-Profil setzt — fail-closed liefert dort 401). Playwright-Report als Artifact hochladen. Falls Laufzeit stört: als Nightly-`schedule` statt pro Push.
+
+**Umsetzung (2026-09-17):** `quartierfest-frontend/.github/workflows/e2e.yml` — Trigger `schedule` (täglich 03:00 UTC) und `workflow_dispatch` mit Input `backend_ref` (Default `main`, erlaubt den Lauf gegen einen Backend-Feature-Branch vor dessen Merge). Ablauf wie empfohlen: PostgreSQL-16-Service → Backend-Checkout nach `backend/` → `./mvnw spring-boot:run` (dev-Profil) und `npm start` im Hintergrund → Warten auf `GET /actuator/health` = `UP` bzw. Port 4200 → `npx playwright install chromium --with-deps` → `npm run e2e` (Playwright-`retries: 2` in CI) → `playwright-report/` immer, `backend.log`/`frontend.log` bei Fehler als Artifact. Bewusst nicht pro Push/PR: Laufzeit (Maven-Build + Browser) und Kaltstart-Flakiness.
 
 ---
 
@@ -62,12 +64,12 @@ Die E2E-Suite (UC-001..016, wertvollste Absicherung des Frontend↔Backend-Zusam
 
 ### OPS-001 – Deployment-Prozess undokumentiert, keine Backup-Strategie, kein Health-Endpoint *(Review 2026-07-09)*
 
-Es gibt kein Dockerfile, kein Deploy-Skript und keine Beschreibung, wie Jar + Angular-Build hinter Nginx auf `davidrossier.ch` landen — das Wissen existiert nur im Kopf des Betreibers. Für die Prod-DB (Personen- und Zahlungsdaten des Vereins) ist keine Backup-Strategie dokumentiert. `spring-boot-starter-actuator` fehlt, daher kein `/actuator/health` für Readiness-Checks (betrifft auch CI-001).
+Es gibt kein Dockerfile, kein Deploy-Skript und keine Beschreibung, wie Jar + Angular-Build hinter Nginx auf `davidrossier.ch` landen — das Wissen existiert nur im Kopf des Betreibers. Für die Prod-DB (Personen- und Zahlungsdaten des Vereins) ist keine Backup-Strategie dokumentiert. ~~`spring-boot-starter-actuator` fehlt, daher kein `/actuator/health` für Readiness-Checks (betrifft auch CI-001).~~ → Punkt 3 erledigt 2026-09-17.
 
 **Empfehlung:**
 1. `DEPLOYMENT.md` im Backend-Repo: Build-Schritte, benötigte Umgebungsvariablen (`AUTH_JWT_SECRET`, `AUTH_INITIAL_ADMIN_*`, `DB_*`), Nginx-Routing (`/api` → 8080, Rest → Angular-`dist/`), Startkommando mit `--spring.profiles.active=prod`
 2. Backups: täglicher `pg_dump` per Cron + gelegentlicher Restore-Test; Aufbewahrung dokumentieren (→ DATA-001)
-3. `spring-boot-starter-actuator` ergänzen; in `SecurityConfig` nur `/actuator/health` freigeben (`requestMatchers("/actuator/health").permitAll()`), Rest der Actuator-Endpunkte gesperrt lassen
+3. ✅ (2026-09-17) `spring-boot-starter-actuator`; `management.endpoints.web.exposure.include=health`, `show-details=never`; `SecurityConfig` gibt nur `GET /actuator/health` frei, alle übrigen Actuator-Pfade bleiben `authenticated()` (401) und sind zudem nicht exponiert (404 mit Token) — TC-047 in `SecurityMatrixIT`
 4. Optional: Dockerfile + Compose (App + PostgreSQL + Nginx) für reproduzierbares Deployment
 
 ---

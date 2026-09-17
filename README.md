@@ -90,7 +90,7 @@ npm start        # http://localhost:4200
 - 3 Service-Tests mit Mockito (13 Tests): `ParteiServiceTest` (`personenIds`-Auflösung), `BenutzerServiceTest` (BCrypt, Duplikat-E-Mail, letzter ORGANISATOR), `AuthServiceTest` (Token-Claims, 401)
 - `BackendApplicationTests` — Spring-Kontext-Smoke-Test (braucht PostgreSQL)
 
-**Integrationstests** (`./mvnw verify`): 44 Testmethoden (TC-001..TC-046, ohne TC-003 und TC-017) in 18 `*IT`-Klassen — 17 je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` plus `OpenApiContractIT` (TC-046, Abgleich `/v3/api-docs` ↔ `specs/openapi.json`) —, laufen gegen echte PostgreSQL.
+**Integrationstests** (`./mvnw verify`): 45 Testmethoden (TC-001..TC-047, ohne TC-003 und TC-017) in 18 `*IT`-Klassen — 17 je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` plus `OpenApiContractIT` (TC-046, Abgleich `/v3/api-docs` ↔ `specs/openapi.json`) —, laufen gegen echte PostgreSQL.
 
 **API-Contract (API-001):** Nach einer Änderung an Entities/Controllern die versionierte OpenAPI-Spec neu erzeugen und mitcommitten, sonst schlägt TC-046 fehl:
 
@@ -98,7 +98,7 @@ npm start        # http://localhost:4200
 OPENAPI_UPDATE=true ./mvnw verify -Dit.test=OpenApiContractIT
 ```
 
-**CI:** GitHub Actions (`.github/workflows/ci.yml`) führt `./mvnw verify` bei Push/PR auf `main` gegen einen PostgreSQL-16-Service-Container aus.
+**CI:** GitHub Actions (`.github/workflows/ci.yml`) führt `./mvnw verify` bei Push/PR auf `main` gegen einen PostgreSQL-16-Service-Container aus. Die Playwright-E2E-Suite läuft nächtlich im Frontend-Repo (`e2e.yml`) gegen `main` dieses Repos.
 
 ---
 
@@ -115,6 +115,7 @@ OPENAPI_UPDATE=true ./mvnw verify -Dit.test=OpenApiContractIT
 | Spring WebMVC (synchronous) | — |
 | Flyway (Schema-Migrationen) | 11.x (Spring-Boot-managed) |
 | springdoc-openapi (OpenAPI-Spec + Swagger-UI) | 3.1.1 |
+| Spring Boot Actuator (nur `/actuator/health`) | Spring-Boot-managed |
 
 ### Frontend
 | Technologie | Version |
@@ -155,7 +156,7 @@ Event-abhängige Routen nutzen einen gemeinsamen `EventKontextService` (Angular 
 
 ## API-Endpunkte
 
-Alle Endpunkte erreichbar unter `http://localhost:8080`. OpenAPI-Spec: `GET /v3/api-docs`, Swagger-UI: `http://localhost:8080/swagger-ui.html` (beides im `dev`-Profil offen, sonst 401; im `prod`-Profil deaktiviert). Der versionierte Contract liegt in `specs/openapi.json`.
+Alle Endpunkte erreichbar unter `http://localhost:8080`. OpenAPI-Spec: `GET /v3/api-docs`, Swagger-UI: `http://localhost:8080/swagger-ui.html` (beides im `dev`-Profil offen, sonst 401; im `prod`-Profil deaktiviert). Der versionierte Contract liegt in `specs/openapi.json`. Readiness: `GET /actuator/health` → `{"status":"UP"}` (ohne Token, ohne Details; übrige Actuator-Pfade gesperrt).
 
 | Ressource | GET (Liste) | POST (Erstellen) | PUT (Aktualisieren) | DELETE |
 |---|---|---|---|---|
