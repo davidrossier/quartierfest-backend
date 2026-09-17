@@ -199,7 +199,7 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 16 Use Cases |
 | `UC-001` .. `UC-016` | Einzelne Use Cases |
-| `testdesign.md` | Testdesign TC-001..TC-040, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign TC-001..TC-047, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden und Refactoring-Backlog |

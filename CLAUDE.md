@@ -253,7 +253,7 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 16 Use Cases |
 | `UC-001` .. `UC-016` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme, UC-014..016 = Auth/Eigenbau-Login) |
-| `testdesign.md` | Testdesign mit TC-001..TC-045, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign mit TC-001..TC-047, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |

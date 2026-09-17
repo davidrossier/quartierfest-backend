@@ -1,6 +1,6 @@
 # Technische Schulden
 
-> Stand: 2026-09-17. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09.
+> Stand: 2026-09-18. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09, Lücken-Review TODO.md ↔ Code/Specs 2026-09-18.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
@@ -14,16 +14,17 @@
 
 **Hoher Nutzen, geringer Aufwand (nächster Sprint):**
 3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren) — ✅ behoben 2026-07-09 (empirisch: 409 statt 404)
-4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen — ✅ behoben 2026-07-09 (Teilnahme-Pfad; UC-006/UC-012-PUT-Endpunkte als Folgearbeit offen)
+4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen — ✅ behoben 2026-07-09 (Teilnahme-Pfad; die PUT-Endpunkte für UC-006/UC-012 sind als **REST-003** offen)
 5. **CODE-001 + DEP-001** — Quick Wins (je < 1 h) — ✅ beide behoben 2026-07-09
 6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check — ✅ behoben 2026-09-17 (Plan: `specs/API-001_Stufe-1_Plan.md`; Stufe 2 DTO-Layer bleibt als MAJOR offen)
 
 **Mittelfristig:**
 7. **CI-001** — E2E-Workflow (Nightly), Actuator-Health als Readiness (→ OPS-001) — ✅ behoben 2026-09-17 (Frontend `e2e.yml`, Backend `/actuator/health` + TC-047; OPS-001 Punkt 3 damit erledigt)
-8. **BIZ-001** — UC-011-Berechnungslogik (fachlich wichtigste Lücke) inkl. `AbrechnungServiceTest`; UC-009-Endpunkt
-9. **QUAL-001** — angular-eslint, Prettier-Check, Dependabot, Coverage
-10. **REFACT-001/002 + TEST-001/002** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen; REST-002 (PUT-404) als Beifang, CODE-002 (`@Data` → `@Getter`/`@Setter`) spätestens mit API-001 Stufe 2
-11. **OPS-001, DATA-001, SEC-003** — Deployment/Backups dokumentieren, Löschkonzept, Audit-Trail-Entscheid
+8. **BIZ-001** — UC-011-Berechnung ins Backend verlagern (fachlich wichtigste Lücke) inkl. `AbrechnungServiceTest` (TEST-003); UC-009-Endpunkt und Event-Filter (API-002)
+9. **QUAL-001** — angular-eslint, Prettier-Check, Dependabot, Coverage als CI-Artifact, `playwright-report/` aus Git nehmen
+10. **REFACT-001/002 + TEST-001/002 + REST-003** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen; REST-002 (PUT-404) und REST-003 (PUT für Einladung/Abrechnung) als Beifang der Controller-Basisklasse, CODE-002 (`@Data` → `@Getter`/`@Setter`) spätestens mit API-001 Stufe 2
+11. **OPS-001, DATA-001, SEC-003** — Deployment (inkl. Nginx-`X-Forwarded-For` für SEC-002)/Backups dokumentieren, Löschkonzept, Audit-Trail-Entscheid
+12. **TEST-004** — Frontend-Unit-Tests für `shared/sortierung.ts` und `computed`-Ableitungen; günstig, aber ohne Blocker-Charakter, deshalb zuletzt
 
 ---
 
@@ -39,26 +40,16 @@ JPA-Entities sind direkt der API-Contract (inkl. verschachtelter Beziehungen wie
 
 ---
 
-### CI-001 – Playwright-E2E läuft nicht in CI — ✅ `2026-09-17`
+### BIZ-001 – UC-011: Abrechnungs-Berechnung nur im Frontend, Backend rechnet und validiert nicht (fachlich wichtigste Lücke) *(Review 2026-07-09, präzisiert 2026-09-18)*
 
-Die E2E-Suite (UC-001..016, wertvollste Absicherung des Frontend↔Backend-Zusammenspiels) läuft nur lokal. Contract- oder Integrationsfehler zwischen den Repos werden von keiner Pipeline erkannt.
-
-**Empfehlung:** Eigener Workflow im Frontend-Repo (Push/PR oder Nightly): PostgreSQL-16-Service-Container (wie Backend-CI) → Backend-Repo via `actions/checkout` (`repository: davidrossier/quartierfest-backend`) auschecken und mit `./mvnw spring-boot:run` im Hintergrund starten → `npm start` im Hintergrund → `npx playwright install chromium --with-deps` → `npm run e2e`. Auf Backend-Readiness warten — sauber via `/actuator/health` (→ OPS-001; `curl --retry` auf `/api/persons` funktioniert nur, weil `spring-boot:run` das `dev`-Profil setzt — fail-closed liefert dort 401). Playwright-Report als Artifact hochladen. Falls Laufzeit stört: als Nightly-`schedule` statt pro Push.
-
-**Umsetzung (2026-09-17):** `quartierfest-frontend/.github/workflows/e2e.yml` — Trigger `schedule` (täglich 03:00 UTC) und `workflow_dispatch` mit Input `backend_ref` (Default `main`, erlaubt den Lauf gegen einen Backend-Feature-Branch vor dessen Merge). Ablauf wie empfohlen: PostgreSQL-16-Service → Backend-Checkout nach `backend/` → `./mvnw spring-boot:run` (dev-Profil) und `npm start` im Hintergrund → Warten auf `GET /actuator/health` = `UP` bzw. Port 4200 → `npx playwright install chromium --with-deps` → `npm run e2e` (Playwright-`retries: 2` in CI) → `playwright-report/` immer, `backend.log`/`frontend.log` bei Fehler als Artifact. Bewusst nicht pro Push/PR: Laufzeit (Maven-Build + Browser) und Kaltstart-Flakiness.
-
----
-
-### BIZ-001 – UC-011: Abrechnungs-Berechnungslogik fehlt (fachlich wichtigste Lücke) *(Review 2026-07-09)*
-
-`anteilAllgemeinkosten`, `totalKonsumation` und `totalBetrag` werden manuell erfasst — die Abrechnung ist aber der Kern des Nutzenversprechens der Nachbearbeitung, und die manuelle Rechnung ist genau der fehleranfällige Schritt, den die Software abnehmen soll. Bisher nur als Traceability-Lücke geführt (UC-011, UC-009); hier konsolidiert, weil die fachliche Priorität über mehreren technischen MAJORs liegt.
+Die Berechnung existiert, aber ausschliesslich clientseitig: `AbrechnungenVerwaltungComponent.abrechnungenErstellen()` rechnet `totalKonsumation = Σ(anzahl × preis)` und `anteilAllgemeinkosten = (Σ Allgemeinausgaben ÷ Σ anzahlPersonenEffektiv) × anzahlPersonenEffektiv` (Verteilschlüssel **pro effektive Person**, so in UC-011 Schritt 2–3 spezifiziert) und schickt die drei Beträge als fertige Werte an `POST /api/abrechnungen`. Das Backend (`AbrechnungService`) ist reine Repository-Delegation: Es prüft weder `totalBetrag == anteilAllgemeinkosten + totalKonsumation` noch die Herleitung der Einzelbeträge — inkonsistente oder manipulierte Beträge werden unverändert gespeichert. Die Abrechnung ist aber der Kern des Nutzenversprechens der Nachbearbeitung; die Rechenregel gehört als Fachlogik ins Backend, testbar und unabhängig vom UI. Bisher nur als Traceability-Lücke geführt (UC-011, UC-009); hier konsolidiert, weil die fachliche Priorität über mehreren technischen MAJORs liegt.
 
 **Empfehlung:**
-- `AbrechnungService.berechneFuerEvent(eventId)`: pro Teilnahme `totalKonsumation = Σ(konsumation.anzahl × angebot.preis)`, `anteilAllgemeinkosten = Σ(allgemeinausgaben des Events) ÷ Verteilschlüssel`, `totalBetrag` als Summe. **Verteilschlüssel vorab mit dem Organisator klären** (pro Teilnahme vs. pro effektive Person) und im UC-011 festhalten.
-- Endpunkt z.B. `POST /api/events/{id}/abrechnungen/berechnen` (erstellt/aktualisiert alle Abrechnungen des Events); manuelle Übersteuerung via bestehendem POST erhalten.
-- Rundung: `BigDecimal` mit `RoundingMode.HALF_UP` auf 0.05 (Schweizer Rappenrundung) — mit Organisator klären.
+- `AbrechnungService.berechneFuerEvent(eventId)`: Rechenregel 1:1 aus dem Frontend übernehmen (Verteilschlüssel pro effektive Person ist entschieden, siehe UC-011 Schritt 2–3), `totalBetrag` als Summe; Frontend anschliessend auf den Endpunkt umstellen und die eigene Berechnung entfernen.
+- Endpunkt z.B. `POST /api/events/{id}/abrechnungen/berechnen` (erstellt/aktualisiert alle Abrechnungen des Events); manuelle Übersteuerung via bestehendem POST erhalten, dort aber mindestens `totalBetrag == anteil + konsumation` validieren (400).
+- Rundung: Frontend rundet heute kaufmännisch auf 0.01 (`rundeAufRappen()`, Name irreführend). Ob auf 0.05 (Schweizer Rappenrundung) gerundet werden soll, ist **offen** — mit dem Organisator klären und im UC-011 festhalten; im Backend `BigDecimal` mit `RoundingMode.HALF_UP`.
 - Unit-Tests für den `AbrechnungService` gleichzeitig einführen (→ TEST-003).
-- UC-009 analog: `GET /api/events/{id}/konsumationsliste` schliesst die zweite Teilimplementierung.
+- UC-009 analog: `GET /api/events/{id}/konsumationsliste` schliesst die zweite Teilimplementierung (Event-Filter generell → API-002).
 
 ---
 
@@ -66,8 +57,10 @@ Die E2E-Suite (UC-001..016, wertvollste Absicherung des Frontend↔Backend-Zusam
 
 Es gibt kein Dockerfile, kein Deploy-Skript und keine Beschreibung, wie Jar + Angular-Build hinter Nginx auf `davidrossier.ch` landen — das Wissen existiert nur im Kopf des Betreibers. Für die Prod-DB (Personen- und Zahlungsdaten des Vereins) ist keine Backup-Strategie dokumentiert. ~~`spring-boot-starter-actuator` fehlt, daher kein `/actuator/health` für Readiness-Checks (betrifft auch CI-001).~~ → Punkt 3 erledigt 2026-09-17.
 
+**Offene Frage aus SEC-002 (2026-09-17):** Ob und welcher Reverse-Proxy vor dem Backend läuft, ist nicht dokumentiert. Die IP-Drosselung (`LoginDrosselung`) zählt pro `request.getRemoteAddr()`; hinter Nginx ist das ohne weiteres `127.0.0.1` für **alle** Clients — das IP-Limit (20 Fehlversuche) würde dann global wirken und alle Haushalte gemeinsam sperren. `server.forward-headers-strategy=native` ist in `application-prod.properties` gesetzt und akzeptiert `X-Forwarded-For` von Loopback/privaten Netzen, Nginx muss den Header aber setzen.
+
 **Empfehlung:**
-1. `DEPLOYMENT.md` im Backend-Repo: Build-Schritte, benötigte Umgebungsvariablen (`AUTH_JWT_SECRET`, `AUTH_INITIAL_ADMIN_*`, `DB_*`), Nginx-Routing (`/api` → 8080, Rest → Angular-`dist/`), Startkommando mit `--spring.profiles.active=prod`
+1. `DEPLOYMENT.md` im Backend-Repo: Build-Schritte, benötigte Umgebungsvariablen (`AUTH_JWT_SECRET`, `AUTH_INITIAL_ADMIN_*`, `DB_*`), Nginx-Routing (`/api` → 8080, Rest → Angular-`dist/`), Startkommando mit `--spring.profiles.active=prod`. **Pflicht im Nginx-Block:** `proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;` (und `X-Forwarded-Proto`), sonst greift die SEC-002-IP-Drosselung falsch. Nach dem Deployment verifizieren: zwei Fehl-Logins von verschiedenen Clients dürfen sich nicht gegenseitig hochzählen (WARN-Log zeigt die IP).
 2. Backups: täglicher `pg_dump` per Cron + gelegentlicher Restore-Test; Aufbewahrung dokumentieren (→ DATA-001)
 3. ✅ (2026-09-17) `spring-boot-starter-actuator`; `management.endpoints.web.exposure.include=health`, `show-details=never`; `SecurityConfig` gibt nur `GET /actuator/health` frei, alle übrigen Actuator-Pfade bleiben `authenticated()` (401) und sind zudem nicht exponiert (404 mit Token) — TC-047 in `SecurityMatrixIT`
 4. Optional: Dockerfile + Compose (App + PostgreSQL + Nginx) für reproduzierbares Deployment
@@ -93,7 +86,7 @@ Es gibt kein Dockerfile, kein Deploy-Skript und keine Beschreibung, wie Jar + An
 
 ### TEST-001 – IT-Test-Boilerplate ohne Basisklasse
 
-Das `setUp()`-Muster (zwei `RestTemplate`, no-op `ResponseErrorHandler`, JSON-Header) ist in allen 17 IT-Klassen identisch kopiert; `tryDelete()`/Fixture-Cleanup zusätzlich in 14 davon (~400+ Zeilen Duplikat-Code).
+Das `setUp()`-Muster (zwei `RestTemplate`, no-op `ResponseErrorHandler`, JSON-Header) ist in 17 der 18 IT-Klassen identisch kopiert (alle Domain-ITs; `OpenApiContractIT` nutzt das Muster nicht); `tryDelete()`/Fixture-Cleanup zusätzlich in 14 davon (~400+ Zeilen Duplikat-Code).
 
 **Empfehlung:**
 
@@ -142,15 +135,17 @@ Nur 7 Spec-Dateien (~31 Tests), fast ausschliesslich `auth/` + `app`. Die 20+ Fe
 
 ### QUAL-001 – Keine statische Analyse / kein Lint in der CI
 
-SonarQube lief einmalig manuell (2026-05-01). Frontend hat kein ESLint; Prettier wird in CI nicht geprüft. Keine Coverage-Reports, kein Dependency-Update-Bot.
+SonarQube lief einmalig manuell (2026-05-01). Frontend hat kein ESLint; Prettier wird in CI nicht geprüft. Backend: JaCoCo ist in der `pom.xml` konfiguriert (Unit- und IT-Report unter `target/site/jacoco*`), die Reports werden aber in der CI weder hochgeladen noch ausgewertet; Frontend hat keine Coverage. Kein Dependency-Update-Bot in beiden Repos.
 
-**Empfehlung:** Frontend: `ng add angular-eslint` + `npx prettier --check .` als CI-Steps. Beide Repos: Dependabot aktivieren (`.github/dependabot.yml` für npm bzw. maven + github-actions). Optional: SonarCloud (gratis für öffentliche Repos) oder `-Dspotbugs` in die Backend-CI; Vitest/JaCoCo-Coverage als CI-Artifact.
+**Beifang (2026-09-18):** Im Frontend-Repo sind `playwright-report/index.html` und `test-results/.last-run.json` versioniert und nicht in der `.gitignore` — jeder lokale E2E-Lauf macht den Working Tree schmutzig und lädt zum versehentlichen Commit ein (die CI lädt den Report bereits als Artifact hoch, im Repo hat er nichts verloren).
+
+**Empfehlung:** Frontend: `ng add angular-eslint` + `npx prettier --check .` als CI-Steps; `playwright-report/` und `test-results/` in die `.gitignore` aufnehmen und per `git rm --cached` aus dem Index entfernen. Beide Repos: Dependabot aktivieren (`.github/dependabot.yml` für npm bzw. maven + github-actions). Optional: SonarCloud (gratis für öffentliche Repos) oder `-Dspotbugs` in die Backend-CI; JaCoCo-Reports (`actions/upload-artifact`) und Vitest-Coverage (`--coverage`) als CI-Artifact.
 
 ---
 
 ### REFACT-002 – Frontend: dupliziertes CRUD-/Meldungs-Muster in allen Verwaltungs-Komponenten
 
-Das Muster `ladevorgang/fehler/erfolg`-Signals + `setTimeout(3–4s)` zum Ausblenden + `laden()`-Reload ist in allen ~12 Verwaltungs-Komponenten kopiert (Pendant zu REFACT-001 im Backend). Querschnittsänderungen am Meldungsverhalten erfordern ~12 gleichlautende Edits.
+Das Muster `ladevorgang/fehler/erfolg`-Signals + `setTimeout(3–4s)` zum Ausblenden + `laden()`-Reload ist in 10 Verwaltungs-Komponenten kopiert (Stand 2026-09-18: 10 Komponenten-Dateien mit `setTimeout`; Pendant zu REFACT-001 im Backend). Querschnittsänderungen am Meldungsverhalten erfordern 10 gleichlautende Edits.
 
 **Empfehlung:** (1) `MeldungService` (oder Composable `createMeldungen()`) für Erfolg/Fehler inkl. Auto-Ausblenden extrahieren — dabei die Meldungs-UX/a11y-Punkte aus UX-001 gleich mitlösen (ein Refactoring, ein Verhalten); (2) generischen `CrudService<T, P>` als Basis der 11 HTTP-Services einführen. Komponenten-Templates bewusst individuell lassen.
 
@@ -180,7 +175,9 @@ Abrechnungen, Zahlungen und Mahnungen sind ohne Nachvollziehbarkeit änder- und 
 
 Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quartierbewohnern unbefristet; eine Aufbewahrungs-/Löschregel ist nirgends spezifiziert.
 
-**Empfehlung:** Mit dem Organisator eine einfache Betriebsregel festlegen und dokumentieren (z.B. «Event-Daten inkl. Konsumationen/Abrechnungen x Jahre nach dem Event löschen; Stammdaten von Personen/Parteien beim Wegzug entfernen»). Technisch reicht vorerst manuelles Löschen über die bestehende UI (Kaskaden prüfen!); ein automatisierter Job ist erst nötig, wenn die Regel steht. Als Abschnitt in `DEPLOYMENT.md` (→ OPS-001) oder eigenem Betriebs-Dokument festhalten.
+**Befund zu den Kaskaden (2026-09-18):** Keine Entity trägt `cascade`/`orphanRemoval`. Das Löschen einer Partei mit Einladungen (oder eines Events mit Einladungen/Angeboten/Ausgaben) scheitert mit 409 «wird noch verwendet» (ERROR-001). Manuelles Löschen heisst deshalb heute: Zahlungen/Mahnungen → Abrechnungen → Konsumationen → Teilnahmen → Einladungen → Partei/Personen, jeweils über die entsprechende Maske. Für ein einzelnes Wegzugs-Szenario zumutbar, für die Bereinigung ganzer Event-Jahrgänge nicht.
+
+**Empfehlung:** Mit dem Organisator eine einfache Betriebsregel festlegen und dokumentieren (z.B. «Event-Daten inkl. Konsumationen/Abrechnungen x Jahre nach dem Event löschen; Stammdaten von Personen/Parteien beim Wegzug entfernen»). Technisch reicht vorerst manuelles Löschen über die bestehende UI in FK-Reihenfolge (siehe oben); sobald die Regel steht, entweder gezielte Kaskaden (z.B. `Event` → Einladungen/Angebote/Ausgaben) oder ein `DELETE /api/events/{id}?mitDaten=true` einführen. Als Abschnitt in `DEPLOYMENT.md` (→ OPS-001) oder eigenem Betriebs-Dokument festhalten.
 
 ---
 
@@ -200,7 +197,29 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 
 ---
 
+### REST-003 – Kein PUT für Einladung und Abrechnung: UC-006/UC-012 hängen am POST-Upsert *(REST-001-Folgearbeit 2026-07-09, als eigener Eintrag 2026-09-18)*
+
+REST-001 hat den POST-Upsert nur auf dem Teilnahme-Pfad unterbunden. `EinladungController` und `AbrechnungController` haben keinen `PUT`-Endpunkt; das Frontend setzt `bestaetigungVersendet` (UC-006, `markiereVersendet()`/`alleMarkieren()`) sowie `zustellungsDatum`/`zustellungskanal` (UC-012, `alsZugestelltMarkieren()`) weiterhin per `POST` mit gesetzter `id` — genau das Muster, das REST-001 architektonisch verworfen hat. Solange die Endpunkte fehlen, kann der POST dort nicht geblockt werden; die Situation ist bisher nur im REST-001-«Behoben»-Eintrag, in den Klassenkommentaren von `BestaetigungVerwaltenIT`/`AbrechnungZustellenIT` und in den Open Items von UC-006/UC-012 festgehalten und fehlt in jeder Liste offener Punkte.
+
+**Empfehlung:** `PUT /api/einladungen/{id}` und `PUT /api/abrechnungen/{id}` mit Whitelist-DTO analog `TeilnahmeUpdateRequest` (Einladung: `status`, `bestaetigungVersendet`; Abrechnung: `zustellungskanal`, `zustellungsDatum`, optional die drei Beträge für die manuelle Übersteuerung aus BIZ-001), Existenzprüfung → 404 (wie REST-002). Danach `POST` mit `id` auf beiden Ressourcen mit 400 ablehnen (analog TC-041), Frontend-Services auf `update()` umstellen, TC-013/TC-032 auf den PUT umschreiben. Der Contract ändert sich → `specs/openapi.json` neu erzeugen (API-001). Passt als Beifang zur Controller-Basisklasse aus REFACT-001.
+
+---
+
+### API-002 – Listen-Endpunkte ohne Event-Filter *(testdesign.md-Open-Item, als eigener Eintrag 2026-09-18)*
+
+Alle Listen-Endpunkte (`GET /api/einladungen`, `/api/teilnahmen`, `/api/konsumationsangebote`, `/api/konsumationen`, `/api/allgemeinausgaben`, `/api/abrechnungen`, `/api/zahlungen`, `/api/mahnungen`) liefern sämtliche Datensätze über alle Events; jede Verwaltungs-Komponente filtert clientseitig über den `EventKontextService`. Das ist funktional korrekt, skaliert aber mit jedem weiteren Festjahr linear (Payload-Grösse, PERF-001-Rest) und ist der Grund, warum UC-009 als «teilweise implementiert» gilt. `KonsumationslisteErstellenIT` (TC-018/TC-019) hält die Lücke als TODO-Kommentar fest.
+
+**Empfehlung:** Optionaler Query-Parameter `?eventId={id}` auf den event-gebundenen Listen (Repository-Methoden `findByEventId` bzw. Fetch-Join über `teilnahme.einladung.event`), Frontend-Services reichen die aktuelle Event-Auswahl durch. Zusammen mit API-001 Stufe 2 (DTOs) umsetzen, damit die Response-Typen nur einmal angefasst werden; `GET /api/events/{id}/konsumationsliste` aus BIZ-001 wird damit zum Spezialfall.
+
+---
+
 ## Behoben
+
+### CI-001 – Playwright-E2E läuft nicht in CI ✅ `2026-09-17`
+
+Die E2E-Suite (UC-001..016, wertvollste Absicherung des Frontend↔Backend-Zusammenspiels) lief nur lokal. Contract- oder Integrationsfehler zwischen den Repos wurden von keiner Pipeline erkannt.
+
+**Umsetzung:** `quartierfest-frontend/.github/workflows/e2e.yml` — Trigger `schedule` (täglich 03:00 UTC) und `workflow_dispatch` mit Input `backend_ref` (Default `main`, erlaubt den Lauf gegen einen Backend-Feature-Branch vor dessen Merge). Ablauf: PostgreSQL-16-Service → Backend-Checkout nach `backend/` → `./mvnw spring-boot:run` (dev-Profil) und `npm start` im Hintergrund → Warten auf `GET /actuator/health` = `UP` (OPS-001 Punkt 3) bzw. Port 4200 → `npx playwright install chromium --with-deps` → `npm run e2e` (Playwright-`retries: 2` in CI) → `playwright-report/` immer, `backend.log`/`frontend.log` bei Fehler als Artifact. Bewusst nicht pro Push/PR: Laufzeit (Maven-Build + Browser) und Kaltstart-Flakiness (UC-004/UC-015).
 
 ### SEC-002 – Brute-Force-Drosselung auf `POST /api/auth/login` ✅ `2026-09-17`
 
@@ -239,7 +258,7 @@ Befund beim Umsetzen: Hibernate hatte für die `@OneToOne`-Beziehungen (`teilnah
 
 Behoben auf dem Teilnahme-Pfad: Frontend nutzt `teilnahmeService.update(id, dto)` mit `TeilnahmeUpdatePayload` (Whitelist ohne `einladung`; `id` aus `TeilnahmePayload` entfernt); Backend lehnt `POST /api/teilnahmen` mit gesetzter `id` mit 400 ab (Fehlerformat aus ERROR-001, Verweis auf den PUT). Neu TC-041 in `TeilnahmeVerwaltenIT` + Slice-Test in `TeilnahmeControllerTest`; Playwright UC-005/UC-016 lokal grün (6/6).
 
-**Folgearbeit offen:** UC-006/UC-012 nutzen dasselbe Upsert-Muster (`bestaetigungVersendet`, `zustellungsDatum`), haben aber keinen PUT-Endpunkt — dedizierte PUT/PATCH-Endpunkte nötig, bevor dort geblockt werden kann (Hinweise in den Klassenkommentaren von `BestaetigungVerwaltenIT`/`AbrechnungZustellenIT`; Open Items in UC-006/UC-012).
+**Folgearbeit:** UC-006/UC-012 nutzen dasselbe Upsert-Muster (`bestaetigungVersendet`, `zustellungsDatum`), haben aber keinen PUT-Endpunkt — seit 2026-09-18 als eigener offener Eintrag **REST-003** geführt.
 
 ---
 
@@ -330,7 +349,7 @@ UC-014/UC-015/UC-016 vollständig umgesetzt (Eigenbau-Entscheid vom 2026-06-12 s
 
 **Tests:** TC-034..TC-040 (BenutzerVerwaltenIT, BenutzerAnmeldenIT, TeilnahmeBestaetigenIT, SecurityMatrixIT mit `@ActiveProfiles("security-test")`); 19 neue Backend-Unit-Tests; 12 neue Vitest-Specs; Playwright-E2E UC-014/015/016 + Auto-Login-Fixture (`e2e/fixtures.ts`) für bestehende Specs.
 
-**Bewusst offen geblieben** (UC-014/015 Open Items): Brute-Force-Drosselung, Passwort-Selbstwechsel, Token-Blacklist bei Account-Löschung (Restgültigkeit max. 12 h akzeptiert).
+**Bewusst offen geblieben** (UC-014/015 Open Items): ~~Brute-Force-Drosselung~~ (→ SEC-002, behoben 2026-09-17), Passwort-Selbstwechsel, Token-Blacklist bei Account-Löschung (Restgültigkeit max. 12 h akzeptiert).
 
 ---
 
@@ -365,7 +384,7 @@ Spring Security 7.x + OAuth2 Resource Server implementiert (Branch `feature/auth
 - Dev/Test-Betrieb (kein `prod`-Profil): `permitAll()` — keine Teständerungen nötig
 - `WebConfig.java` entfernt; CORS via `CorsConfigurationSource`-Bean in `SecurityConfig`
 
-**Noch ausstehend (künftiges Feature):** Rolle `PARTEI` + datensatz-seitige Autorisierung via `@PreAuthorize`
+~~**Noch ausstehend (künftiges Feature):** Rolle `PARTEI` + datensatz-seitige Autorisierung via `@PreAuthorize`~~ → umgesetzt mit AUTH-002 (2026-06-12)
 
 ---
 
