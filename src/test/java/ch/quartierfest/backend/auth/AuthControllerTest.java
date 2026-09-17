@@ -12,6 +12,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.util.Map;
 
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -32,7 +34,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("UC-014: POST /api/auth/login liefert Token bei korrekten Credentials")
     void login_korrekt_liefertToken() throws Exception {
-        when(authService.login("mueller@quartier.ch", "geheim-1234")).thenReturn("ey.test.token");
+        when(authService.login(eq("mueller@quartier.ch"), eq("geheim-1234"), anyString())).thenReturn("ey.test.token");
 
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -45,7 +47,7 @@ class AuthControllerTest {
     @Test
     @DisplayName("UC-014: POST /api/auth/login mit falschen Credentials liefert 401")
     void login_falsch_liefert401() throws Exception {
-        when(authService.login("mueller@quartier.ch", "falsch"))
+        when(authService.login(eq("mueller@quartier.ch"), eq("falsch"), anyString()))
                 .thenThrow(new ResponseStatusException(HttpStatus.UNAUTHORIZED,
                         "E-Mail-Adresse oder Passwort falsch."));
 
@@ -63,5 +65,21 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of("passwort", "geheim-1234"))))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("SEC-002: POST /api/auth/login bei gesperrter E-Mail/IP liefert 429 mit generischer Meldung")
+    void login_gesperrt_liefert429() throws Exception {
+        when(authService.login(eq("mueller@quartier.ch"), eq("geheim-1234"), anyString()))
+                .thenThrow(new ResponseStatusException(HttpStatus.TOO_MANY_REQUESTS,
+                        "Zu viele Fehlversuche. Bitte später erneut versuchen."));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(
+                                Map.of("email", "mueller@quartier.ch", "passwort", "geheim-1234"))))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.status").value(429))
+                .andExpect(jsonPath("$.message").value("Zu viele Fehlversuche. Bitte später erneut versuchen."));
     }
 }

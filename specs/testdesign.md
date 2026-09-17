@@ -17,7 +17,7 @@
 | UC-011 Abrechnung erstellen | Partial | TC-022..023, TC-044 – keine Berechnungslogik im API; manuelle Eingabe aller Felder; zweite Abrechnung je Teilnahme → 409 (DB-002) |
 | UC-012 Abrechnung zustellen | Yes | TC-024..025, TC-032 – `zustellungsDatum` und Kanal via POST/Upsert nachträglich setzbar |
 | UC-013 Inkasso sicherstellen | Yes | TC-026..028 |
-| UC-014 Benutzer anmelden | Yes | TC-038 (Login), TC-040 (Autorisierungsmatrix, Profil `security-test`); Frontend-Flow zusätzlich via Playwright-E2E (`UC-014_Benutzer-Anmelden.spec.ts`) |
+| UC-014 Benutzer anmelden | Yes | TC-038 (Login), TC-040 (Autorisierungsmatrix, Profil `security-test`), TC-045 (Brute-Force-Sperre, SEC-002); Frontend-Flow zusätzlich via Playwright-E2E (`UC-014_Benutzer-Anmelden.spec.ts`) |
 | UC-015 Benutzer verwalten | Yes | TC-034 (Happy Path), TC-035 (Duplikat-E-Mail), TC-039 (letzter ORGANISATOR) — `BenutzerVerwaltenIT` |
 | UC-016 Teilnahme bestätigen | Yes | TC-036 (PARTEI bestätigt eigene Teilnahme, mit echtem JWT), TC-037 (Fremdzugriff → 403) — `TeilnahmeBestaetigenIT` |
 
@@ -414,6 +414,14 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - **Then**: HTTP 409 + Fehler-JSON mit «existiert bereits»; Cleanup der ersten Abrechnung via DELETE → 200
 - **Citrus actions**: `send POST /api/abrechnungen`, `receive 200`, `send POST /api/abrechnungen`, `receive 409`, `send DELETE /api/abrechnungen/{id}`, `receive 200`
 
+### TC-045 – SEC-002 Login nach 5 Fehlversuchen für 15 Minuten gesperrt (429)
+- **Source**: UC-014, Error Scenario E3 (Brute-Force-Drosselung, SEC-002)
+- **Type**: Error scenario
+- **Given**: Benutzer existiert (Setup via POST `/api/benutzer`); Drosselung mit Defaults (5 pro E-Mail, 20 pro IP, 15 min)
+- **When**: 5× POST `/api/auth/login` mit falschem Passwort, dann ein 6. Versuch mit falschem und einer mit korrektem Passwort; danach Login des Bootstrap-Admins von derselben IP
+- **Then**: Versuche 1–5 → HTTP 401; 6. Versuch → HTTP 429 + Fehler-JSON «Zu viele Fehlversuche…»; korrektes Passwort → ebenfalls 429 ohne `token`; Admin → HTTP 200 (IP-Limit nicht erreicht). `@AfterEach` setzt `LoginDrosselung` zurück (geteilter Context)
+- **Citrus actions**: `send POST /api/auth/login` ×5, `receive 401`, `send POST /api/auth/login`, `receive 429`, `send POST /api/auth/login`, `receive 429`, `send POST /api/auth/login`, `receive 200`
+
 ---
 
 ## Traceability-Status
@@ -466,8 +474,9 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 | TC-042 | UC-004 E1 Duplikat-Einladung abgelehnt (DB-002) | EinladungVerwaltenIT | tc042_einladungDuplikatEventParteiAbgelehnt | ✅ |
 | TC-043 | UC-005 Duplikat-Teilnahme abgelehnt (DB-002) | TeilnahmeVerwaltenIT | tc043_teilnahmeDuplikatEinladungAbgelehnt | ✅ |
 | TC-044 | UC-011 Duplikat-Abrechnung abgelehnt (DB-002) | AbrechnungErstellenIT | tc044_abrechnungDuplikatTeilnahmeAbgelehnt | ✅ |
+| TC-045 | SEC-002 Login nach 5 Fehlversuchen gesperrt (429) | BenutzerAnmeldenIT | tc045_loginNachFuenfFehlversuchenGesperrt | ✅ |
 
-**42 TCs implementiert (TC-001..TC-044, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
+**43 TCs implementiert (TC-001..TC-045, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
 
 ---
 
@@ -487,4 +496,5 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - [x] **UC-006 PATCH für `bestaetigungVersendet`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-013 aktualisiert.
 - [x] **UC-012 PATCH für `zustellungsDatum`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-032 ergänzt.
 - [x] **DB-002 Unique-Constraints** (2026-09-08): `uk_einladung_event_partei`, `uk_teilnahme_einladung`, `uk_abrechnung_teilnahme` per Flyway-Migration V2; TC-042..TC-044 prüfen den 409-Pfad (Meldung «Datensatz existiert bereits.»). UC-004 E1 damit auch API-seitig abgesichert.
+- [x] **SEC-002 Brute-Force-Drosselung** (2026-09-17): `LoginDrosselung` (Caffeine, pro E-Mail/IP) vor dem Credential-Check in `AuthService`; TC-045 prüft den 429-Pfad, `LoginDrosselungTest` den Ablauf der Sperre mit gestellter Uhr. UC-014-Open-Item geschlossen.
 - [x] **UC-014–016 (AUTH-002) implementiert** (2026-06-12): TC-034..TC-040 umgesetzt. TC-036/TC-037 laufen mit echten JWTs (via `POST /api/auth/login`) im Default-Profil — die Ownership-Prüfung ist Methoden-Security und wirkt auch dort. Die URL-Autorisierungsmatrix testet `SecurityMatrixIT` (TC-040) mit `@ActiveProfiles("security-test")` und prod-gleicher Chain; Konfiguration in `src/test/resources/application-security-test.properties`.

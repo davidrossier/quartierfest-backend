@@ -7,9 +7,9 @@ traceability:
   impl_status: implementiert
   endpoints:
     - "POST /api/auth/login"
-  test_ids: [TC-038, TC-040]
+  test_ids: [TC-038, TC-040, TC-045]
   it_classes: [BenutzerAnmeldenIT, SecurityMatrixIT]
-  last_traced: "2026-06-12"
+  last_traced: "2026-09-17"
 ---
 
 # UC-014 – Benutzer anmelden
@@ -74,7 +74,7 @@ traceability:
 1. Der Route Guard stellt fest, dass kein gültiges Token vorliegt.
 2. Das System leitet den Benutzer auf die Login-Seite (`/login`) weiter.
 3. Der Benutzer gibt E-Mail-Adresse und Passwort ein und klickt auf «Anmelden». Das Frontend sendet `POST /api/auth/login`.
-4. Das Backend prüft die E-Mail-Adresse und vergleicht das Passwort gegen den BCrypt-Hash. *(→ E1 bei ungültigen Anmeldedaten)*
+4. Das Backend prüft, ob E-Mail-Adresse oder Client-IP gesperrt sind *(→ E3)*, prüft dann die E-Mail-Adresse und vergleicht das Passwort gegen den BCrypt-Hash. *(→ E1 bei ungültigen Anmeldedaten)*
 5. Das Backend stellt ein signiertes JWT aus (Claims: `sub` = Benutzer-ID, `email`, `rolle`; Gültigkeit 12 h) und liefert es zurück.
 6. Das Frontend legt das Token in `sessionStorage` ab; der HTTP-Interceptor verwendet es für alle künftigen API-Requests.
 7. Das System liest den Rollen-Claim aus dem Token und leitet den Benutzer zur rollenbasierten Einstiegsseite weiter.
@@ -117,6 +117,14 @@ traceability:
 2. E2.2: Die Login-Seite zeigt den Hinweis: «Passwort vergessen? Bitte wenden Sie sich an den Organisator.»
 3. E2.3: Der Organisator setzt über die Benutzerverwaltung (UC-015) ein neues Passwort und teilt es dem Benutzer mit.
 
+### E3 – Zu viele Fehlversuche (Brute-Force-Drosselung, SEC-002)
+
+> Entry point: step 4 of the main flow
+
+1. E3.1: Für die E-Mail-Adresse wurden innerhalb der Sperrdauer 5 Fehlversuche gezählt (oder 20 für die Client-IP, unabhängig von der E-Mail-Adresse).
+2. E3.2: Das Backend antwortet mit 429 «Zu viele Fehlversuche. Bitte später erneut versuchen.» — ohne die Anmeldedaten zu prüfen; auch ein korrektes Passwort wird während der Sperre abgewiesen. Jeder weitere Fehlversuch verlängert die Sperre um die volle Sperrdauer (15 min); ein erfolgreicher Login setzt den Zähler zurück.
+3. E3.3: Das Frontend zeigt: «Zu viele Fehlversuche. Bitte versuchen Sie es in 15 Minuten erneut.»
+
 ---
 
 ## Postconditions
@@ -156,6 +164,11 @@ Scenario: Anmeldung mit falschem Passwort schlägt fehl
   When er ein falsches Passwort eingibt
   Then antwortet das Backend mit 401 und das Frontend zeigt "E-Mail-Adresse oder Passwort falsch"
 
+Scenario: Zu viele Fehlversuche sperren die Anmeldung vorübergehend
+  Given ein Benutzer "orga@quartier.ch" existiert
+  When fünfmal ein falsches Passwort eingegeben wurde
+  Then antwortet das Backend auf den nächsten Versuch mit 429, auch bei korrektem Passwort, und das Frontend zeigt "Zu viele Fehlversuche"
+
 Scenario: Seitenreload erhält die Sitzung
   Given ein angemeldeter Benutzer mit gültigem Token
   When er die Seite neu lädt
@@ -171,7 +184,7 @@ Scenario: Abgelaufenes Token führt zurück zum Login
 
 ## Open Items
 
-- [ ] OPEN: Brute-Force-Schutz für `POST /api/auth/login` — Umfang festlegen (z. B. zunehmende Verzögerung oder temporäre Sperre nach n Fehlversuchen pro E-Mail/IP). Für den geschlossenen Benutzerkreis reicht vermutlich eine einfache Drosselung. (Entscheid 2026-06-12: nicht Teil der ersten Iteration.)
+- [x] RESOLVED (2026-09-17, SEC-002): Brute-Force-Schutz als In-Memory-Drosselung umgesetzt — 5 Fehlversuche pro E-Mail bzw. 20 pro IP → 15 min Sperre (429), konfigurierbar via `auth.drosselung.*`. Siehe E3, TC-045.
 - [ ] OPEN: Soll der Benutzer sein eigenes Passwort ändern können (z. B. `POST /api/auth/passwort`)? Reduziert, dass der Organisator Passwörter dauerhaft kennt. (Entscheid 2026-06-12: nicht Teil der ersten Iteration.)
 - [x] RESOLVED (2026-06-12): Token-Gültigkeit 12 h umgesetzt (`auth.jwt.ttl-stunden`, konfigurierbar) — deckt einen Festtag ab.
 

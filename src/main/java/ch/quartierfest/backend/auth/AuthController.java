@@ -2,6 +2,7 @@ package ch.quartierfest.backend.auth;
 
 // UC-014: Benutzer anmelden (AUTH-002)
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +25,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest request) {
-        return new LoginResponse(authService.login(request.email(), request.passwort()));
+    public LoginResponse login(@Valid @RequestBody LoginRequest request, HttpServletRequest http) {
+        // SEC-002: Client-IP für die Drosselung; in prod hinter Proxy via server.forward-headers-strategy=native
+        return new LoginResponse(authService.login(request.email(), request.passwort(), http.getRemoteAddr()));
     }
 }

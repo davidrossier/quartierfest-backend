@@ -39,11 +39,14 @@ class AuthServiceTest {
     @Mock
     private JwtEncoder jwtEncoder;
 
+    @Mock
+    private LoginDrosselung loginDrosselung;
+
     private AuthService authService;
 
     @BeforeEach
     void setUp() {
-        authService = new AuthService(benutzerRepository, passwordEncoder, jwtEncoder, 12);
+        authService = new AuthService(benutzerRepository, passwordEncoder, jwtEncoder, loginDrosselung, 12);
     }
 
     private Benutzer buildBenutzer() {
@@ -71,13 +74,14 @@ class AuthServiceTest {
         when(passwordEncoder.matches("geheim-1234", "$2a$hash")).thenReturn(true);
         when(jwtEncoder.encode(any())).thenReturn(buildJwt());
 
-        String token = authService.login("mueller@quartier.ch", "geheim-1234");
+        String token = authService.login("mueller@quartier.ch", "geheim-1234", "10.0.0.1");
 
         assertThat(token).isEqualTo("ey.test.token");
         ArgumentCaptor<JwtEncoderParameters> params = ArgumentCaptor.forClass(JwtEncoderParameters.class);
         verify(jwtEncoder).encode(params.capture());
         assertThat(params.getValue().getClaims().getSubject()).isEqualTo("42");
         assertThat(params.getValue().getClaims().getClaim("rolle").toString()).isEqualTo("PARTEI");
+        verify(loginDrosselung).erfolg("mueller@quartier.ch", "10.0.0.1");
     }
 
     @Test
@@ -86,11 +90,12 @@ class AuthServiceTest {
         when(benutzerRepository.findByEmail("mueller@quartier.ch")).thenReturn(Optional.of(buildBenutzer()));
         when(passwordEncoder.matches("falsch", "$2a$hash")).thenReturn(false);
 
-        assertThatThrownBy(() -> authService.login("mueller@quartier.ch", "falsch"))
+        assertThatThrownBy(() -> authService.login("mueller@quartier.ch", "falsch", "10.0.0.1"))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
         verify(jwtEncoder, never()).encode(any());
+        verify(loginDrosselung).fehlversuch("mueller@quartier.ch", "10.0.0.1");
     }
 
     @Test
@@ -98,9 +103,34 @@ class AuthServiceTest {
     void login_unbekannteEmail_wirft401() {
         when(benutzerRepository.findByEmail("unbekannt@quartier.ch")).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> authService.login("unbekannt@quartier.ch", "egal"))
+        assertThatThrownBy(() -> authService.login("unbekannt@quartier.ch", "egal", "10.0.0.1"))
                 .isInstanceOf(ResponseStatusException.class)
                 .extracting(e -> ((ResponseStatusException) e).getStatusCode())
                 .isEqualTo(HttpStatus.UNAUTHORIZED);
+    }
+
+    @Test
+    @DisplayName("SEC-002: login() mit unbekannter E-Mail zählt einen Fehlversuch")
+    void login_unbekannteEmail_zaehltFehlversuch() {
+        when(benutzerRepository.findByEmail("unbekannt@quartier.ch")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> authService.login("unbekannt@quartier.ch", "egal", "10.0.0.1"))
+                .isInstanceOf(ResponseStatusException.class);
+        verify(loginDrosselung).fehlversuch("unbekannt@quartier.ch", "10.0.0.1");
+        verify(loginDrosselung, never()).erfolg(any(), any());
+    }
+
+    @Test
+    @DisplayName("SEC-002: login() bei gesperrter E-Mail/IP wirft 429, ohne Credentials zu prüfen")
+    void login_gesperrt_wirft429() {
+        when(loginDrosselung.istGesperrt("mueller@quartier.ch", "10.0.0.1")).thenReturn(true);
+
+        assertThatThrownBy(() -> authService.login("mueller@quartier.ch", "geheim-1234", "10.0.0.1"))
+                .isInstanceOf(ResponseStatusException.class)
+                .extracting(e -> ((ResponseStatusException) e).getStatusCode())
+                .isEqualTo(HttpStatus.TOO_MANY_REQUESTS);
+        verify(benutzerRepository, never()).findByEmail(any());
+        verify(passwordEncoder, never()).matches(any(), any());
+        verify(jwtEncoder, never()).encode(any());
     }
 }
