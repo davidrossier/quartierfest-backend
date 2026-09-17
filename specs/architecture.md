@@ -225,10 +225,10 @@ erDiagram
 | VALID-001 | Validierung | Kein `@Valid` auf Controllern — Pflichtfeldverletzungen liefern HTTP 500 statt 400 | MAJOR | ✅ Behoben 2026-05-12 |
 | REFACT-001 | Code-Qualität | 8 Controller + 10 Services mit identischem CRUD-Boilerplate, kein `BaseCrud*` | MINOR | Offen |
 | DEPLOY-003 | CI/CD | Kein GitHub Actions Workflow — Tests laufen nur lokal | MAJOR | ✅ Behoben 2026-07-06 |
-| TEST-001 | Tests | 17 IT-Klassen duplizieren `setUp()`-Boilerplate (14 davon zusätzlich `tryDelete()`) | MINOR | Offen |
+| TEST-001 | Tests | 17 Domain-IT-Klassen duplizieren `setUp()`-Boilerplate (14 davon zusätzlich `tryDelete()`) | MINOR | Offen |
 | DB-001 | Deployment | `ddl-auto=update` gilt auch in prod — keine Flyway/Liquibase-Migrationen | MAJOR | ✅ Behoben 2026-09-08 (Flyway, `ddl-auto=validate`) |
 | SEC-001 | Sicherheit | Security-Default fail-open: ohne `prod`-Profil ist die API komplett offen | MAJOR | ✅ Behoben 2026-07-09 |
-| API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Offen |
+| API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Stufe 1 ✅ 2026-09-17 (springdoc, `specs/openapi.json` + TC-046, Frontend-Typen generiert, CI-Drift-Check); Stufe 2 (DTO-Layer) offen |
 | CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | Offen |
 | ERROR-001 | Code-Qualität | Kein `@RestControllerAdvice` — FK-Fehler liefern 500, kein einheitliches Fehler-JSON | MINOR | ✅ Behoben 2026-07-09 |
 | REST-001 | Architektur | Frontend aktualisiert Teilnahmen via POST-Upsert statt `PUT /api/teilnahmen/{id}` | MINOR | ✅ Behoben 2026-07-09 (Teilnahme-Pfad) |

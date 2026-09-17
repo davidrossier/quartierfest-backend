@@ -49,6 +49,7 @@ SQL logging is enabled via `spring.jpa.show-sql=true`.
 - **caffeine** — In-Memory-Cache mit TTL für die Login-Drosselung (SEC-002)
 - **spring-boot-starter-flyway** + `flyway-database-postgresql` — Schema-Migrationen (DB-001); Spring Boot 4 aktiviert Flyway nur über den Starter, `flyway-core` allein reicht nicht
 - **spring-boot-starter-oauth2-resource-server** — JWT-Validierung; Eigenbau-Login (AUTH-002): Backend stellt HS256-JWTs selbst aus (`JwtEncoder`/`NimbusJwtDecoder.withSecretKey`), kein externer IdP
+- **springdoc-openapi-starter-webmvc-ui 3.1.1** — OpenAPI-Spec `/v3/api-docs` + Swagger-UI `/swagger-ui.html` (API-001 Stufe 1); 3.x ist die Linie für Spring Boot 4 / Jackson 3
 - **spring-boot-devtools** (runtime, optional)
 
 Test scope:
@@ -115,6 +116,18 @@ Ausnahmen:
 Enums sind als innere Klassen in der jeweiligen Entity definiert:
 `Einladung.EinladungStatus`, `Einladung.BuffetBeitrag`, `Abrechnung.Zustellungskanal`, `Zahlung.Zahlungskanal`, `Benutzer.Rolle`
 
+### API-Contract (API-001 Stufe 1)
+
+Der Ist-Contract (Entities als Request-/Response-Schema) ist als OpenAPI-3-Spec in `specs/openapi.json` **versioniert**. `OpenApiContractIT` (TC-046, `dev`-Profil) vergleicht `GET /v3/api-docs` byte-genau mit der Datei (Keys sortiert, pretty-printed).
+
+- **Workflow bei Contract-Änderung** (Entity-Feld, Controller, DTO): im selben PR wie die Flyway-Migration die Spec neu erzeugen — sonst rot in CI:
+  ```bash
+  OPENAPI_UPDATE=true ./mvnw verify -Dit.test=OpenApiContractIT
+  ```
+- Das Frontend generiert seine TypeScript-Typen aus dieser Datei (`npm run api:generate`) und prüft in seiner CI gegen Backend-`main` auf Drift → Backend-PR **vor** dem Frontend-PR mergen.
+- `OpenApiConfig` liefert nur Metadaten (Titel, `bearerAuth`-Schema für den Authorize-Button der Swagger-UI). Swagger-UI lokal: `http://localhost:8080/swagger-ui.html` (`dev`-Profil). Ohne Profil: 401 (fail-closed); `prod`: `springdoc.api-docs.enabled=false` → 404.
+- Stufe 2 (DTO-Layer, getrennte Request-/Response-Schemas) ist offen → `specs/TODO.md`.
+
 ### Fehlerbehandlung (ERROR-001)
 
 `GlobalExceptionHandler` (`@RestControllerAdvice` im Root-Package, erbt von `ResponseEntityExceptionHandler`) liefert für alle Fehlerpfade einheitliches JSON `{status, message}` — kein Fehler-Handling in einzelnen Controllern nötig:
@@ -165,10 +178,10 @@ class PersonControllerTest {
 **Smoke-Test**: `BackendApplicationTests.java` — Spring-Kontext-Ladetest (braucht PostgreSQL).
 
 ### Integration tests
-17 `*IT.java` Klassen je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`).
+18 `*IT.java` Klassen: 17 je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`) plus `OpenApiContractIT` im Root-Package (TC-046, API-001).
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
 Alle ITs ausser `SecurityMatrixIT` tragen `@ActiveProfiles("dev")` (offene Security-Chain, SEC-001) — byte-identisch, damit alle denselben gecachten Spring-Context teilen.
-**43 Testmethoden (TC-001..TC-045, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
+**44 Testmethoden (TC-001..TC-046, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Auth-Besonderheiten:
 - `TeilnahmeBestaetigenIT` (TC-036/037) holt sich echte JWTs via `POST /api/auth/login` — die Ownership-403-Fälle laufen im dev-Profil (Methoden-Security)
@@ -243,6 +256,8 @@ Alle Spezifikationen liegen unter `specs/`:
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |
+| `openapi.json` | Versionierter API-Contract (springdoc-Dump, via `OpenApiContractIT` abgeglichen; Quelle für die Frontend-Typen) |
+| `API-001_Stufe-1_Plan.md` | Umsetzungsplan API-001 Stufe 1 (OpenAPI, generierte Typen, Drift-Check) |
 
 ## Claude Code Skills
 
