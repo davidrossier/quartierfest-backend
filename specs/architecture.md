@@ -249,6 +249,7 @@ erDiagram
 | CODE-002 | Code-Qualität | Lombok `@Data` auf allen 13 JPA-Entities — `equals`/`hashCode`/`toString` über Kollektionen (Lazy-Loading-/Set-Fallen) | MINOR | Offen |
 | REST-003 | Architektur | Kein `PUT` auf `/api/einladungen` und `/api/abrechnungen` — UC-006/UC-012 hängen am POST-Upsert (REST-001-Folgearbeit) | MINOR | Offen |
 | API-002 | Architektur | Listen-Endpunkte ohne `?eventId=`-Filter — alle Events werden geladen, Frontend filtert clientseitig | MINOR | Offen |
+| CI-002 | CI/CD | Qualitäts-Pipeline nie als Ganzes geprüft: kein Lint-Gate, Teststufen nicht getrennt, E2E nicht PR-blockierend, Traceability-Matrizen ohne automatischen Check | MAJOR | Offen |
 
 ---
 

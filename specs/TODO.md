@@ -21,7 +21,7 @@
 **Mittelfristig:**
 7. **CI-001** — E2E-Workflow (Nightly), Actuator-Health als Readiness (→ OPS-001) — ✅ behoben 2026-09-17 (Frontend `e2e.yml`, Backend `/actuator/health` + TC-047; OPS-001 Punkt 3 damit erledigt)
 8. **BIZ-001** — UC-011-Berechnung ins Backend verlagern (fachlich wichtigste Lücke) inkl. `AbrechnungServiceTest` (TEST-003); UC-009-Endpunkt und Event-Filter (API-002)
-9. **QUAL-001** — angular-eslint, Prettier-Check, Dependabot, Coverage als CI-Artifact, `playwright-report/` aus Git nehmen
+9. **CI-002 + QUAL-001** — gesamte Qualitäts-Pipeline durchgehend prüfen (Linting → Unit → IT → Contract → E2E → Coverage → Traceability-Check in CI); QUAL-001 (angular-eslint, Prettier-Check, Dependabot, Coverage als CI-Artifact, `playwright-report/` aus Git nehmen) geht darin auf
 10. **REFACT-001/002 + TEST-001/002 + REST-003** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen; REST-002 (PUT-404) und REST-003 (PUT für Einladung/Abrechnung) als Beifang der Controller-Basisklasse, CODE-002 (`@Data` → `@Getter`/`@Setter`) spätestens mit API-001 Stufe 2
 11. **OPS-001, DATA-001, SEC-003** — Deployment (inkl. Nginx-`X-Forwarded-For` für SEC-002)/Backups dokumentieren, Löschkonzept, Audit-Trail-Entscheid
 12. **TEST-004** — Frontend-Unit-Tests für `shared/sortierung.ts` und `computed`-Ableitungen; günstig, aber ohne Blocker-Charakter, deshalb zuletzt
@@ -50,6 +50,34 @@ Die Berechnung existiert, aber ausschliesslich clientseitig: `AbrechnungenVerwal
 - Rundung: Frontend rundet heute kaufmännisch auf 0.01 (`rundeAufRappen()`, Name irreführend). Ob auf 0.05 (Schweizer Rappenrundung) gerundet werden soll, ist **offen** — mit dem Organisator klären und im UC-011 festhalten; im Backend `BigDecimal` mit `RoundingMode.HALF_UP`.
 - Unit-Tests für den `AbrechnungService` gleichzeitig einführen (→ TEST-003).
 - UC-009 analog: `GET /api/events/{id}/konsumationsliste` schliesst die zweite Teilimplementierung (Event-Filter generell → API-002).
+
+---
+
+### CI-002 – Gesamte Qualitäts-Pipeline überprüfen: Linting → Teststufen → Traceability *(2026-09-18)*
+
+Die Pipeline ist über mehrere Reviews hinweg stückweise gewachsen (DEPLOY-003, CI-001, API-001, QUAL-001) und wurde nie als Ganzes geprüft. Es ist nicht belegt, dass jede Qualitätsstufe (a) existiert, (b) in der CI tatsächlich läuft, (c) bei Verstoss rot wird und (d) mit den Specs verknüpft ist. Ist-Stand der Stufen:
+
+| Stufe | Backend | Frontend | Läuft in CI? | Bricht bei Verstoss? |
+|---|---|---|---|---|
+| Formatierung | — (kein Spotless/Checkstyle) | Prettier konfiguriert (`.prettierrc`) | nein | nein |
+| Linting / statische Analyse | — (SonarQube einmalig 2026-05-01, `sonar-maven-plugin` ungenutzt) | kein ESLint | nein | nein |
+| Unit-Tests | `./mvnw verify` (Surefire) | Vitest (`npm test`) | ja (`ci.yml`) | ja |
+| Integrationstests | `./mvnw verify` (Failsafe, `*IT`) gegen PostgreSQL-Service | — | ja (`ci.yml`) | ja |
+| Contract-Test | `OpenApiContractIT` (TC-046) | `npm run api:check` gegen Backend-`main` | ja | ja |
+| Security-Matrix | `SecurityMatrixIT` (TC-040/047) | — | ja | ja |
+| E2E | — | Playwright (`e2e.yml`, nächtlich) | nur nightly/manuell | ja, aber nicht PR-blockierend |
+| Coverage | JaCoCo-Reports lokal | — | nein (nicht publiziert) | nein (keine Schwelle) |
+| Traceability UC ↔ Impl ↔ Test | `/traceability-manager` (manuell), Matrizen in `architecture.md`/`testdesign.md` | `e2e/TRACEABILITY.md` («automatisch generiert») | nein | nein |
+
+**Konkrete Befunde beim Aufnehmen:** Die Traceability-Matrix in `architecture.md` stand bis 2026-09-18 auf dem Stand 2026-06-12 (TC-041..044 fehlten) — niemand merkt, wenn sie veraltet. Das Skill-Verzeichnis heisst `.claude/commands/tracebiliy-manager/` (Tippfehler), während CLAUDE.md `/traceability-manager` dokumentiert; ob der Skill unter dem dokumentierten Namen auflösbar ist, ist zu prüfen. `e2e/TRACEABILITY.md` sagt «automatisch generiert», ein Generator ist im Repo nicht auffindbar.
+
+**Empfehlung (Reihenfolge = Pipeline-Reihenfolge):**
+1. **Linting/Format als erste Stufe:** Frontend `ng add angular-eslint` + `prettier --check`; Backend Spotless (google-java-format oder Eclipse-Formatter) mit `spotless:check` im `verify`; beides als CI-Step vor den Tests (→ QUAL-001).
+2. **Teststufen explizit machen:** Backend-CI in `test` (Unit) und `integration-test` (Failsafe) trennen, damit ein Fehlschlag der Stufe zuordenbar ist; JaCoCo-Report als Artifact und Mindest-Coverage (`jacoco:check`) für die Service-Schicht, sobald BIZ-001 Logik dorthin bringt; Vitest `--coverage` analog.
+3. **E2E-Stufe absichern:** Nightly-Fehlschlag muss sichtbar werden (GitHub-Notification oder Badge im README); prüfen, ob ein reduzierter Smoke-Lauf (Login + ein UC) pro PR tragbar ist.
+4. **Traceability als prüfbare Stufe:** Skript (z.B. `specs/check-traceability.sh` oder Maven-`exec`) das (a) jede `TC-xxx` aus `testdesign.md` in genau einer IT-Methode findet, (b) jede `@DisplayName("TC-…")` in `testdesign.md` vorkommt, (c) jede `UC-xxx` in `architecture.md`-Matrix, `use-cases_overview.md` und `e2e/TRACEABILITY.md` konsistent gelistet ist; in beiden CIs laufen lassen und bei Abweichung rot. Skill-Verzeichnis umbenennen und `/traceability-manager` einmal vollständig laufen lassen, um den Ausgangszustand herzustellen.
+5. **Dependabot** in beiden Repos (→ QUAL-001), damit die Pipeline auch Abhängigkeits-Drift meldet.
+6. Ergebnis als Abschnitt «Qualitäts-Pipeline» in `architecture.md` dokumentieren: welche Stufe wo läuft, was sie blockiert, wie man sie lokal reproduziert.
 
 ---
 
