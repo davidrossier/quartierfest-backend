@@ -59,6 +59,11 @@
 			<artifactId>caffeine</artifactId>
 		</dependency>
 
+		<!-- OPS-001/CI-001: /actuator/health als Readiness-Signal (nur health exponiert, siehe application.properties) -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-actuator</artifactId>
+		</dependency>
 		<!-- API-001: OpenAPI-Spec (/v3/api-docs) + Swagger-UI; 3.x ist die Linie für Spring Boot 4 / Jackson 3 -->
 		<dependency>
 			<groupId>org.springdoc</groupId>

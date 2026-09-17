@@ -49,7 +49,7 @@ public class SecurityConfig {
     private String jwtSecret;
 
     /**
-     * Autorisierungsmatrix — Default (fail-closed, SEC-001): Login offen,
+     * Autorisierungsmatrix — Default (fail-closed, SEC-001): Login und /actuator/health offen,
      * Benutzerverwaltung nur ORGANISATOR, PARTEI ausschliesslich auf den eigenen
      * Teilnahme-Endpunkten (Ownership zusätzlich via Methoden-Security), alles
      * übrige nur ORGANISATOR. Gilt für prod, security-test und jeden Start ohne
@@ -64,6 +64,8 @@ public class SecurityConfig {
             .csrf(AbstractHttpConfigurer::disable)
             .authorizeHttpRequests(auth -> auth
                 .requestMatchers(HttpMethod.POST, "/api/auth/login").permitAll()
+                // OPS-001/CI-001: Readiness-Check ohne Token; alle übrigen Actuator-Pfade bleiben authenticated
+                .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
                 .requestMatchers(HttpMethod.GET, "/api/teilnahmen/meine").hasAnyRole("ORGANISATOR", "PARTEI")
                 .requestMatchers(HttpMethod.PUT, "/api/teilnahmen/*").hasAnyRole("ORGANISATOR", "PARTEI")
                 .requestMatchers("/api/**").hasRole("ORGANISATOR")

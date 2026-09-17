@@ -27,7 +27,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ./mvnw test -Dtest=BackendApplicationTests#contextLoads
 ```
 
-**CI:** GitHub Actions (`.github/workflows/ci.yml`) läuft bei Push/PR auf `main`: `./mvnw --batch-mode verify` gegen einen PostgreSQL-16-Service-Container (gleiche Credentials wie lokal — keine Teständerungen nötig).
+**CI:** GitHub Actions (`.github/workflows/ci.yml`) läuft bei Push/PR auf `main`: `./mvnw --batch-mode verify` gegen einen PostgreSQL-16-Service-Container (gleiche Credentials wie lokal — keine Teständerungen nötig). Die Playwright-E2E-Suite läuft nächtlich im Frontend-Repo (`e2e.yml`, CI-001) gegen dieses Repo auf `main` (manuell auch gegen einen Feature-Branch via `backend_ref`); Readiness über `GET /actuator/health`.
 
 ## Database
 
@@ -49,6 +49,7 @@ SQL logging is enabled via `spring.jpa.show-sql=true`.
 - **caffeine** — In-Memory-Cache mit TTL für die Login-Drosselung (SEC-002)
 - **spring-boot-starter-flyway** + `flyway-database-postgresql` — Schema-Migrationen (DB-001); Spring Boot 4 aktiviert Flyway nur über den Starter, `flyway-core` allein reicht nicht
 - **spring-boot-starter-oauth2-resource-server** — JWT-Validierung; Eigenbau-Login (AUTH-002): Backend stellt HS256-JWTs selbst aus (`JwtEncoder`/`NimbusJwtDecoder.withSecretKey`), kein externer IdP
+- **spring-boot-starter-actuator** — nur `GET /actuator/health` exponiert (ohne Details, ohne Token; OPS-001/CI-001) als Readiness-Signal für die E2E-CI und den Betrieb
 - **springdoc-openapi-starter-webmvc-ui 3.1.1** — OpenAPI-Spec `/v3/api-docs` + Swagger-UI `/swagger-ui.html` (API-001 Stufe 1); 3.x ist die Linie für Spring Boot 4 / Jackson 3
 - **spring-boot-devtools** (runtime, optional)
 
@@ -65,7 +66,7 @@ Test scope:
 
 | Profil | Verhalten |
 |---|---|
-| Default (kein Profil), `prod`, `security-test` | Autorisierungsmatrix: `POST /api/auth/login` offen; `/api/benutzer/**` nur `ORGANISATOR`; `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}` für `ORGANISATOR`/`PARTEI`; alle übrigen `/api/**` nur `ORGANISATOR` |
+| Default (kein Profil), `prod`, `security-test` | Autorisierungsmatrix: `POST /api/auth/login` und `GET /actuator/health` offen; `/api/benutzer/**` nur `ORGANISATOR`; `GET /api/teilnahmen/meine` + `PUT /api/teilnahmen/{id}` für `ORGANISATOR`/`PARTEI`; alle übrigen `/api/**` nur `ORGANISATOR` |
 | `dev` (explizit) | `permitAll()` mit WARN-Log, aber Bearer-Tokens werden trotzdem verarbeitet — `/meine` und Ownership-Checks funktionieren auch lokal |
 
 `./mvnw spring-boot:run` aktiviert das `dev`-Profil automatisch (pom.xml, `spring-boot-maven-plugin`). Das gepackte Jar und der IDE-Start der Main-Klasse sind fail-closed — dort das Profil bei Bedarf manuell setzen (`--spring.profiles.active=dev`).
@@ -181,11 +182,11 @@ class PersonControllerTest {
 18 `*IT.java` Klassen: 17 je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`) plus `OpenApiContractIT` im Root-Package (TC-046, API-001).
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
 Alle ITs ausser `SecurityMatrixIT` tragen `@ActiveProfiles("dev")` (offene Security-Chain, SEC-001) — byte-identisch, damit alle denselben gecachten Spring-Context teilen.
-**44 Testmethoden (TC-001..TC-046, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
+**45 Testmethoden (TC-001..TC-047, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Auth-Besonderheiten:
 - `TeilnahmeBestaetigenIT` (TC-036/037) holt sich echte JWTs via `POST /api/auth/login` — die Ownership-403-Fälle laufen im dev-Profil (Methoden-Security)
-- `SecurityMatrixIT` (TC-040) läuft als einziger IT mit `@ActiveProfiles("security-test")` (prod-gleiche URL-Matrix, `src/test/resources/application-security-test.properties`) und `RANDOM_PORT` (der Default-Context belegt 8080)
+- `SecurityMatrixIT` (TC-040; TC-047 Actuator-Health offen, Rest gesperrt) läuft als einziger IT mit `@ActiveProfiles("security-test")` (prod-gleiche URL-Matrix, `src/test/resources/application-security-test.properties`) und `RANDOM_PORT` (der Default-Context belegt 8080)
 - Der Bootstrap-ORGANISATOR (`admin@quartierfest.local`) existiert in allen IT-Läufen; `tc039` setzt via JUnit-Assumption genau einen ORGANISATOR voraus
 
 Verwendetes Muster:
