@@ -20,6 +20,7 @@
 | UC-014 Benutzer anmelden | Yes | TC-038 (Login), TC-040 (Autorisierungsmatrix, Profil `security-test`), TC-045 (Brute-Force-Sperre, SEC-002); Frontend-Flow zusätzlich via Playwright-E2E (`UC-014_Benutzer-Anmelden.spec.ts`) |
 | UC-015 Benutzer verwalten | Yes | TC-034 (Happy Path), TC-035 (Duplikat-E-Mail), TC-039 (letzter ORGANISATOR) — `BenutzerVerwaltenIT` |
 | UC-016 Teilnahme bestätigen | Yes | TC-036 (PARTEI bestätigt eigene Teilnahme, mit echtem JWT), TC-037 (Fremdzugriff → 403) — `TeilnahmeBestaetigenIT` |
+| Übergreifend: API-Contract (API-001) | Yes | TC-046 (`/v3/api-docs` ↔ `specs/openapi.json`) — `OpenApiContractIT` |
 
 **Hinweis:** TC-003 (Person löschen) ist in TC-001 integriert. TC-017 (Konsumationsangebot löschen) ist in TC-016 integriert. Die Löschung erfolgt als letzter Schritt des jeweiligen Happy-Path-Tests (Lösch-Test).
 
@@ -422,6 +423,14 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - **Then**: Versuche 1–5 → HTTP 401; 6. Versuch → HTTP 429 + Fehler-JSON «Zu viele Fehlversuche…»; korrektes Passwort → ebenfalls 429 ohne `token`; Admin → HTTP 200 (IP-Limit nicht erreicht). `@AfterEach` setzt `LoginDrosselung` zurück (geteilter Context)
 - **Citrus actions**: `send POST /api/auth/login` ×5, `receive 401`, `send POST /api/auth/login`, `receive 429`, `send POST /api/auth/login`, `receive 429`, `send POST /api/auth/login`, `receive 200`
 
+### TC-046 – API-001 OpenAPI-Spec entspricht dem versionierten Contract
+- **Source**: API-001 Stufe 1 (übergreifend, kein UC)
+- **Type**: Contract test
+- **Given**: `specs/openapi.json` ist eingecheckt (erzeugt mit `OPENAPI_UPDATE=true ./mvnw verify -Dit.test=OpenApiContractIT`)
+- **When**: GET `/v3/api-docs` (dev-Profil), Antwort mit sortierten Keys pretty-printed normalisiert
+- **Then**: Normalisierte Spec ist byte-identisch mit `specs/openapi.json`; bei Abweichung schlägt der Test mit Hinweis auf den Update-Befehl fehl. Mit `OPENAPI_UPDATE=true` wird die Datei stattdessen neu geschrieben (Test grün). Keine Testdaten, kein Cleanup
+- **Citrus actions**: `send GET /v3/api-docs`, `receive 200`, Vergleich mit Datei
+
 ---
 
 ## Traceability-Status
@@ -475,8 +484,9 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 | TC-043 | UC-005 Duplikat-Teilnahme abgelehnt (DB-002) | TeilnahmeVerwaltenIT | tc043_teilnahmeDuplikatEinladungAbgelehnt | ✅ |
 | TC-044 | UC-011 Duplikat-Abrechnung abgelehnt (DB-002) | AbrechnungErstellenIT | tc044_abrechnungDuplikatTeilnahmeAbgelehnt | ✅ |
 | TC-045 | SEC-002 Login nach 5 Fehlversuchen gesperrt (429) | BenutzerAnmeldenIT | tc045_loginNachFuenfFehlversuchenGesperrt | ✅ |
+| TC-046 | API-001 OpenAPI-Spec ↔ `specs/openapi.json` | OpenApiContractIT | tc046_openApiSpecEntsprichtEingechecktemContract | ✅ |
 
-**43 TCs implementiert (TC-001..TC-045, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
+**44 TCs implementiert (TC-001..TC-046, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind). Keine fehlenden IT-Methoden.**
 
 ---
 
@@ -496,5 +506,6 @@ Alle 13 REST-Ressourcen (11 Domänen-CRUD + `benutzer` + `auth`) sprechen HTTP/J
 - [x] **UC-006 PATCH für `bestaetigungVersendet`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-013 aktualisiert.
 - [x] **UC-012 PATCH für `zustellungsDatum`**: Kein PATCH benötigt — POST/Upsert mit `id` im Body funktioniert. TC-032 ergänzt.
 - [x] **DB-002 Unique-Constraints** (2026-09-08): `uk_einladung_event_partei`, `uk_teilnahme_einladung`, `uk_abrechnung_teilnahme` per Flyway-Migration V2; TC-042..TC-044 prüfen den 409-Pfad (Meldung «Datensatz existiert bereits.»). UC-004 E1 damit auch API-seitig abgesichert.
+- [x] **API-001 Stufe 1 Contract-Test** (2026-09-17): `OpenApiContractIT` (TC-046) friert den springdoc-Dump als `specs/openapi.json` ein; das Frontend generiert daraus seine Typen und prüft in der CI auf Drift. Getrennte Request-/Response-Schemas erst mit Stufe 2 (DTOs).
 - [x] **SEC-002 Brute-Force-Drosselung** (2026-09-17): `LoginDrosselung` (Caffeine, pro E-Mail/IP) vor dem Credential-Check in `AuthService`; TC-045 prüft den 429-Pfad, `LoginDrosselungTest` den Ablauf der Sperre mit gestellter Uhr. UC-014-Open-Item geschlossen.
 - [x] **UC-014–016 (AUTH-002) implementiert** (2026-06-12): TC-034..TC-040 umgesetzt. TC-036/TC-037 laufen mit echten JWTs (via `POST /api/auth/login`) im Default-Profil — die Ownership-Prüfung ist Methoden-Security und wirkt auch dort. Die URL-Autorisierungsmatrix testet `SecurityMatrixIT` (TC-040) mit `@ActiveProfiles("security-test")` und prod-gleicher Chain; Konfiguration in `src/test/resources/application-security-test.properties`.
