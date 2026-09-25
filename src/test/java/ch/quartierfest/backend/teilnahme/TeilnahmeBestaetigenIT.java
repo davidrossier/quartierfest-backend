@@ -72,7 +72,7 @@ class TeilnahmeBestaetigenIT {
                 Map.of("eventId", eventId, "parteiId", parteiAId,
                         "status", "ANGEMELDET", "anzahlPersonen", 3, "bestaetigungVersendet", false)));
         teilnahmeAId = id(setupPost(base + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungAId), "anzahlPersonenEffektiv", 3)));
+                Map.of("einladungId", einladungAId, "anzahlPersonenEffektiv", 3)));
 
         parteiBId = id(setupPost(base + "/api/parteien",
                 Map.of("bezeichnung", "Bestaetigen-Partei-B", "adresse", "Weg B", "twintAktiv", false)));
@@ -80,7 +80,7 @@ class TeilnahmeBestaetigenIT {
                 Map.of("eventId", eventId, "parteiId", parteiBId,
                         "status", "ANGEMELDET", "anzahlPersonen", 2, "bestaetigungVersendet", false)));
         teilnahmeBId = id(setupPost(base + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungBId), "anzahlPersonenEffektiv", 2)));
+                Map.of("einladungId", einladungBId, "anzahlPersonenEffektiv", 2)));
 
         benutzerAId = id(setupPost(base + "/api/benutzer",
                 Map.of("email", "tc036.partei-a@quartier.ch",

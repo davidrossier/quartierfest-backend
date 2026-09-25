@@ -83,7 +83,7 @@ class TeilnahmeVerwaltenIT {
     void tc011_teilnahmeErstellenHappyPath() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "einladung", Map.of("id", einladungId),
+                        "einladungId", einladungId,
                         "anzahlPersonenEffektiv", 2,
                         "hilftAufstellen", true), json), Map.class);
 
@@ -102,12 +102,12 @@ class TeilnahmeVerwaltenIT {
     void tc012_teilnahmeErstellenEinladungFehlt() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "einladung", Map.of("id", 999999),
+                        "einladungId", 999999,
                         "anzahlPersonenEffektiv", 2), json), Map.class);
 
-        // ERROR-001: FK-Verletzung → 409 mit einheitlichem Fehler-JSON {status, message}
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody().get("status")).isEqualTo(409);
+        // API-001 Stufe 2 (E5): unbekannte Referenz ist ungültige Eingabe → 400 (vorher FK-Verletzung → 409)
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().get("status")).isEqualTo(400);
         assertThat((String) response.getBody().get("message")).isNotBlank();
     }
 
@@ -117,7 +117,7 @@ class TeilnahmeVerwaltenIT {
     void tc041_teilnahmeErstellenMitIdAbgelehnt() {
         ResponseEntity<Map> angelegt = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "einladung", Map.of("id", einladungId),
+                        "einladungId", einladungId,
                         "anzahlPersonenEffektiv", 2), json), Map.class);
         assertThat(angelegt.getStatusCode()).isEqualTo(HttpStatus.OK);
         Number teilnahmeId = (Number) angelegt.getBody().get("id");
@@ -125,12 +125,13 @@ class TeilnahmeVerwaltenIT {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
                         "id", teilnahmeId,
-                        "einladung", Map.of("id", einladungId),
+                        "einladungId", einladungId,
                         "anzahlPersonenEffektiv", 3), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
         assertThat(response.getBody().get("status")).isEqualTo(400);
-        assertThat((String) response.getBody().get("message")).contains("PUT /api/teilnahmen/");
+        // API-001 Stufe 2: TeilnahmeRequest hat kein id-Feld → unbekanntes Feld (E6)
+        assertThat((String) response.getBody().get("message")).isEqualTo("Unbekanntes Feld: id");
 
         tryDelete("http://localhost:" + port + "/api/teilnahmen/" + teilnahmeId);
     }
@@ -140,7 +141,7 @@ class TeilnahmeVerwaltenIT {
     @SuppressWarnings("unchecked")
     void tc043_teilnahmeDuplikatEinladungAbgelehnt() {
         Map<String, Object> body = Map.of(
-                "einladung", Map.of("id", einladungId),
+                "einladungId", einladungId,
                 "anzahlPersonenEffektiv", 2);
         ResponseEntity<Map> erste = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
                 new HttpEntity<>(body, json), Map.class);
@@ -171,7 +172,7 @@ class TeilnahmeVerwaltenIT {
 
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/teilnahmen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "einladung", Map.of("id", einladungId),
+                        "einladungId", einladungId,
                         "anzahlPersonenEffektiv", 3,
                         "buffetBeitraege", beitraege), json), Map.class);
 

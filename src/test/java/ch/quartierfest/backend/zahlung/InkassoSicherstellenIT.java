@@ -70,7 +70,7 @@ class InkassoSicherstellenIT {
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2)));
         abrechnungId = id(setupPost("http://localhost:" + port + "/api/abrechnungen", Map.of(
                 "teilnahme", Map.of("id", teilnahmeId),
                 "anteilAllgemeinkosten", "40.00",

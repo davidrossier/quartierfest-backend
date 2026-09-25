@@ -29,4 +29,7 @@ public interface TeilnahmeRepository extends JpaRepository<Teilnahme, Long> {
             """)
     List<Teilnahme> findEigeneAbStichtag(@Param("parteiId") Long parteiId,
                                          @Param("stichtag") LocalDate stichtag);
+
+    /** UC-016: Ownership-Prüfung für TeilnahmeZugriff — gehört die Teilnahme zur Partei? */
+    boolean existsByIdAndEinladungParteiId(Long id, Long parteiId);
 }

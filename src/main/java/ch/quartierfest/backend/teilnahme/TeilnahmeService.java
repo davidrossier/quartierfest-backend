@@ -1,11 +1,14 @@
 package ch.quartierfest.backend.teilnahme;
 
+import ch.quartierfest.backend.Referenzen;
 import ch.quartierfest.backend.benutzer.Benutzer;
 import ch.quartierfest.backend.benutzer.BenutzerRepository;
+import ch.quartierfest.backend.einladung.EinladungRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
@@ -16,25 +19,39 @@ import java.util.List;
 public class TeilnahmeService {
 
     private final TeilnahmeRepository teilnahmeRepository;
+    private final EinladungRepository einladungRepository;
     private final BenutzerRepository benutzerRepository;
 
-    public List<Teilnahme> findAll() {
-        return teilnahmeRepository.findAll();
+    @Transactional(readOnly = true)
+    public List<TeilnahmeResponse> findAll() {
+        return teilnahmeRepository.findAll().stream().map(TeilnahmeResponse::von).toList();
     }
 
-    public Teilnahme save(Teilnahme teilnahme) {
-        return teilnahmeRepository.save(teilnahme);
+    @Transactional
+    public TeilnahmeResponse create(TeilnahmeRequest request) {
+        Teilnahme teilnahme = new Teilnahme();
+        teilnahme.setEinladung(Referenzen.aufloesen(einladungRepository, request.einladungId(), "Einladung"));
+        teilnahme.setAnzahlPersonenEffektiv(request.anzahlPersonenEffektiv());
+        teilnahme.setHilftAufstellen(request.hilftAufstellen());
+        teilnahme.setHilftAufraumen(request.hilftAufraumen());
+        if (request.buffetBeitraege() != null) {
+            teilnahme.getBuffetBeitraege().addAll(request.buffetBeitraege());
+        }
+        return TeilnahmeResponse.von(teilnahmeRepository.save(teilnahme));
     }
 
+    @Transactional
     public void delete(Long id) {
         teilnahmeRepository.deleteById(id);
+        teilnahmeRepository.flush();
     }
 
     /**
      * UC-016: Teilnahme der eigenen Partei zum nächsten Event
      * (frühestes Event-Datum >= heute), ermittelt via JWT sub → Benutzer → Partei.
      */
-    public Teilnahme findMeine(String sub) {
+    @Transactional(readOnly = true)
+    public TeilnahmeResponse findMeine(String sub) {
         Benutzer benutzer = benutzerRepository.findById(parseSub(sub))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
                         "Kein Benutzer zur Anmeldung gefunden."));
@@ -44,16 +61,16 @@ public class TeilnahmeService {
         }
         return teilnahmeRepository.findEigeneAbStichtag(benutzer.getPartei().getId(), LocalDate.now())
                 .stream().findFirst()
+                .map(TeilnahmeResponse::von)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
                         "Für Ihren Haushalt wurde noch keine Teilnahme erstellt."));
     }
 
     /** UC-016: Whitelist-Update — nur die vier PARTEI-editierbaren Felder, nie die Einladung. */
     @PreAuthorize("@teilnahmeZugriff.darfBearbeiten(#id, authentication)")
-    public Teilnahme update(Long id, TeilnahmeUpdateRequest request) {
-        Teilnahme teilnahme = teilnahmeRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Teilnahme nicht gefunden."));
+    @Transactional
+    public TeilnahmeResponse update(Long id, TeilnahmeUpdateRequest request) {
+        Teilnahme teilnahme = Referenzen.laden(teilnahmeRepository, id, "Teilnahme");
         teilnahme.setAnzahlPersonenEffektiv(request.anzahlPersonenEffektiv());
         teilnahme.setHilftAufstellen(request.hilftAufstellen());
         teilnahme.setHilftAufraumen(request.hilftAufraumen());
@@ -61,7 +78,7 @@ public class TeilnahmeService {
         if (request.buffetBeitraege() != null) {
             teilnahme.getBuffetBeitraege().addAll(request.buffetBeitraege());
         }
-        return teilnahmeRepository.save(teilnahme);
+        return TeilnahmeResponse.von(teilnahmeRepository.saveAndFlush(teilnahme));
     }
 
     private Long parseSub(String sub) {

@@ -114,7 +114,7 @@ class KonsumationslisteErstellenIT {
 
         // Given: create a Teilnahme for the ANGEMELDET Einladung from setup
         Map<String, Object> teilnahme = setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2));
 
         ResponseEntity<String> response = http.exchange(
                 "http://localhost:" + port + "/api/teilnahmen", HttpMethod.GET, null, String.class);

@@ -70,7 +70,7 @@ class KonsumationUebernehmenIT {
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2)));
         angebotId = id(setupPost("http://localhost:" + port + "/api/konsumationsangebote",
                 Map.of("eventId", eventId, "bezeichnung", "Bier 5dl", "preis", "3.00")));
     }

@@ -2,8 +2,9 @@ package ch.quartierfest.backend.teilnahme;
 
 import ch.quartierfest.backend.einladung.Einladung;
 import ch.quartierfest.backend.einladung.Einladung.BuffetBeitrag;
-import ch.quartierfest.backend.event.Event;
-import ch.quartierfest.backend.partei.Partei;
+import ch.quartierfest.backend.einladung.EinladungKurz;
+import ch.quartierfest.backend.event.EventResponse;
+import ch.quartierfest.backend.partei.ParteiKurz;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -37,57 +38,35 @@ class TeilnahmeControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Teilnahme buildTeilnahme() {
-        Event event = new Event();
-        event.setId(1L);
-        event.setDatum(LocalDate.of(2025, 7, 5));
-        event.setStartzeit(LocalTime.of(15, 0));
-        event.setStandort("Buchlenwiese");
-
-        Partei partei = new Partei();
-        partei.setId(2L);
-        partei.setBezeichnung("Familie Müller");
-        partei.setAdresse("Musterstrasse 1");
-        partei.setTwintAktiv(false);
-        partei.setPersonen(List.of());
-
-        Einladung einladung = new Einladung();
-        einladung.setId(3L);
-        einladung.setEvent(event);
-        einladung.setPartei(partei);
-        einladung.setStatus(Einladung.EinladungStatus.ANGEMELDET);
-        einladung.setBestaetigungVersendet(false);
-
-        Teilnahme t = new Teilnahme();
-        t.setId(4L);
-        t.setEinladung(einladung);
-        t.setAnzahlPersonenEffektiv(2);
-        t.setHilftAufstellen(true);
-        return t;
+    private TeilnahmeResponse buildTeilnahme(int anzahl, List<TeilnahmeBuffetBeitrag> beitraege) {
+        EventResponse event = new EventResponse(1L, LocalDate.of(2025, 7, 5), LocalTime.of(15, 0),
+                "Buchlenwiese", null, null, null);
+        ParteiKurz partei = new ParteiKurz(2L, "Familie Müller", "Musterstrasse 1", false, null);
+        EinladungKurz einladung = new EinladungKurz(3L, Einladung.EinladungStatus.ANGEMELDET, 2, event, partei);
+        return new TeilnahmeResponse(4L, einladung, anzahl, true, false, beitraege);
     }
 
     @Test
     @DisplayName("UC-005: GET /api/teilnahmen gibt alle Teilnahmen zurück")
     void getAll_returnsList() throws Exception {
-        when(teilnahmeService.findAll()).thenReturn(List.of(buildTeilnahme()));
+        when(teilnahmeService.findAll()).thenReturn(List.of(buildTeilnahme(2, List.of())));
 
         mockMvc.perform(get("/api/teilnahmen"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].anzahlPersonenEffektiv").value(2))
-                .andExpect(jsonPath("$[0].hilftAufstellen").value(true));
+                .andExpect(jsonPath("$[0].hilftAufstellen").value(true))
+                .andExpect(jsonPath("$[0].einladung.event.id").value(1))
+                .andExpect(jsonPath("$[0].einladung.partei.bezeichnung").value("Familie Müller"));
     }
 
     @Test
     @DisplayName("UC-005: POST /api/teilnahmen legt eine Teilnahme an")
     void create_returnsTeilnahme() throws Exception {
-        Teilnahme t = buildTeilnahme();
-        when(teilnahmeService.save(any(Teilnahme.class))).thenReturn(t);
+        when(teilnahmeService.create(any(TeilnahmeRequest.class))).thenReturn(buildTeilnahme(2, List.of()));
 
-        Teilnahme request = buildTeilnahme();
-        request.setId(null); // REST-001: Create-Request trägt keine id
         mockMvc.perform(post("/api/teilnahmen")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(new TeilnahmeRequest(3L, 2, true, false, List.of()))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(4))
                 .andExpect(jsonPath("$.anzahlPersonenEffektiv").value(2));
@@ -95,34 +74,42 @@ class TeilnahmeControllerTest {
 
     @Test
     @DisplayName("UC-005: POST /api/teilnahmen mit id wird abgelehnt (REST-001)")
-    void create_withId_returnsBadRequest() throws Exception {
+    void create_mitId_wirdAbgelehnt() throws Exception {
         mockMvc.perform(post("/api/teilnahmen")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(buildTeilnahme())))
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "id", 4, "einladungId", 3, "anzahlPersonenEffektiv", 2))))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.status").value(400))
-                .andExpect(jsonPath("$.message").value(
-                        org.hamcrest.Matchers.containsString("PUT /api/teilnahmen/")));
+                .andExpect(jsonPath("$.message").value("Unbekanntes Feld: id"));
     }
 
     @Test
     @DisplayName("UC-005: POST /api/teilnahmen mit mehreren Buffet-Beiträgen")
     void create_withMultipleBeitraege_returnsTeilnahme() throws Exception {
         // UC-005: Mehrere Buffet-Beiträge je Teilnahme möglich (TC-033)
-        Teilnahme t = buildTeilnahme();
-        t.setBuffetBeitraege(List.of(
+        List<TeilnahmeBuffetBeitrag> beitraege = List.of(
                 new TeilnahmeBuffetBeitrag(BuffetBeitrag.SALAT, "Grüner Salat"),
-                new TeilnahmeBuffetBeitrag(BuffetBeitrag.DESSERT, "Mousse au chocolat")));
-        when(teilnahmeService.save(any(Teilnahme.class))).thenReturn(t);
+                new TeilnahmeBuffetBeitrag(BuffetBeitrag.DESSERT, "Mousse au chocolat"));
+        when(teilnahmeService.create(any(TeilnahmeRequest.class))).thenReturn(buildTeilnahme(2, beitraege));
 
-        Teilnahme request = buildTeilnahme();
-        request.setId(null); // REST-001: Create-Request trägt keine id
-        request.setBuffetBeitraege(t.getBuffetBeitraege());
         mockMvc.perform(post("/api/teilnahmen")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
+                        .content(objectMapper.writeValueAsString(new TeilnahmeRequest(3L, 2, true, false, beitraege))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.buffetBeitraege.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("UC-005: Buffet-Beitrag ohne art wird mit 400 abgelehnt (API-001 Stufe 2)")
+    void create_beitragOhneArt_wirdAbgelehnt() throws Exception {
+        mockMvc.perform(post("/api/teilnahmen")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "einladungId", 3,
+                                "buffetBeitraege", List.of(Map.of("beschreibung", "ohne Art"))))))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("Validierung fehlgeschlagen: buffetBeitraege[0].art: must not be null"));
     }
 
     @Test
@@ -139,9 +126,7 @@ class TeilnahmeControllerTest {
     @Test
     @DisplayName("UC-016: PUT /api/teilnahmen/{id} aktualisiert die Whitelist-Felder")
     void update_returnsAktualisierteTeilnahme() throws Exception {
-        Teilnahme t = buildTeilnahme();
-        t.setAnzahlPersonenEffektiv(4);
-        when(teilnahmeService.update(eq(4L), any(TeilnahmeUpdateRequest.class))).thenReturn(t);
+        when(teilnahmeService.update(eq(4L), any(TeilnahmeUpdateRequest.class))).thenReturn(buildTeilnahme(4, List.of()));
 
         mockMvc.perform(put("/api/teilnahmen/4")
                         .contentType(MediaType.APPLICATION_JSON)

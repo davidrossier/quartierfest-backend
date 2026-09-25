@@ -167,6 +167,29 @@
         "required" : [ "event", "partei", "status" ],
         "type" : "object"
       },
+      "EinladungKurz" : {
+        "properties" : {
+          "anzahlPersonen" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "event" : {
+            "$ref" : "#/components/schemas/EventResponse"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "partei" : {
+            "$ref" : "#/components/schemas/ParteiKurz"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/EinladungStatus"
+          }
+        },
+        "required" : [ "event", "id", "partei", "status" ],
+        "type" : "object"
+      },
       "EinladungRequest" : {
         "properties" : {
           "anzahlPersonen" : {
@@ -721,6 +744,62 @@
             "type" : "string"
           }
         },
+        "required" : [ "art" ],
+        "type" : "object"
+      },
+      "TeilnahmeRequest" : {
+        "properties" : {
+          "anzahlPersonenEffektiv" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "buffetBeitraege" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TeilnahmeBuffetBeitrag"
+            },
+            "type" : "array"
+          },
+          "einladungId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hilftAufraumen" : {
+            "type" : "boolean"
+          },
+          "hilftAufstellen" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "einladungId" ],
+        "type" : "object"
+      },
+      "TeilnahmeResponse" : {
+        "properties" : {
+          "anzahlPersonenEffektiv" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "buffetBeitraege" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TeilnahmeBuffetBeitrag"
+            },
+            "type" : "array"
+          },
+          "einladung" : {
+            "$ref" : "#/components/schemas/EinladungKurz"
+          },
+          "hilftAufraumen" : {
+            "type" : "boolean"
+          },
+          "hilftAufstellen" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "buffetBeitraege", "einladung", "id" ],
         "type" : "object"
       },
       "TeilnahmeUpdateRequest" : {
@@ -2122,10 +2201,10 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Teilnahme"
+                    "$ref" : "#/components/schemas/TeilnahmeResponse"
                   },
                   "type" : "array"
                 }
@@ -2152,7 +2231,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Teilnahme"
+                "$ref" : "#/components/schemas/TeilnahmeRequest"
               }
             }
           },
@@ -2161,9 +2240,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Teilnahme"
+                  "$ref" : "#/components/schemas/TeilnahmeResponse"
                 }
               }
             },
@@ -2189,9 +2268,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Teilnahme"
+                  "$ref" : "#/components/schemas/TeilnahmeResponse"
                 }
               }
             },
@@ -2264,9 +2343,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Teilnahme"
+                  "$ref" : "#/components/schemas/TeilnahmeResponse"
                 }
               }
             },

@@ -76,7 +76,7 @@ class AbrechnungZustellenIT {
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2)));
 
         // Partei 2 – TWINT delivery
         parteiId2 = id(setupPost("http://localhost:" + port + "/api/parteien",
@@ -88,7 +88,7 @@ class AbrechnungZustellenIT {
                 "anzahlPersonen", 3,
                 "bestaetigungVersendet", false)));
         teilnahmeId2 = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId2), "anzahlPersonenEffektiv", 3)));
+                Map.of("einladungId", einladungId2, "anzahlPersonenEffektiv", 3)));
     }
 
     @AfterEach

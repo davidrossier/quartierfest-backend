@@ -1,14 +1,17 @@
 package ch.quartierfest.backend.teilnahme;
 
-// UC-016: Whitelist-DTO für PUT /api/teilnahmen/{id} — bewusst kein Entity-Binding,
-// damit die einladung-Verknüpfung über diesen Endpunkt nie veränderbar ist.
-
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.NotNull;
 import org.jspecify.annotations.Nullable;
 
 import java.util.List;
 
-public record TeilnahmeUpdateRequest(
+/**
+ * UC-005: Request für POST /api/teilnahmen (API-001 Stufe 2). Kein {@code id}-Feld: ein POST mit id
+ * wird als unbekanntes Feld mit 400 abgelehnt (REST-001, TC-041); Updates laufen über den Whitelist-PUT.
+ */
+public record TeilnahmeRequest(
+        @NotNull Long einladungId,
         @Nullable Integer anzahlPersonenEffektiv,
         @Nullable Boolean hilftAufstellen,
         @Nullable Boolean hilftAufraumen,

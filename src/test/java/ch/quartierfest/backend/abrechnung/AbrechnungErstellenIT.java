@@ -70,7 +70,7 @@ class AbrechnungErstellenIT {
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2)));
     }
 
     @AfterEach
