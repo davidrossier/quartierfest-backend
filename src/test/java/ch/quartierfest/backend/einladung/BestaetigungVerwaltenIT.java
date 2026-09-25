@@ -4,7 +4,7 @@ package ch.quartierfest.backend.einladung;
  * Traceability:
  *   UC: UC-006 (Bestätigung erstellen und versenden)
  *   TCs: TC-013
- *   Last traced: 2026-05-01
+ *   Last traced: 2026-09-25
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -30,10 +30,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for UC-006 – Bestätigung erstellen und versenden.
  * Covers TC-013.
  *
- * UC-006 main flow: bestaetigungVersendet wird via POST/Upsert nachträglich auf true gesetzt.
- * POST /api/einladungen mit id im Body agiert als Upsert (JPA save() mit vorhandener ID).
- * REST-001-Folgearbeit (2026-07-09): Upsert soll durch einen dedizierten PUT/PATCH-Endpunkt
- * ersetzt werden (auf dem Teilnahme-Pfad bereits geblockt) — bis dahin bleibt er hier bewusst bestehen.
+ * UC-006 main flow: bestaetigungVersendet wird via PUT /api/einladungen/{id} nachträglich auf true gesetzt (REST-003).
+ * Der frühere POST-Upsert (id im Body) ist seit API-001 Stufe 2 nicht mehr möglich: POST lehnt ein
+ * id-Feld als unbekanntes Feld mit 400 ab.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")
@@ -81,14 +80,14 @@ class BestaetigungVerwaltenIT {
     }
 
     @Test
-    @DisplayName("TC-013 – UC-006 Bestätigung versendet via POST/Upsert nachträglich setzen")
+    @DisplayName("TC-013 – UC-006 Bestätigung versendet via PUT nachträglich setzen (REST-003)")
     @SuppressWarnings("unchecked")
-    void tc013_bestaetigungVersendetViaUpsert() {
+    void tc013_bestaetigungVersendetViaPut() {
         // Given: Einladung mit bestaetigungVersendet=false anlegen
         ResponseEntity<Map> created = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
-                        "partei", Map.of("id", parteiId),
+                        "eventId", eventId,
+                        "parteiId", parteiId,
                         "status", "ANGEMELDET",
                         "anzahlPersonen", 2,
                         "bestaetigungVersendet", false), json), Map.class);
@@ -97,12 +96,10 @@ class BestaetigungVerwaltenIT {
         assertThat(created.getBody().get("bestaetigungVersendet")).isEqualTo(false);
         long einladungId = ((Number) created.getBody().get("id")).longValue();
 
-        // When: bestaetigungVersendet via POST/Upsert (id im Body) auf true setzen
-        ResponseEntity<Map> updated = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
+        // When: bestaetigungVersendet via PUT (REST-003, Whitelist ohne Event/Partei) auf true setzen
+        ResponseEntity<Map> updated = http.exchange("http://localhost:" + port + "/api/einladungen/" + einladungId,
+                HttpMethod.PUT,
                 new HttpEntity<>(Map.of(
-                        "id", einladungId,
-                        "event", Map.of("id", eventId),
-                        "partei", Map.of("id", parteiId),
                         "status", "ANGEMELDET",
                         "anzahlPersonen", 2,
                         "bestaetigungVersendet", true), json), Map.class);

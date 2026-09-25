@@ -3,8 +3,8 @@ package ch.quartierfest.backend.einladung;
 /**
  * Traceability:
  *   UC: UC-004 (Einladung erstellen und verwalten)
- *   TCs: TC-008, TC-009, TC-010, TC-042
- *   Last traced: 2026-09-08
+ *   TCs: TC-008, TC-009, TC-010, TC-042, TC-048
+ *   Last traced: 2026-09-25
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -26,7 +26,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-004 – Einladung erstellen und verwalten. TC-008, TC-009, TC-010, TC-042. */
+/** Integration tests for UC-004 – Einladung erstellen und verwalten. TC-008, TC-009, TC-010, TC-042, TC-048. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")
 class EinladungVerwaltenIT {
@@ -76,8 +76,8 @@ class EinladungVerwaltenIT {
     void tc008_einladungErstellenStatusOffen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
-                        "partei", Map.of("id", parteiId),
+                        "eventId", eventId,
+                        "parteiId", parteiId,
                         "status", "OFFEN",
                         "bestaetigungVersendet", false), json), Map.class);
 
@@ -96,8 +96,8 @@ class EinladungVerwaltenIT {
     void tc009_rueckmeldungAngemeldetErfassen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
-                        "partei", Map.of("id", parteiId),
+                        "eventId", eventId,
+                        "parteiId", parteiId,
                         "status", "ANGEMELDET",
                         "anzahlPersonen", 3,
                         "hilftAufstellen", true,
@@ -119,8 +119,8 @@ class EinladungVerwaltenIT {
     void tc010_rueckmeldungAbgemeldetErfassen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
-                        "partei", Map.of("id", parteiId),
+                        "eventId", eventId,
+                        "parteiId", parteiId,
                         "status", "ABGEMELDET",
                         "bestaetigungVersendet", false), json), Map.class);
 
@@ -138,8 +138,8 @@ class EinladungVerwaltenIT {
     @SuppressWarnings("unchecked")
     void tc042_einladungDuplikatEventParteiAbgelehnt() {
         Map<String, Object> body = Map.of(
-                "event", Map.of("id", eventId),
-                "partei", Map.of("id", parteiId),
+                "eventId", eventId,
+                "parteiId", parteiId,
                 "status", "OFFEN",
                 "bestaetigungVersendet", false);
         ResponseEntity<Map> erste = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
@@ -157,6 +157,47 @@ class EinladungVerwaltenIT {
         // Cleanup als Lösch-Test
         ResponseEntity<Void> del = http.exchange("http://localhost:" + port + "/api/einladungen/" + einladungId,
                 HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("TC-048 – UC-004 Rückmeldung per PUT erfassen; Event und Partei bleiben unveränderlich (REST-003)")
+    @SuppressWarnings("unchecked")
+    void tc048_rueckmeldungPerPutErfassen() {
+        ResponseEntity<Map> erstellt = http.exchange("http://localhost:" + port + "/api/einladungen", HttpMethod.POST,
+                new HttpEntity<>(Map.of(
+                        "eventId", eventId,
+                        "parteiId", parteiId,
+                        "status", "OFFEN",
+                        "bestaetigungVersendet", false), json), Map.class);
+        assertThat(erstellt.getStatusCode()).isEqualTo(HttpStatus.OK);
+        Number einladungId = (Number) erstellt.getBody().get("id");
+        String url = "http://localhost:" + port + "/api/einladungen/" + einladungId;
+
+        ResponseEntity<Map> rueckmeldung = http.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(Map.of(
+                        "status", "ANGEMELDET",
+                        "anzahlPersonen", 3,
+                        "hilftAufstellen", true,
+                        "buffetBeitrag", "SALAT",
+                        "bestaetigungVersendet", false), json), Map.class);
+        assertThat(rueckmeldung.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(rueckmeldung.getBody().get("status")).isEqualTo("ANGEMELDET");
+        assertThat(rueckmeldung.getBody().get("anzahlPersonen")).isEqualTo(3);
+        assertThat(rueckmeldung.getBody().get("buffetBeitrag")).isEqualTo("SALAT");
+        assertThat(((Map<String, Object>) rueckmeldung.getBody().get("partei")).get("id"))
+                .isEqualTo(((Number) parteiId).intValue());
+
+        // Event/Partei sind nicht Teil der Whitelist → unbekanntes Feld → 400
+        ResponseEntity<Map> mitEvent = http.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(Map.of(
+                        "eventId", eventId,
+                        "status", "ANGEMELDET",
+                        "bestaetigungVersendet", false), json), Map.class);
+        assertThat(mitEvent.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat((String) mitEvent.getBody().get("message")).isEqualTo("Unbekanntes Feld: eventId");
+
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
         assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

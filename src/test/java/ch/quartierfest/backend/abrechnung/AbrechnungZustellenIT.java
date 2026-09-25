@@ -70,8 +70,8 @@ class AbrechnungZustellenIT {
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
                 Map.of("bezeichnung", "Zustell-Partei-1", "adresse", "Zustellgasse 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
-                "event", Map.of("id", eventId),
-                "partei", Map.of("id", parteiId),
+                "eventId", eventId,
+                "parteiId", parteiId,
                 "status", "ANGEMELDET",
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
@@ -82,8 +82,8 @@ class AbrechnungZustellenIT {
         parteiId2 = id(setupPost("http://localhost:" + port + "/api/parteien",
                 Map.of("bezeichnung", "Zustell-Partei-2", "adresse", "Zustellgasse 2", "twintAktiv", true, "twintMobilenummer", "+41791234567")));
         einladungId2 = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
-                "event", Map.of("id", eventId),
-                "partei", Map.of("id", parteiId2),
+                "eventId", eventId,
+                "parteiId", parteiId2,
                 "status", "ANGEMELDET",
                 "anzahlPersonen", 3,
                 "bestaetigungVersendet", false)));

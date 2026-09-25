@@ -167,9 +167,111 @@
         "required" : [ "event", "partei", "status" ],
         "type" : "object"
       },
+      "EinladungRequest" : {
+        "properties" : {
+          "anzahlPersonen" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "bestaetigungVersendet" : {
+            "type" : "boolean"
+          },
+          "buffetBeitrag" : {
+            "$ref" : "#/components/schemas/BuffetBeitrag"
+          },
+          "buffetBeitragBeschreibung" : {
+            "type" : "string"
+          },
+          "eventId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hilftAufraumen" : {
+            "type" : "boolean"
+          },
+          "hilftAufstellen" : {
+            "type" : "boolean"
+          },
+          "parteiId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/EinladungStatus"
+          }
+        },
+        "required" : [ "eventId", "parteiId", "status" ],
+        "type" : "object"
+      },
+      "EinladungResponse" : {
+        "properties" : {
+          "anzahlPersonen" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "bestaetigungVersendet" : {
+            "type" : "boolean"
+          },
+          "buffetBeitrag" : {
+            "$ref" : "#/components/schemas/BuffetBeitrag"
+          },
+          "buffetBeitragBeschreibung" : {
+            "type" : "string"
+          },
+          "event" : {
+            "$ref" : "#/components/schemas/EventResponse"
+          },
+          "hilftAufraumen" : {
+            "type" : "boolean"
+          },
+          "hilftAufstellen" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "partei" : {
+            "$ref" : "#/components/schemas/ParteiKurz"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/EinladungStatus"
+          }
+        },
+        "required" : [ "bestaetigungVersendet", "event", "id", "partei", "status" ],
+        "type" : "object"
+      },
       "EinladungStatus" : {
         "enum" : [ "OFFEN", "ANGEMELDET", "ABGEMELDET" ],
         "type" : "string"
+      },
+      "EinladungUpdateRequest" : {
+        "properties" : {
+          "anzahlPersonen" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "bestaetigungVersendet" : {
+            "type" : "boolean"
+          },
+          "buffetBeitrag" : {
+            "$ref" : "#/components/schemas/BuffetBeitrag"
+          },
+          "buffetBeitragBeschreibung" : {
+            "type" : "string"
+          },
+          "hilftAufraumen" : {
+            "type" : "boolean"
+          },
+          "hilftAufstellen" : {
+            "type" : "boolean"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/EinladungStatus"
+          }
+        },
+        "required" : [ "status" ],
+        "type" : "object"
       },
       "Event" : {
         "properties" : {
@@ -855,7 +957,7 @@
     },
     "/api/allgemeinausgaben/{id}" : {
       "delete" : {
-        "operationId" : "delete_5",
+        "operationId" : "delete_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -883,7 +985,7 @@
         "tags" : [ "allgemeinausgabe-controller" ]
       },
       "put" : {
-        "operationId" : "update_5",
+        "operationId" : "update_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1116,10 +1218,10 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Einladung"
+                    "$ref" : "#/components/schemas/EinladungResponse"
                   },
                   "type" : "array"
                 }
@@ -1146,7 +1248,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Einladung"
+                "$ref" : "#/components/schemas/EinladungRequest"
               }
             }
           },
@@ -1155,9 +1257,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Einladung"
+                  "$ref" : "#/components/schemas/EinladungResponse"
                 }
               }
             },
@@ -1179,7 +1281,7 @@
     },
     "/api/einladungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_9",
+        "operationId" : "delete_5",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1191,6 +1293,51 @@
         } ],
         "responses" : {
           "200" : {
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "einladung-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_5",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EinladungUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EinladungResponse"
+                }
+              }
+            },
             "description" : "OK"
           },
           "4XX" : {
@@ -1418,7 +1565,7 @@
     },
     "/api/konsumationen/{id}" : {
       "delete" : {
-        "operationId" : "delete_8",
+        "operationId" : "delete_9",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1657,7 +1804,7 @@
     },
     "/api/mahnungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_7",
+        "operationId" : "delete_8",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -2208,7 +2355,7 @@
     },
     "/api/zahlungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_6",
+        "operationId" : "delete_7",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",

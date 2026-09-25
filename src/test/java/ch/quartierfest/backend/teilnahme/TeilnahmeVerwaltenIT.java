@@ -54,8 +54,8 @@ class TeilnahmeVerwaltenIT {
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
                 Map.of("bezeichnung", "Teilnahme-Partei", "adresse", "Teilnahmeweg 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
-                "event", Map.of("id", eventId),
-                "partei", Map.of("id", parteiId),
+                "eventId", eventId,
+                "parteiId", parteiId,
                 "status", "ANGEMELDET",
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
