@@ -6,6 +6,7 @@ import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -18,7 +19,7 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/benutzer")
+@RequestMapping(value = "/api/benutzer", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class BenutzerController {
 
@@ -28,17 +29,17 @@ public class BenutzerController {
     }
 
     @GetMapping
-    public List<Benutzer> findAll() {
+    public List<BenutzerResponse> findAll() {
         return benutzerService.findAll();
     }
 
     @PostMapping
-    public Benutzer create(@Valid @RequestBody Benutzer benutzer) {
-        return benutzerService.save(benutzer);
+    public BenutzerResponse create(@Valid @RequestBody BenutzerRequest request) {
+        return benutzerService.create(request);
     }
 
     @PutMapping("/{id}/passwort")
-    public Benutzer passwortSetzen(@PathVariable Long id, @Valid @RequestBody PasswortReset reset) {
+    public BenutzerResponse passwortSetzen(@PathVariable Long id, @Valid @RequestBody PasswortReset reset) {
         return benutzerService.passwortSetzen(id, reset.passwort());
     }
 

@@ -86,7 +86,7 @@ class TeilnahmeBestaetigenIT {
                 Map.of("email", "tc036.partei-a@quartier.ch",
                         "passwort", "partei-a-geheim",
                         "rolle", "PARTEI",
-                        "partei", Map.of("id", parteiAId))));
+                        "parteiId", parteiAId)));
 
         Map<String, Object> login = setupPost(base + "/api/auth/login",
                 Map.of("email", "tc036.partei-a@quartier.ch", "passwort", "partei-a-geheim"));

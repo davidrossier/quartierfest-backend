@@ -74,7 +74,7 @@ class AllgemeinausgabeVerwaltenIT {
     void tc014_allgemeinausgabeAnlegenHappyPath() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/allgemeinausgaben", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
+                        "eventId", eventId,
                         "beschreibung", "Getränkeeinkauf",
                         "herkunft", "Coop",
                         "betrag", "120.00"), json), Map.class);
@@ -95,7 +95,7 @@ class AllgemeinausgabeVerwaltenIT {
     void tc015_allgemeinausgabeAnlegenBetragFehlt() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/allgemeinausgaben", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
+                        "eventId", eventId,
                         "beschreibung", "Ohne Betrag"), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);

@@ -27,8 +27,6 @@ public class BootstrapConfig {
             if (benutzerRepository.countByRolle(Benutzer.Rolle.ORGANISATOR) == 0) {
                 Benutzer admin = new Benutzer();
                 admin.setEmail(email);
-                // passwort muss beim Persistieren gesetzt sein (@Transient-Validierung); min. 10 Zeichen
-                admin.setPasswort(password);
                 admin.setPasswortHash(passwordEncoder.encode(password));
                 admin.setRolle(Benutzer.Rolle.ORGANISATOR);
                 benutzerRepository.save(admin);

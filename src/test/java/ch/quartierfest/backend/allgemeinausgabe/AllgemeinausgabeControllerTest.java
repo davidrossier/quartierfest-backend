@@ -1,6 +1,6 @@
 package ch.quartierfest.backend.allgemeinausgabe;
 
-import ch.quartierfest.backend.event.Event;
+import ch.quartierfest.backend.event.EventResponse;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,11 +16,12 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-/** Unit tests for UC-007 – Allgemeinausgaben verwalten. */
+/** Unit tests for UC-007 – Allgemeinausgabe verwalten. */
 @WebMvcTest(AllgemeinausgabeController.class)
 class AllgemeinausgabeControllerTest {
 
@@ -33,26 +34,20 @@ class AllgemeinausgabeControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Allgemeinausgabe buildAusgabe() {
-        Event event = new Event();
-        event.setId(1L);
-        event.setDatum(LocalDate.of(2025, 7, 5));
-        event.setStartzeit(LocalTime.of(15, 0));
-        event.setStandort("Buchlenwiese");
+    private AllgemeinausgabeResponse buildAusgabe(String betrag) {
+        EventResponse event = new EventResponse(1L, LocalDate.of(2025, 7, 5), LocalTime.of(15, 0),
+                "Buchlenwiese", null, null, null);
+        return new AllgemeinausgabeResponse(2L, event, "Kühlschrankmiete", "Coop", new BigDecimal(betrag));
+    }
 
-        Allgemeinausgabe a = new Allgemeinausgabe();
-        a.setId(2L);
-        a.setEvent(event);
-        a.setBeschreibung("Kühlschrankmiete");
-        a.setHerkunft("Coop");
-        a.setBetrag(new BigDecimal("120.00"));
-        return a;
+    private AllgemeinausgabeRequest buildRequest(String betrag) {
+        return new AllgemeinausgabeRequest(1L, "Kühlschrankmiete", "Coop", new BigDecimal(betrag));
     }
 
     @Test
     @DisplayName("UC-007: GET /api/allgemeinausgaben gibt alle Ausgaben zurück")
     void getAll_returnsList() throws Exception {
-        when(allgemeinausgabeService.findAll()).thenReturn(List.of(buildAusgabe()));
+        when(allgemeinausgabeService.findAll()).thenReturn(List.of(buildAusgabe("120.00")));
 
         mockMvc.perform(get("/api/allgemeinausgaben"))
                 .andExpect(status().isOk())
@@ -63,15 +58,27 @@ class AllgemeinausgabeControllerTest {
     @Test
     @DisplayName("UC-007: POST /api/allgemeinausgaben legt eine Ausgabe an und gibt sie zurück")
     void create_returnsSavedAusgabe() throws Exception {
-        Allgemeinausgabe a = buildAusgabe();
-        when(allgemeinausgabeService.save(any(Allgemeinausgabe.class))).thenReturn(a);
+        when(allgemeinausgabeService.create(any(AllgemeinausgabeRequest.class))).thenReturn(buildAusgabe("120.00"));
 
         mockMvc.perform(post("/api/allgemeinausgaben")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(a)))
+                        .content(objectMapper.writeValueAsString(buildRequest("120.00"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(2))
                 .andExpect(jsonPath("$.beschreibung").value("Kühlschrankmiete"));
+    }
+
+    @Test
+    @DisplayName("UC-007: PUT /api/allgemeinausgaben/{id} aktualisiert eine Ausgabe (REST-003, erweitert)")
+    void update_returnsUpdatedAusgabe() throws Exception {
+        when(allgemeinausgabeService.update(eq(2L), any(AllgemeinausgabeRequest.class)))
+                .thenReturn(buildAusgabe("150.00"));
+
+        mockMvc.perform(put("/api/allgemeinausgaben/2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildRequest("150.00"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.betrag").value(150.00));
     }
 
     @Test

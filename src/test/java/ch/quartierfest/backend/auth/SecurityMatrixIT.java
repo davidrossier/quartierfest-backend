@@ -127,7 +127,7 @@ class SecurityMatrixIT {
                 new HttpEntity<>(Map.of("email", "tc040.partei@quartier.ch",
                         "passwort", "matrix-geheim-1",
                         "rolle", "PARTEI",
-                        "partei", Map.of("id", parteiId)), bearer(orgaToken)),
+                        "parteiId", parteiId), bearer(orgaToken)),
                 Map.class);
         assertThat(benutzer.getStatusCode()).isEqualTo(HttpStatus.OK);
         benutzerId = id(benutzer.getBody());

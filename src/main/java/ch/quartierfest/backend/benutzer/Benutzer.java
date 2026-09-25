@@ -3,8 +3,6 @@ package ch.quartierfest.backend.benutzer;
 // UC-015: Benutzer verwalten (AUTH-002, Eigenbau-Login)
 
 import ch.quartierfest.backend.partei.Partei;
-import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -14,11 +12,9 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -36,7 +32,7 @@ public class Benutzer {
     @Column(nullable = false)
     private String email;
 
-    @JsonIgnore
+    // Nie ausgeliefert: BenutzerResponse kennt das Feld nicht (API-001 Stufe 2)
     @Column(nullable = false)
     private String passwortHash;
 
@@ -47,13 +43,6 @@ public class Benutzer {
 
     @ManyToOne
     private Partei partei;
-
-    // Nur beim POST entgegengenommen; wird im Service gehasht und nie ausgeliefert
-    @Transient
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    @NotBlank
-    @Size(min = 10)
-    private String passwort;
 
     public enum Rolle {
         ORGANISATOR, PARTEI

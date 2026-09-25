@@ -82,7 +82,7 @@ class BenutzerVerwaltenIT {
                         "email", "tc034.mueller@quartier.ch",
                         "passwort", "geheim-1234",
                         "rolle", "PARTEI",
-                        "partei", Map.of("id", parteiId)), json),
+                        "parteiId", parteiId), json),
                 Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -111,7 +111,7 @@ class BenutzerVerwaltenIT {
                 Map.of("email", "tc035.doppelt@quartier.ch",
                         "passwort", "geheim-1234",
                         "rolle", "PARTEI",
-                        "partei", Map.of("id", parteiId)));
+                        "parteiId", parteiId));
         try {
             ResponseEntity<Map> response = http.exchange(
                     "http://localhost:" + port + "/api/benutzer", HttpMethod.POST,
@@ -119,7 +119,7 @@ class BenutzerVerwaltenIT {
                             "email", "tc035.doppelt@quartier.ch",
                             "passwort", "anderes-passwort-99",
                             "rolle", "PARTEI",
-                            "partei", Map.of("id", parteiId)), json),
+                            "parteiId", parteiId), json),
                     Map.class);
 
             assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);

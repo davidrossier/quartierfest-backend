@@ -60,7 +60,7 @@ class BenutzerAnmeldenIT {
                 Map.of("email", "tc038.login@quartier.ch",
                         "passwort", "login-geheim-12",
                         "rolle", "PARTEI",
-                        "partei", Map.of("id", parteiId))));
+                        "parteiId", parteiId)));
     }
 
     @AfterEach

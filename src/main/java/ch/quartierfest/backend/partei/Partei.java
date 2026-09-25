@@ -1,11 +1,11 @@
 package ch.quartierfest.backend.partei;
 
 import ch.quartierfest.backend.person.Person;
-import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 import lombok.Setter;
+import java.util.ArrayList;
 import java.util.List;
 
 @Getter
@@ -33,9 +33,5 @@ public class Partei {
 
     @OneToMany
     @JoinColumn(name = "partei_id")
-    private List<Person> personen;
-
-    @Transient
-    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
-    private List<Long> personenIds;
+    private List<Person> personen = new ArrayList<>();
 }

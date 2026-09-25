@@ -1,6 +1,6 @@
 package ch.quartierfest.backend.benutzer;
 
-import ch.quartierfest.backend.partei.Partei;
+import ch.quartierfest.backend.partei.ParteiKurz;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,19 +34,9 @@ class BenutzerControllerTest {
     @Autowired
     private tools.jackson.databind.ObjectMapper objectMapper;  // Jackson 3.x!
 
-    private Benutzer buildBenutzer() {
-        Partei partei = new Partei();
-        partei.setId(1L);
-        partei.setBezeichnung("Familie Müller");
-        partei.setAdresse("Musterstrasse 1");
-        partei.setPersonen(List.of());
-        Benutzer benutzer = new Benutzer();
-        benutzer.setId(5L);
-        benutzer.setEmail("mueller@quartier.ch");
-        benutzer.setPasswortHash("$2a$hash");
-        benutzer.setRolle(Benutzer.Rolle.PARTEI);
-        benutzer.setPartei(partei);
-        return benutzer;
+    private BenutzerResponse buildBenutzer() {
+        ParteiKurz partei = new ParteiKurz(1L, "Familie Müller", "Musterstrasse 1", false, null);
+        return new BenutzerResponse(5L, "mueller@quartier.ch", Benutzer.Rolle.PARTEI, partei);
     }
 
     @Test
@@ -64,17 +54,15 @@ class BenutzerControllerTest {
     @Test
     @DisplayName("UC-015: POST /api/benutzer legt einen Benutzer an, Antwort ohne Passwortfelder")
     void create_returnsSavedBenutzerOhnePasswort() throws Exception {
-        when(benutzerService.save(any(Benutzer.class))).thenReturn(buildBenutzer());
+        when(benutzerService.create(any(BenutzerRequest.class))).thenReturn(buildBenutzer());
 
-        // Request als Map: das Entity-Feld passwort ist WRITE_ONLY und würde
-        // bei der Serialisierung eines Benutzer-Objekts fehlen
         mockMvc.perform(post("/api/benutzer")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
                                 "email", "mueller@quartier.ch",
                                 "passwort", "geheim-1234",
                                 "rolle", "PARTEI",
-                                "partei", Map.of("id", 1)))))
+                                "parteiId", 1))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(5))
                 .andExpect(jsonPath("$.passwort").doesNotExist())
@@ -90,7 +78,7 @@ class BenutzerControllerTest {
                                 "email", "mueller@quartier.ch",
                                 "passwort", "kurz",
                                 "rolle", "PARTEI",
-                                "partei", Map.of("id", 1)))))
+                                "parteiId", 1))))
                 .andExpect(status().isBadRequest());
     }
 

@@ -30,7 +30,7 @@
         "required" : [ "anteilAllgemeinkosten", "teilnahme", "totalBetrag", "totalKonsumation", "zustellungskanal" ],
         "type" : "object"
       },
-      "Allgemeinausgabe" : {
+      "AllgemeinausgabeRequest" : {
         "properties" : {
           "beschreibung" : {
             "minLength" : 1,
@@ -39,8 +39,27 @@
           "betrag" : {
             "type" : "number"
           },
+          "eventId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "herkunft" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "beschreibung", "betrag", "eventId" ],
+        "type" : "object"
+      },
+      "AllgemeinausgabeResponse" : {
+        "properties" : {
+          "beschreibung" : {
+            "type" : "string"
+          },
+          "betrag" : {
+            "type" : "number"
+          },
           "event" : {
-            "$ref" : "#/components/schemas/Event"
+            "$ref" : "#/components/schemas/EventResponse"
           },
           "herkunft" : {
             "type" : "string"
@@ -50,7 +69,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "beschreibung", "betrag", "event" ],
+        "required" : [ "beschreibung", "betrag", "event", "id" ],
         "type" : "object"
       },
       "ApiError" : {
@@ -65,10 +84,31 @@
         },
         "required" : [ "message", "status" ]
       },
-      "Benutzer" : {
+      "BenutzerRequest" : {
         "properties" : {
           "email" : {
             "minLength" : 1,
+            "type" : "string"
+          },
+          "parteiId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "passwort" : {
+            "maxLength" : 2147483647,
+            "minLength" : 10,
+            "type" : "string"
+          },
+          "rolle" : {
+            "$ref" : "#/components/schemas/Rolle"
+          }
+        },
+        "required" : [ "email", "passwort", "rolle" ],
+        "type" : "object"
+      },
+      "BenutzerResponse" : {
+        "properties" : {
+          "email" : {
             "type" : "string"
           },
           "id" : {
@@ -76,19 +116,13 @@
             "type" : "integer"
           },
           "partei" : {
-            "$ref" : "#/components/schemas/Partei"
-          },
-          "passwort" : {
-            "maxLength" : 2147483647,
-            "minLength" : 10,
-            "type" : "string",
-            "writeOnly" : true
+            "$ref" : "#/components/schemas/ParteiKurz"
           },
           "rolle" : {
             "$ref" : "#/components/schemas/Rolle"
           }
         },
-        "required" : [ "email", "passwort", "rolle" ],
+        "required" : [ "email", "id", "rolle" ],
         "type" : "object"
       },
       "BuffetBeitrag" : {
@@ -370,13 +404,54 @@
             },
             "type" : "array"
           },
+          "twintAktiv" : {
+            "type" : "boolean"
+          },
+          "twintMobilenummer" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "adresse", "bezeichnung" ],
+        "type" : "object"
+      },
+      "ParteiKurz" : {
+        "properties" : {
+          "adresse" : {
+            "type" : "string"
+          },
+          "bezeichnung" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "twintAktiv" : {
+            "type" : "boolean"
+          },
+          "twintMobilenummer" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "adresse", "bezeichnung", "id", "twintAktiv" ],
+        "type" : "object"
+      },
+      "ParteiRequest" : {
+        "properties" : {
+          "adresse" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "bezeichnung" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
           "personenIds" : {
             "items" : {
               "format" : "int64",
               "type" : "integer"
             },
-            "type" : "array",
-            "writeOnly" : true
+            "type" : "array"
           },
           "twintAktiv" : {
             "type" : "boolean"
@@ -386,6 +461,34 @@
           }
         },
         "required" : [ "adresse", "bezeichnung" ],
+        "type" : "object"
+      },
+      "ParteiResponse" : {
+        "properties" : {
+          "adresse" : {
+            "type" : "string"
+          },
+          "bezeichnung" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "personen" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PersonResponse"
+            },
+            "type" : "array"
+          },
+          "twintAktiv" : {
+            "type" : "boolean"
+          },
+          "twintMobilenummer" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "adresse", "bezeichnung", "id", "personen", "twintAktiv" ],
         "type" : "object"
       },
       "PasswortReset" : {
@@ -689,10 +792,10 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Allgemeinausgabe"
+                    "$ref" : "#/components/schemas/AllgemeinausgabeResponse"
                   },
                   "type" : "array"
                 }
@@ -719,7 +822,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Allgemeinausgabe"
+                "$ref" : "#/components/schemas/AllgemeinausgabeRequest"
               }
             }
           },
@@ -728,9 +831,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Allgemeinausgabe"
+                  "$ref" : "#/components/schemas/AllgemeinausgabeResponse"
                 }
               }
             },
@@ -752,7 +855,7 @@
     },
     "/api/allgemeinausgaben/{id}" : {
       "delete" : {
-        "operationId" : "delete_10",
+        "operationId" : "delete_5",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -764,6 +867,51 @@
         } ],
         "responses" : {
           "200" : {
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "allgemeinausgabe-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_5",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AllgemeinausgabeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AllgemeinausgabeResponse"
+                }
+              }
+            },
             "description" : "OK"
           },
           "4XX" : {
@@ -824,10 +972,10 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Benutzer"
+                    "$ref" : "#/components/schemas/BenutzerResponse"
                   },
                   "type" : "array"
                 }
@@ -854,7 +1002,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Benutzer"
+                "$ref" : "#/components/schemas/BenutzerRequest"
               }
             }
           },
@@ -863,9 +1011,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Benutzer"
+                  "$ref" : "#/components/schemas/BenutzerResponse"
                 }
               }
             },
@@ -887,7 +1035,7 @@
     },
     "/api/benutzer/{id}" : {
       "delete" : {
-        "operationId" : "delete_9",
+        "operationId" : "delete_10",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -940,9 +1088,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Benutzer"
+                  "$ref" : "#/components/schemas/BenutzerResponse"
                 }
               }
             },
@@ -1031,7 +1179,7 @@
     },
     "/api/einladungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_8",
+        "operationId" : "delete_9",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1270,7 +1418,7 @@
     },
     "/api/konsumationen/{id}" : {
       "delete" : {
-        "operationId" : "delete_7",
+        "operationId" : "delete_8",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1509,7 +1657,7 @@
     },
     "/api/mahnungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_6",
+        "operationId" : "delete_7",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1543,10 +1691,10 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Partei"
+                    "$ref" : "#/components/schemas/ParteiResponse"
                   },
                   "type" : "array"
                 }
@@ -1573,7 +1721,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Partei"
+                "$ref" : "#/components/schemas/ParteiRequest"
               }
             }
           },
@@ -1582,9 +1730,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Partei"
+                  "$ref" : "#/components/schemas/ParteiResponse"
                 }
               }
             },
@@ -1648,7 +1796,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Partei"
+                "$ref" : "#/components/schemas/ParteiRequest"
               }
             }
           },
@@ -1657,9 +1805,9 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Partei"
+                  "$ref" : "#/components/schemas/ParteiResponse"
                 }
               }
             },
@@ -2060,7 +2208,7 @@
     },
     "/api/zahlungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_5",
+        "operationId" : "delete_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
