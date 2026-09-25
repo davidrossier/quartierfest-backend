@@ -4,9 +4,11 @@ import ch.quartierfest.backend.konsumationsangebot.Konsumationsangebot;
 import ch.quartierfest.backend.teilnahme.Teilnahme;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "konsumation")
 public class Konsumation {

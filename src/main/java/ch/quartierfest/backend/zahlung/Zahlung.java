@@ -3,11 +3,13 @@ package ch.quartierfest.backend.zahlung;
 import ch.quartierfest.backend.abrechnung.Abrechnung;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "zahlung")
 public class Zahlung {

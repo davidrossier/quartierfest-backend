@@ -19,9 +19,11 @@ import jakarta.persistence.UniqueConstraint;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "benutzer", uniqueConstraints = @UniqueConstraint(name = "uk_benutzer_email", columnNames = "email"))
 public class Benutzer {

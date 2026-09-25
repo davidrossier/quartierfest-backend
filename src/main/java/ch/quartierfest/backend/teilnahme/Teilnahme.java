@@ -3,12 +3,14 @@ package ch.quartierfest.backend.teilnahme;
 import ch.quartierfest.backend.einladung.Einladung;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-@Data
+@Getter
+@Setter
 @Entity
 // DB-002: Einladung 1—1 Teilnahme — DB-Constraint uk_teilnahme_einladung (V2)
 @Table(name = "teilnahme", uniqueConstraints = @UniqueConstraint(name = "uk_teilnahme_einladung", columnNames = "einladung_id"))
