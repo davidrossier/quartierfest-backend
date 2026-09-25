@@ -2,24 +2,26 @@ package ch.quartierfest.backend.zahlung;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/zahlungen")
+@RequestMapping(value = "/api/zahlungen", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class ZahlungController {
 
     private final ZahlungService zahlungService;
 
     @GetMapping
-    public List<Zahlung> findAll() {
+    public List<ZahlungResponse> findAll() {
         return zahlungService.findAll();
     }
 
     @PostMapping
-    public Zahlung create(@Valid @RequestBody Zahlung zahlung) {
-        return zahlungService.save(zahlung);
+    public ZahlungResponse create(@Valid @RequestBody ZahlungRequest request) {
+        return zahlungService.create(request);
     }
 
     @DeleteMapping("/{id}")

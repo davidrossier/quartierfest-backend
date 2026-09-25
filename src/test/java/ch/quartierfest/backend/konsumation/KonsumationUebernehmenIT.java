@@ -100,8 +100,8 @@ class KonsumationUebernehmenIT {
     void tc020_konsumationErfassenHappyPath() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/konsumationen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId),
-                        "konsumationsangebot", Map.of("id", angebotId),
+                        "teilnahmeId", teilnahmeId,
+                        "konsumationsangebotId", angebotId,
                         "anzahl", 3), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -120,8 +120,8 @@ class KonsumationUebernehmenIT {
     void tc021_konsumationErfassenAnzahlFehlt() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/konsumationen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId),
-                        "konsumationsangebot", Map.of("id", angebotId)), json), Map.class);
+                        "teilnahmeId", teilnahmeId,
+                        "konsumationsangebotId", angebotId), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
     }

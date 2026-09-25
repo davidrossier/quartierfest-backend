@@ -4,7 +4,7 @@ package ch.quartierfest.backend.abrechnung;
  * Traceability:
  *   UC: UC-012 (Abrechnung zustellen)
  *   TCs: TC-024, TC-025, TC-032
- *   Last traced: 2026-05-01
+ *   Last traced: 2026-09-25
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -30,10 +30,8 @@ import static org.assertj.core.api.Assertions.assertThat;
  * Integration tests for UC-012 – Abrechnung zustellen.
  * Covers TC-024, TC-025, TC-032.
  *
- * UC-012: zustellungsDatum und Zustellungskanal werden via POST/Upsert gesetzt.
- * POST /api/abrechnungen mit id im Body agiert als Upsert (JPA save() mit vorhandener ID).
- * REST-001-Folgearbeit (2026-07-09): Upsert soll durch einen dedizierten PUT/PATCH-Endpunkt
- * ersetzt werden (auf dem Teilnahme-Pfad bereits geblockt) — bis dahin bleibt er hier bewusst bestehen.
+ * UC-012: zustellungsDatum und Zustellungskanal werden via PUT /api/abrechnungen/{id} gesetzt (REST-003).
+ * Der frühere POST-Upsert (id im Body) ist seit API-001 Stufe 2 nicht mehr möglich (unbekanntes Feld → 400).
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")
@@ -122,7 +120,7 @@ class AbrechnungZustellenIT {
     void tc024_abrechnungZustellenKanalEmail() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId),
+                        "teilnahmeId", teilnahmeId,
                         "anteilAllgemeinkosten", 40.00,
                         "totalKonsumation", 17.00,
                         "totalBetrag", 57.00,
@@ -145,7 +143,7 @@ class AbrechnungZustellenIT {
     void tc025_abrechnungZustellenKanalTwint() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId2),
+                        "teilnahmeId", teilnahmeId2,
                         "anteilAllgemeinkosten", 60.00,
                         "totalKonsumation", 12.00,
                         "totalBetrag", 72.00,
@@ -162,13 +160,13 @@ class AbrechnungZustellenIT {
     }
 
     @Test
-    @DisplayName("TC-032 – UC-012 Zustellungsdatum nachträglich via POST/Upsert setzen")
+    @DisplayName("TC-032 – UC-012 Zustellungsdatum nachträglich via PUT setzen (REST-003)")
     @SuppressWarnings("unchecked")
-    void tc032_zustellungsDatumViaUpsert() {
+    void tc032_zustellungsDatumViaPut() {
         // Given: Abrechnung ohne zustellungsDatum anlegen
         ResponseEntity<Map> created = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId),
+                        "teilnahmeId", teilnahmeId,
                         "anteilAllgemeinkosten", 40.00,
                         "totalKonsumation", 17.00,
                         "totalBetrag", 57.00,
@@ -178,11 +176,10 @@ class AbrechnungZustellenIT {
         assertThat(created.getBody().get("zustellungsDatum")).isNull();
         long abrechnungId = ((Number) created.getBody().get("id")).longValue();
 
-        // When: zustellungsDatum via POST/Upsert (id im Body) nachträglich setzen
-        ResponseEntity<Map> updated = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
+        // When: zustellungsDatum via PUT (REST-003, Whitelist ohne Teilnahme) nachträglich setzen
+        ResponseEntity<Map> updated = http.exchange("http://localhost:" + port + "/api/abrechnungen/" + abrechnungId,
+                HttpMethod.PUT,
                 new HttpEntity<>(Map.of(
-                        "id", abrechnungId,
-                        "teilnahme", Map.of("id", teilnahmeId),
                         "anteilAllgemeinkosten", 40.00,
                         "totalKonsumation", 17.00,
                         "totalBetrag", 57.00,
