@@ -16,7 +16,7 @@
 3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren) — ✅ behoben 2026-07-09 (empirisch: 409 statt 404)
 4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen — ✅ behoben 2026-07-09 (Teilnahme-Pfad; die PUT-Endpunkte für UC-006/UC-012 sind als **REST-003** offen)
 5. **CODE-001 + DEP-001** — Quick Wins (je < 1 h) — ✅ beide behoben 2026-07-09
-6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check — ✅ behoben 2026-09-17 (Plan: `specs/API-001_Stufe-1_Plan.md`; Stufe 2 DTO-Layer bleibt als MAJOR offen)
+6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check — ✅ behoben 2026-09-17 (Plan: `specs/plans/API-001_Stufe-1_Plan.md`; Stufe 2 DTO-Layer bleibt als MAJOR offen)
 
 **Mittelfristig:**
 7. **CI-001** — E2E-Workflow (Nightly), Actuator-Health als Readiness (→ OPS-001) — ✅ behoben 2026-09-17 (Frontend `e2e.yml`, Backend `/actuator/health` + TC-047; OPS-001 Punkt 3 damit erledigt)
@@ -35,8 +35,8 @@
 JPA-Entities sind direkt der API-Contract (inkl. verschachtelter Beziehungen wie `Teilnahme → Einladung → Partei → Personen`); die TypeScript-Interfaces im Frontend werden von Hand synchron gehalten. Es gibt keine OpenAPI-Spec, keine generierten Typen und keine Contract-Tests — Drift zwischen Entity und Frontend-Model fällt erst im lokal laufenden Playwright-E2E auf (das nicht in CI läuft, → CI-001). Folgeproblem: Entity-Serialisierung erzwingt die in PERF-001 dokumentierten verschachtelten Payloads.
 
 **Empfehlung:** In zwei Stufen:
-1. ✅ **Stufe 1 (2026-09-17):** `springdoc-openapi-starter-webmvc-ui` 3.1.1; Ist-Contract versioniert in `specs/openapi.json`, Abgleich via `OpenApiContractIT` (TC-046, Update mit `OPENAPI_UPDATE=true`); Frontend generiert `src/app/api/schema.d.ts` (`openapi-typescript`, `npm run api:generate`), alle `*.model.ts` leiten ihre Response-Typen daraus ab (`Persisted<T>`-Helper, weil `id` im Entity-Schema optional ist); Frontend-CI checkt die Spec von Backend-`main` aus und schlägt bei Drift fehl (`npm run api:check`). Prod: api-docs/Swagger-UI deaktiviert, ohne Profil 401. Einschränkung: `*Payload`-Typen bleiben handgeschrieben, weil Entity = Request- und Response-Schema. Details: `specs/API-001_Stufe-1_Plan.md`.
-2. Mittelfristig DTO-Layer (Java Records je Endpunkt) einführen, beginnend bei den Endpunkten mit verschachtelten Payloads (`/api/einladungen`, `/api/teilnahmen`, `/api/abrechnungen`) — entkoppelt Frontend vom DB-Schema und löst den PERF-001-Rest.
+1. ✅ **Stufe 1 (2026-09-17):** `springdoc-openapi-starter-webmvc-ui` 3.1.1; Ist-Contract versioniert in `specs/openapi.json`, Abgleich via `OpenApiContractIT` (TC-046, Update mit `OPENAPI_UPDATE=true`); Frontend generiert `src/app/api/schema.d.ts` (`openapi-typescript`, `npm run api:generate`), alle `*.model.ts` leiten ihre Response-Typen daraus ab (`Persisted<T>`-Helper, weil `id` im Entity-Schema optional ist); Frontend-CI checkt die Spec von Backend-`main` aus und schlägt bei Drift fehl (`npm run api:check`). Prod: api-docs/Swagger-UI deaktiviert, ohne Profil 401. Einschränkung: `*Payload`-Typen bleiben handgeschrieben, weil Entity = Request- und Response-Schema. Details: `specs/plans/API-001_Stufe-1_Plan.md`.
+2. Mittelfristig DTO-Layer (Java Records je Endpunkt) einführen, beginnend bei den Endpunkten mit verschachtelten Payloads (`/api/einladungen`, `/api/teilnahmen`, `/api/abrechnungen`) — entkoppelt Frontend vom DB-Schema und löst den PERF-001-Rest. Umsetzungsplan (2026-09-25): `specs/plans/API-001_Stufe-2_Plan.md` — schliesst CODE-002, REST-002 und REST-003 mit ein; REST-003 dort erweitert auf Konsumation, Konsumationsangebot und Allgemeinausgabe (ebenfalls POST-Upsert).
 
 ---
 

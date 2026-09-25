@@ -258,7 +258,14 @@ Alle Spezifikationen liegen unter `specs/`:
 | `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |
 | `openapi.json` | Versionierter API-Contract (springdoc-Dump, via `OpenApiContractIT` abgeglichen; Quelle für die Frontend-Typen) |
-| `API-001_Stufe-1_Plan.md` | Umsetzungsplan API-001 Stufe 1 (OpenAPI, generierte Typen, Drift-Check) |
+| `plans/` | Umsetzungspläne für grössere TODO-Punkte (siehe unten) |
+
+**Umsetzungspläne** liegen unter `specs/plans/`, benannt nach dem TODO-Punkt (`<ID>_<Stufe/Thema>_Plan.md`). Ein Plan wird vor der Umsetzung angelegt, im TODO-Eintrag verlinkt und während der Umsetzung im Abschnitt «Umsetzungsnotizen» nachgeführt; nach Abschluss bleibt er als Entscheidungsdokumentation liegen.
+
+| Datei | Inhalt |
+|---|---|
+| `plans/API-001_Stufe-1_Plan.md` | API-001 Stufe 1 (OpenAPI, generierte Typen, Drift-Check) — umgesetzt 2026-09-17 |
+| `plans/API-001_Stufe-2_Plan.md` | API-001 Stufe 2 (DTO-Layer, inkl. CODE-002, REST-002, REST-003) |
 
 ## Claude Code Skills
 
