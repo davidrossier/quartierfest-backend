@@ -47,7 +47,7 @@ traceability:
 > Event-kontextabhängig; Matrix aus Teilnahmen × Konsumationsangebote des gewählten Events.
 
 - **Matrixeingabe:** Jede Zelle ist ein editierbares Zahlenfeld (`matrixWerte` Signal mit Key `teilnahmeId-angebotId`). Alle Werte werden in einem einzigen "Speichern"-Button-Klick per `forkJoin` persistiert.
-- **Upsert-Logik:** Einträge mit Anzahl > 0 werden erstellt oder aktualisiert (anhand der `konsumationIds`-Map). Einträge mit Anzahl = 0 werden gelöscht, wenn ein bestehender Datensatz vorhanden ist.
+- **Speicherlogik:** Einträge mit Anzahl > 0 werden neu per `POST` erstellt oder, wenn bereits ein Datensatz existiert (`konsumationIds`-Map), per `PUT /api/konsumationen/{id}` mit der neuen Anzahl aktualisiert (REST-003, seit 2026-09-25; vorher POST-Upsert, TC-051). Einträge mit Anzahl = 0 werden gelöscht, wenn ein bestehender Datensatz vorhanden ist.
 - **Clientseitige Validierung:** `hatUngueltigeWerte()` prüft auf negative Zahlen; das Speichern wird blockiert.
 - **Totals:** `totalFuerTeilnahme()` berechnet den Konsumationstotal pro Partei clientseitig (Anzahl × Preis).
 

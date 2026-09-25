@@ -4,7 +4,7 @@ package ch.quartierfest.backend.auth;
  * Traceability:
  *   UC: UC-014 (Benutzer anmelden) / AUTH-002 Autorisierungsmatrix
  *   TCs: TC-040, TC-047
- *   Last traced: 2026-09-17
+ *   Last traced: 2026-09-25
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -22,6 +22,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -127,7 +128,7 @@ class SecurityMatrixIT {
                 new HttpEntity<>(Map.of("email", "tc040.partei@quartier.ch",
                         "passwort", "matrix-geheim-1",
                         "rolle", "PARTEI",
-                        "partei", Map.of("id", parteiId)), bearer(orgaToken)),
+                        "parteiId", parteiId), bearer(orgaToken)),
                 Map.class);
         assertThat(benutzer.getStatusCode()).isEqualTo(HttpStatus.OK);
         benutzerId = id(benutzer.getBody());
@@ -150,6 +151,19 @@ class SecurityMatrixIT {
                 base + "/api/teilnahmen/meine", HttpMethod.GET, new HttpEntity<>(bearer(parteiToken)), String.class);
         assertThat(meine.getStatusCode()).isIn(HttpStatus.OK, HttpStatus.NOT_FOUND);
         assertThat(meine.getStatusCode()).isNotIn(HttpStatus.UNAUTHORIZED, HttpStatus.FORBIDDEN);
+
+        // 6. API-001 Stufe 2 / REST-003: die neuen PUT-Endpunkte sind ORGANISATOR-only
+        //    (Regel /api/** in SecurityConfig) — PARTEI → 403, ohne Token → 401
+        for (String ressource : List.of("einladungen", "abrechnungen", "konsumationen",
+                "konsumationsangebote", "allgemeinausgaben")) {
+            String url = base + "/api/" + ressource + "/1";
+            ResponseEntity<String> alsPartei = http.exchange(url, HttpMethod.PUT,
+                    new HttpEntity<>(Map.of(), bearer(parteiToken)), String.class);
+            assertThat(alsPartei.getStatusCode()).as("PUT %s als PARTEI", url).isEqualTo(HttpStatus.FORBIDDEN);
+            ResponseEntity<String> anonym = http.exchange(url, HttpMethod.PUT,
+                    new HttpEntity<>(Map.of(), json), String.class);
+            assertThat(anonym.getStatusCode()).as("PUT %s ohne Token", url).isEqualTo(HttpStatus.UNAUTHORIZED);
+        }
     }
 
     @Test

@@ -2,30 +2,31 @@ package ch.quartierfest.backend.event;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/events")
+@RequestMapping(value = "/api/events", produces = MediaType.APPLICATION_JSON_VALUE)
 @RequiredArgsConstructor
 public class EventController {
 
     private final EventService eventService;
 
     @GetMapping
-    public List<Event> findAll() {
+    public List<EventResponse> findAll() {
         return eventService.findAll();
     }
 
     @PostMapping
-    public Event create(@Valid @RequestBody Event event) {
-        return eventService.save(event);
+    public EventResponse create(@Valid @RequestBody EventRequest request) {
+        return eventService.create(request);
     }
 
     @PutMapping("/{id}")
-    public Event update(@PathVariable Long id, @Valid @RequestBody Event event) {
-        event.setId(id);
-        return eventService.save(event);
+    public EventResponse update(@PathVariable Long id, @Valid @RequestBody EventRequest request) {
+        return eventService.update(id, request);
     }
 
     @DeleteMapping("/{id}")

@@ -64,13 +64,13 @@ class AbrechnungErstellenIT {
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
                 Map.of("bezeichnung", "Abrechnung-Partei", "adresse", "Abrechnungsstrasse 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
-                "event", Map.of("id", eventId),
-                "partei", Map.of("id", parteiId),
+                "eventId", eventId,
+                "parteiId", parteiId,
                 "status", "ANGEMELDET",
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2)));
     }
 
     @AfterEach
@@ -100,7 +100,7 @@ class AbrechnungErstellenIT {
         //       manually here. UC-011 requires automatic calculation. No such endpoint exists.
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId),
+                        "teilnahmeId", teilnahmeId,
                         "anteilAllgemeinkosten", 40.00,
                         "totalKonsumation", 17.00,
                         "totalBetrag", 57.00,
@@ -124,15 +124,15 @@ class AbrechnungErstellenIT {
     void tc023_abrechnungErstellenTeilnahmeFehlt() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/abrechnungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", 999999),
+                        "teilnahmeId", 999999,
                         "anteilAllgemeinkosten", 40.00,
                         "totalKonsumation", 17.00,
                         "totalBetrag", 57.00,
                         "zustellungskanal", "EMAIL"), json), Map.class);
 
-        // ERROR-001: FK-Verletzung → 409 mit einheitlichem Fehler-JSON {status, message}
-        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
-        assertThat(response.getBody().get("status")).isEqualTo(409);
+        // API-001 Stufe 2 (E5): unbekannte Referenz ist ungültige Eingabe → 400 (vorher FK-Verletzung → 409)
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+        assertThat(response.getBody().get("status")).isEqualTo(400);
         assertThat((String) response.getBody().get("message")).isNotBlank();
     }
 
@@ -141,7 +141,7 @@ class AbrechnungErstellenIT {
     @SuppressWarnings("unchecked")
     void tc044_abrechnungDuplikatTeilnahmeAbgelehnt() {
         Map<String, Object> body = Map.of(
-                "teilnahme", Map.of("id", teilnahmeId),
+                "teilnahmeId", teilnahmeId,
                 "anteilAllgemeinkosten", 40.00,
                 "totalKonsumation", 17.00,
                 "totalBetrag", 57.00,

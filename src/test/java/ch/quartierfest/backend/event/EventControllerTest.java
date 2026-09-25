@@ -14,6 +14,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -31,19 +32,20 @@ class EventControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Event buildEvent() {
-        Event e = new Event();
-        e.setId(1L);
-        e.setDatum(LocalDate.of(2025, 7, 5));
-        e.setStartzeit(LocalTime.of(15, 0));
-        e.setStandort("Buchlenwiese");
-        return e;
+    private EventResponse buildEvent(String alternativerStandort) {
+        return new EventResponse(1L, LocalDate.of(2025, 7, 5), LocalTime.of(15, 0), "Buchlenwiese",
+                alternativerStandort, null, null);
+    }
+
+    private EventRequest buildRequest(String alternativerStandort) {
+        return new EventRequest(LocalDate.of(2025, 7, 5), LocalTime.of(15, 0), "Buchlenwiese",
+                alternativerStandort, null, null);
     }
 
     @Test
     @DisplayName("UC-003: GET /api/events gibt alle Events zurück")
     void getAll_returnsList() throws Exception {
-        when(eventService.findAll()).thenReturn(List.of(buildEvent()));
+        when(eventService.findAll()).thenReturn(List.of(buildEvent(null)));
 
         mockMvc.perform(get("/api/events"))
                 .andExpect(status().isOk())
@@ -53,12 +55,11 @@ class EventControllerTest {
     @Test
     @DisplayName("UC-003: POST /api/events legt einen Event an und gibt ihn zurück")
     void create_returnsSavedEvent() throws Exception {
-        Event e = buildEvent();
-        when(eventService.save(any(Event.class))).thenReturn(e);
+        when(eventService.create(any(EventRequest.class))).thenReturn(buildEvent(null));
 
         mockMvc.perform(post("/api/events")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(e)))
+                        .content(objectMapper.writeValueAsString(buildRequest(null))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(1))
                 .andExpect(jsonPath("$.standort").value("Buchlenwiese"));
@@ -67,13 +68,11 @@ class EventControllerTest {
     @Test
     @DisplayName("UC-003: PUT /api/events/{id} aktualisiert einen Event")
     void update_returnsUpdatedEvent() throws Exception {
-        Event e = buildEvent();
-        e.setAlternativerStandort("Turnhalle");
-        when(eventService.save(any(Event.class))).thenReturn(e);
+        when(eventService.update(eq(1L), any(EventRequest.class))).thenReturn(buildEvent("Turnhalle"));
 
         mockMvc.perform(put("/api/events/1")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(e)))
+                        .content(objectMapper.writeValueAsString(buildRequest("Turnhalle"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.alternativerStandort").value("Turnhalle"));
     }

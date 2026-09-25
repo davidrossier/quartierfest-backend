@@ -4,10 +4,12 @@ import ch.quartierfest.backend.event.Event;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import java.math.BigDecimal;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "konsumationsangebot")
 public class Konsumationsangebot {
@@ -17,7 +19,7 @@ public class Konsumationsangebot {
     private Long id;
 
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Event event;
 
     @NotBlank

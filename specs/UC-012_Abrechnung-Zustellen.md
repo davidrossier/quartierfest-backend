@@ -46,9 +46,9 @@ traceability:
 > **Route:** `/nachbearbeitung/abrechnungen` — `AbrechnungenVerwaltungComponent` (Angular 21, Standalone)
 > UC-012 ist in derselben Komponente wie UC-011 implementiert.
 
-- **Zustellungskanal ändern:** Dropdown-Selektion pro Zeile (`kanalAendern()`), wird mit "Speichern"-Button via erneuten POST-Upsert persistiert (`kanalSpeichern()`).
-- **Als zugestellt markieren:** `alsZugestelltMarkieren()` setzt `zustellungsDatum` auf `new Date().toISOString().substring(0, 10)` (heutiges Datum) via POST-Upsert.
-- Kein PATCH-Endpunkt benötigt; POST agiert als Upsert.
+- **Zustellungskanal ändern:** Dropdown-Selektion pro Zeile (`kanalAendern()`), wird mit "Speichern"-Button via `PUT /api/abrechnungen/{id}` persistiert (`kanalSpeichern()`).
+- **Als zugestellt markieren:** `alsZugestelltMarkieren()` setzt `zustellungsDatum` auf `new Date().toISOString().substring(0, 10)` (heutiges Datum) via `PUT /api/abrechnungen/{id}`.
+- Beide Änderungen laufen über den Whitelist-PUT (REST-003, seit 2026-09-25); die Teilnahme ist dort nicht änderbar.
 - Es gibt keine automatische Vorlage oder Dokumentgenerierung; der Versand erfolgt manuell ausserhalb des Systems.
 
 ---
@@ -140,7 +140,7 @@ Scenario: Zustellungskanal vor Versand ändern
 - [x] ~~OPEN: Bulk-Markierung?~~ → **Beantwortet:** Keine Bulk-Markierung für Zustellung implementiert (Einzelaktion via `alsZugestelltMarkieren()`). Bulk existiert nur für `bestaetigungVersendet` in UC-006.
 - [x] ~~REVIEW: Partei als `Human`-Aktor?~~ → **Beantwortet (analog UC-004):** Partei ist externer Stakeholder. Typ auf `External` korrigiert.
 - [x] ~~REVIEW: `zustellungsDatum` und Kanalanpassung ohne PATCH-Endpunkt?~~ → **Beantwortet:** Frontend nutzt POST als Upsert für beide Felder. Kein PATCH-Endpunkt benötigt.
-- [ ] **OPEN (REST-001-Folgearbeit, 2026-07-09):** Der Architekturentscheid aus REST-001 revidiert das obige Review: POST-Upsert soll generell unterbunden werden (auf dem Teilnahme-Pfad bereits geschehen, POST mit `id` → 400). Für `zustellungsDatum`/Kanalanpassung braucht es dafür zuerst einen dedizierten `PUT`/`PATCH`-Endpunkt auf `/api/abrechnungen` — bis dahin bleibt der POST-Upsert hier bewusst bestehen (Hinweis im Klassenkommentar von `AbrechnungZustellenIT`; seit 2026-09-18 als eigener Eintrag **REST-003** in `specs/TODO.md` geführt: `PUT /api/abrechnungen/{id}` mit Whitelist-DTO, danach POST mit `id` → 400, TC-032 auf PUT umschreiben).
+- [x] ~~**OPEN (REST-001-Folgearbeit, 2026-07-09):** POST-Upsert unterbinden, dafür `PUT /api/abrechnungen/{id}`.~~ → **Erledigt 2026-09-25** (REST-003, API-001 Stufe 2): `PUT /api/abrechnungen/{id}` mit Whitelist, POST mit `id` → 400 (TC-053), TC-032 auf den PUT umgeschrieben.
 
 ---
 

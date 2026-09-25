@@ -43,14 +43,14 @@ SQL logging is enabled via `spring.jpa.show-sql=true`.
 
 - **Spring Boot 4.0.3** / **Spring Framework 7.x** / **Java 21**
 - **Spring Data JPA** + **PostgreSQL** (runtime)
-- **Lombok** (`@Data`, `@RequiredArgsConstructor`) — never write boilerplate manually
+- **Lombok** (`@Getter`/`@Setter` auf Entities, `@RequiredArgsConstructor`) — never write boilerplate manually; kein `@Data` auf Entities (CODE-002)
 - **Spring WebMVC** (synchronous) — not WebFlux
 - **spring-boot-starter-validation** — Bean Validation (`@NotBlank`, `@NotNull` auf Entities; `@Valid` auf `@RequestBody`)
 - **caffeine** — In-Memory-Cache mit TTL für die Login-Drosselung (SEC-002)
 - **spring-boot-starter-flyway** + `flyway-database-postgresql` — Schema-Migrationen (DB-001); Spring Boot 4 aktiviert Flyway nur über den Starter, `flyway-core` allein reicht nicht
 - **spring-boot-starter-oauth2-resource-server** — JWT-Validierung; Eigenbau-Login (AUTH-002): Backend stellt HS256-JWTs selbst aus (`JwtEncoder`/`NimbusJwtDecoder.withSecretKey`), kein externer IdP
 - **spring-boot-starter-actuator** — nur `GET /actuator/health` exponiert (ohne Details, ohne Token; OPS-001/CI-001) als Readiness-Signal für die E2E-CI und den Betrieb
-- **springdoc-openapi-starter-webmvc-ui 3.1.1** — OpenAPI-Spec `/v3/api-docs` + Swagger-UI `/swagger-ui.html` (API-001 Stufe 1); 3.x ist die Linie für Spring Boot 4 / Jackson 3
+- **springdoc-openapi-starter-webmvc-ui 3.1.1** — OpenAPI-Spec `/v3/api-docs` + Swagger-UI `/swagger-ui.html` (API-001); 3.x ist die Linie für Spring Boot 4 / Jackson 3
 - **spring-boot-devtools** (runtime, optional)
 
 Test scope:
@@ -74,26 +74,27 @@ Test scope:
 - **Brute-Force-Drosselung (SEC-002):** `auth/LoginDrosselung` zählt Fehlversuche in-memory (Caffeine) pro E-Mail und pro Client-IP; `AuthService.login()` wirft bei Sperre `429` vor dem Credential-Check. Properties `auth.drosselung.max-fehlversuche-email=5`, `max-fehlversuche-ip=20`, `sperre-minuten=15` (0 = aus). Prod: `server.forward-headers-strategy=native` für die Client-IP hinter einem Reverse-Proxy. ITs, die Fehl-Logins provozieren, müssen `loginDrosselung.zuruecksetzen()` im `@AfterEach` aufrufen (geteilter Context).
 - **Eigenbau-JWT:** `POST /api/auth/login` (Package `auth`) prüft BCrypt-Hash und stellt ein HS256-JWT aus (Claims `sub` = Benutzer-ID, `email`, `rolle`; 12 h). Secret: `auth.jwt.secret` (prod: `AUTH_JWT_SECRET`, min. 32 Zeichen).
 - **Rollen-Mapping:** `JwtAuthenticationConverter` mappt den Claim `rolle` → `ROLE_*` (Spring-Default liest nur `scope`).
-- **Ownership (UC-016):** `@PreAuthorize("@teilnahmeZugriff.darfBearbeiten(...)")` auf `TeilnahmeService.update()` — Methoden-Security (`@EnableMethodSecurity`), wirkt in allen Profilen.
+- **Ownership (UC-016):** `@PreAuthorize("@teilnahmeZugriff.darfBearbeiten(...)")` auf `TeilnahmeService.update()` — Methoden-Security (`@EnableMethodSecurity`), wirkt in allen Profilen. Die Prüfung ist eine Repository-Abfrage (`existsByIdAndEinladungParteiId`), keine Navigation über Lazy-Beziehungen.
 - **Bootstrap:** Beim Start wird ohne vorhandenen `ORGANISATOR` ein Admin aus `auth.bootstrap.email/password` angelegt (Dev: `admin@quartierfest.local` / `quartierfest-admin`; prod: `AUTH_INITIAL_ADMIN_*`).
-- **Passwörter:** nie in API-Antworten (`@JsonIgnore` auf `passwortHash`, `passwort` ist `@Transient` WRITE_ONLY, min. 10 Zeichen). Achtung: Hibernate validiert `@Transient`-Constraints beim Persistieren — `passwort` muss beim `save()` gesetzt sein und wird erst danach geleert.
+- **Passwörter:** nie in API-Antworten — das Klartext-Passwort existiert nur in `BenutzerRequest` (`@Size(min = 10)`) und `PasswortReset`, die Entity kennt nur `passwortHash`, `BenutzerResponse` keines von beiden.
 
 ### Domänen
 
-Code is organized by domain under `ch.quartierfest.backend`. Each domain is a package with exactly 4 files:
+Code is organized by domain under `ch.quartierfest.backend`. Each domain is a package with:
 
-- **Entity** (`@Entity`, `@Data`) — JPA-mapped table
-- **Repository** (`JpaRepository<Entity, Long>`) — data access
-- **Service** (`@Service`, `@RequiredArgsConstructor`) — business logic
-- **Controller** (`@RestController`, `@RequestMapping("/api/...")`) — HTTP endpoints
+- **Entity** (`@Entity`, `@Getter`/`@Setter`) — JPA-mapped table, **nie** im API-Contract (keine Jackson-Annotationen)
+- **Repository** (`JpaRepository<Entity, Long>`) — data access; `findAll()` mit Fetch-Joins, wo die Response Referenzen liest
+- **Service** (`@Service`, `@RequiredArgsConstructor`) — business logic, `@Transactional` (lesend `readOnly`), mappt Entities auf Records
+- **Controller** (`@RestController`, `@RequestMapping(value = "/api/...", produces = JSON)`) — HTTP endpoints, nimmt nur `*Request`-Records und liefert nur `*Response`-Records
+- **Records** (API-001 Stufe 2): `XxxRequest` (POST, bei vollem Ersetzen auch PUT), `XxxUpdateRequest` (Whitelist-PUT), `XxxResponse` mit `static von(Entity)`, `XxxKurz` (eingebettete Referenz ohne Collections)
 
-All controllers expose the same three operations:
+All controllers expose:
 - `GET /api/{resource}` — list all
-- `POST /api/{resource}` — create, returns `200 OK` + saved entity
+- `POST /api/{resource}` — create, returns `200 OK` + `XxxResponse`; ein `id`-Feld im Body → `400 «Unbekanntes Feld: id»`
 - `DELETE /api/{resource}/{id}` — delete, returns `200 OK`
 
-Ausnahmen:
-- `PersonController`, `ParteiController` und `EventController` haben zusätzlich `PUT /api/{resource}/{id}` — update, returns `200 OK` + updated entity.
+Ausnahmen / Ergänzungen:
+- `PUT /api/{resource}/{id}` — update, returns `200 OK` + `XxxResponse`; unbekannte id → `404` (REST-002). Vorhanden für Person, Partei, Event, Konsumationsangebot, Allgemeinausgabe (voller `XxxRequest`) sowie Einladung, Teilnahme, Konsumation, Abrechnung (Whitelist-`XxxUpdateRequest`, Referenzen nicht änderbar; REST-003). Zahlung und Mahnung haben keinen PUT.
 - `TeilnahmeController` (UC-016): `GET /api/teilnahmen/meine` (eigene Teilnahme via JWT `sub`, nächster Event) und `PUT /api/teilnahmen/{id}` mit Whitelist-DTO `TeilnahmeUpdateRequest` (`einladung` nie änderbar; PARTEI nur eigene → sonst 403).
 - `BenutzerController` (UC-015): zusätzlich `PUT /api/benutzer/{id}/passwort` (Reset); Duplikat-E-Mail und letzter-ORGANISATOR-Löschung → `409`.
 - `AuthController` (UC-014): nur `POST /api/auth/login` → `{token}`; falsche Credentials → `401`; gesperrt (SEC-002) → `429`.
@@ -117,17 +118,18 @@ Ausnahmen:
 Enums sind als innere Klassen in der jeweiligen Entity definiert:
 `Einladung.EinladungStatus`, `Einladung.BuffetBeitrag`, `Abrechnung.Zustellungskanal`, `Zahlung.Zahlungskanal`, `Benutzer.Rolle`
 
-### API-Contract (API-001 Stufe 1)
+### API-Contract (API-001)
 
-Der Ist-Contract (Entities als Request-/Response-Schema) ist als OpenAPI-3-Spec in `specs/openapi.json` **versioniert**. `OpenApiContractIT` (TC-046, `dev`-Profil) vergleicht `GET /v3/api-docs` byte-genau mit der Datei (Keys sortiert, pretty-printed).
+Der Contract (Request-/Response-Records, Stufe 2) ist als OpenAPI-3-Spec in `specs/openapi.json` **versioniert**. `OpenApiContractIT` (TC-046, `dev`-Profil) vergleicht `GET /v3/api-docs` byte-genau mit der Datei (Keys sortiert, pretty-printed).
 
-- **Workflow bei Contract-Änderung** (Entity-Feld, Controller, DTO): im selben PR wie die Flyway-Migration die Spec neu erzeugen — sonst rot in CI:
+- **Workflow bei Contract-Änderung** (Record, Controller): im selben PR wie die Flyway-Migration die Spec neu erzeugen — sonst rot in CI:
   ```bash
   OPENAPI_UPDATE=true ./mvnw verify -Dit.test=OpenApiContractIT
   ```
 - Das Frontend generiert seine TypeScript-Typen aus dieser Datei (`npm run api:generate`) und prüft in seiner CI gegen Backend-`main` auf Drift → Backend-PR **vor** dem Frontend-PR mergen.
-- `OpenApiConfig` liefert nur Metadaten (Titel, `bearerAuth`-Schema für den Authorize-Button der Swagger-UI). Swagger-UI lokal: `http://localhost:8080/swagger-ui.html` (`dev`-Profil). Ohne Profil: 401 (fail-closed); `prod`: `springdoc.api-docs.enabled=false` → 404.
-- Stufe 2 (DTO-Layer, getrennte Request-/Response-Schemas) ist offen → `specs/TODO.md`.
+- `OpenApiConfig`: Metadaten, `bearerAuth`-Schema, Enums als eigene Schemas, `ApiError` als `4XX`-Antwort aller Operationen und ein Customizer, der in `*Response`/`*Kurz` alle Felder zu Pflichtfeldern macht, ausser sie tragen JSpecify-`@Nullable`. Swagger-UI lokal: `http://localhost:8080/swagger-ui.html` (`dev`-Profil). Ohne Profil: 401 (fail-closed); `prod`: `springdoc.api-docs.enabled=false` → 404.
+- **Konventionen (Stufe 2):** Requests referenzieren über flache IDs (`eventId`, `parteiId`, …); unbekannte Referenz-id → `400` (`Referenzen.aufloesen`), unbekannte Pfad-id → `404` (`Referenzen.laden`). `spring.jackson.deserialization.fail-on-unknown-properties=true` (unbekannte Felder → 400 mit Feldname), `spring.jackson.default-property-inclusion=non_null` (nullbare Felder fehlen in der Antwort), `spring.jpa.open-in-view=false` (Mapping nur in Service-Transaktionen). Primitive Pflicht-Booleans in Requests als `@NotNull Boolean` — Jackson 3 lehnt fehlende Primitive in Records sonst unspezifisch ab.
+- Details und Entscheide: `specs/plans/API-001_Stufe-2_Plan.md`.
 
 ### Fehlerbehandlung (ERROR-001)
 
@@ -160,10 +162,11 @@ class PersonControllerTest {
     @Test
     @DisplayName("UC-001: POST /api/persons legt eine Person an")
     void create_returnsSavedPerson() throws Exception {
-        when(personService.save(any(Person.class))).thenReturn(buildPerson());
+        when(personService.create(any(PersonRequest.class)))
+            .thenReturn(new PersonResponse(1L, "Hans", "Müller", null, null, null));
         mockMvc.perform(post("/api/persons")
                 .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(buildPerson())))
+                .content(objectMapper.writeValueAsString(new PersonRequest("Hans", "Müller", null, null, null))))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.vorname").value("Hans"));
     }
@@ -171,18 +174,18 @@ class PersonControllerTest {
 ```
 
 **Service-Tests** (`@ExtendWith(MockitoExtension.class)` — reine Mockito-Tests, kein Spring-Kontext):
-- `ParteiServiceTest` — `save()` löst `personenIds` via `PersonRepository` auf (4 Methoden)
-- `BenutzerServiceTest` — BCrypt-Hashing, Duplikat-E-Mail/letzter-ORGANISATOR → 409, Passwort-Reset (6 Methoden)
+- `ParteiServiceTest` — `create()` löst `personenIds` via `PersonRepository` auf, unbekannte Person → 400, PUT auf unbekannte id → 404 (6 Methoden)
+- `BenutzerServiceTest` — BCrypt-Hashing, Duplikat-E-Mail/letzter-ORGANISATOR → 409, unbekannte Partei → 400, Passwort-Reset (7 Methoden)
 - `AuthServiceTest` — Token-Claims, 401 bei falschen Credentials/unbekannter E-Mail, 429 bei Sperre, Zähler-Aufrufe (5 Methoden)
 - `LoginDrosselungTest` — SEC-002-Zähler mit gestellter Caffeine-`Ticker`-Uhr: Limits, Normalisierung, Ablauf, Reset (6 Methoden)
 
 **Smoke-Test**: `BackendApplicationTests.java` — Spring-Kontext-Ladetest (braucht PostgreSQL).
 
 ### Integration tests
-18 `*IT.java` Klassen: 17 je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`) plus `OpenApiContractIT` im Root-Package (TC-046, API-001).
+20 `*IT.java` Klassen: 17 je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` (z.B. `person/PersonVerwaltenIT.java`, `benutzer/BenutzerVerwaltenIT.java`) plus drei übergreifende im Root-Package: `OpenApiContractIT` (TC-046), `RestKonventionenIT` (TC-052 PUT unbekannte id → 404, TC-053 POST mit id → 400) und `AbfrageAnzahlIT` (TC-054, höchstens zwei SQL-Statements pro Listen-Endpunkt; Hibernate-Statistik wird im Test programmatisch eingeschaltet, kein eigenes Profil).
 Laufen gegen eine echte PostgreSQL-Datenbank (kein Mocking).
 Alle ITs ausser `SecurityMatrixIT` tragen `@ActiveProfiles("dev")` (offene Security-Chain, SEC-001) — byte-identisch, damit alle denselben gecachten Spring-Context teilen.
-**45 Testmethoden (TC-001..TC-047, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
+**52 Testmethoden, 74 Ausführungen inkl. Parametrisierung (TC-001..TC-054, ohne TC-003 und TC-017 die in TC-001 bzw. TC-016 integriert sind).**
 
 Auth-Besonderheiten:
 - `TeilnahmeBestaetigenIT` (TC-036/037) holt sich echte JWTs via `POST /api/auth/login` — die Ownership-403-Fälle laufen im dev-Profil (Methoden-Security)
@@ -253,12 +256,19 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 16 Use Cases |
 | `UC-001` .. `UC-016` | Einzelne Use Cases (UC-004 = Einladung, UC-005 = Teilnahme, UC-014..016 = Auth/Eigenbau-Login) |
-| `testdesign.md` | Testdesign mit TC-001..TC-047, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign mit TC-001..TC-054, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, REST-Endpunkte, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden (SonarQube-Befunde, Refactoring-Backlog) |
 | `openapi.json` | Versionierter API-Contract (springdoc-Dump, via `OpenApiContractIT` abgeglichen; Quelle für die Frontend-Typen) |
-| `API-001_Stufe-1_Plan.md` | Umsetzungsplan API-001 Stufe 1 (OpenAPI, generierte Typen, Drift-Check) |
+| `plans/` | Umsetzungspläne für grössere TODO-Punkte (siehe unten) |
+
+**Umsetzungspläne** liegen unter `specs/plans/`, benannt nach dem TODO-Punkt (`<ID>_<Stufe/Thema>_Plan.md`). Ein Plan wird vor der Umsetzung angelegt, im TODO-Eintrag verlinkt und während der Umsetzung im Abschnitt «Umsetzungsnotizen» nachgeführt; nach Abschluss bleibt er als Entscheidungsdokumentation liegen.
+
+| Datei | Inhalt |
+|---|---|
+| `plans/API-001_Stufe-1_Plan.md` | API-001 Stufe 1 (OpenAPI, generierte Typen, Drift-Check) — umgesetzt 2026-09-17 |
+| `plans/API-001_Stufe-2_Plan.md` | API-001 Stufe 2 (DTO-Layer, inkl. CODE-002, REST-002, REST-003) — umgesetzt 2026-09-25 |
 
 ## Claude Code Skills
 

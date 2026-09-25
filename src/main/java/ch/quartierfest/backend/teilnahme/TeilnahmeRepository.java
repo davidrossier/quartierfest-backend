@@ -11,9 +11,18 @@ import java.util.List;
 @Repository
 public interface TeilnahmeRepository extends JpaRepository<Teilnahme, Long> {
 
-    /** PERF-001: Buffet-Beiträge per Fetch-Join laden — eine Query statt 1+N bei GET /api/teilnahmen. */
+    /**
+     * PERF-001 / API-001 Stufe 2: Buffet-Beiträge und Einladung mit Event und Partei per Fetch-Join —
+     * eine Query statt 1+N bei GET /api/teilnahmen (TC-054).
+     */
     @Override
-    @Query("select t from Teilnahme t left join fetch t.buffetBeitraege")
+    @Query("""
+            select t from Teilnahme t
+            join fetch t.einladung e
+            join fetch e.event
+            join fetch e.partei
+            left join fetch t.buffetBeitraege
+            """)
     List<Teilnahme> findAll();
 
     /**
@@ -22,11 +31,17 @@ public interface TeilnahmeRepository extends JpaRepository<Teilnahme, Long> {
      */
     @Query("""
             select t from Teilnahme t
+            join fetch t.einladung e
+            join fetch e.event
+            join fetch e.partei
             left join fetch t.buffetBeitraege
-            where t.einladung.partei.id = :parteiId
-              and t.einladung.event.datum >= :stichtag
-            order by t.einladung.event.datum asc
+            where e.partei.id = :parteiId
+              and e.event.datum >= :stichtag
+            order by e.event.datum asc
             """)
     List<Teilnahme> findEigeneAbStichtag(@Param("parteiId") Long parteiId,
                                          @Param("stichtag") LocalDate stichtag);
+
+    /** UC-016: Ownership-Prüfung für TeilnahmeZugriff — gehört die Teilnahme zur Partei? */
+    boolean existsByIdAndEinladungParteiId(Long id, Long parteiId);
 }

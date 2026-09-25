@@ -64,15 +64,15 @@ class InkassoSicherstellenIT {
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
                 Map.of("bezeichnung", "Inkasso-Partei", "adresse", "Inkassostrasse 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
-                "event", Map.of("id", eventId),
-                "partei", Map.of("id", parteiId),
+                "eventId", eventId,
+                "parteiId", parteiId,
                 "status", "ANGEMELDET",
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2)));
         abrechnungId = id(setupPost("http://localhost:" + port + "/api/abrechnungen", Map.of(
-                "teilnahme", Map.of("id", teilnahmeId),
+                "teilnahmeId", teilnahmeId,
                 "anteilAllgemeinkosten", "40.00",
                 "totalKonsumation", "17.00",
                 "totalBetrag", "57.00",
@@ -105,7 +105,7 @@ class InkassoSicherstellenIT {
     void tc026_twintZahlungErfassen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/zahlungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "abrechnung", Map.of("id", abrechnungId),
+                        "abrechnungId", abrechnungId,
                         "zahlungskanal", "TWINT",
                         "datum", "2025-07-15",
                         "betrag", 57.00), json), Map.class);
@@ -126,7 +126,7 @@ class InkassoSicherstellenIT {
     void tc027_zahlungOhneDatum() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/zahlungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "abrechnung", Map.of("id", abrechnungId),
+                        "abrechnungId", abrechnungId,
                         "zahlungskanal", "TWINT",
                         "betrag", 57.00), json), Map.class);
 
@@ -139,7 +139,7 @@ class InkassoSicherstellenIT {
     void tc028_mahnungErfassen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/mahnungen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "abrechnung", Map.of("id", abrechnungId),
+                        "abrechnungId", abrechnungId,
                         "datum", "2025-07-20",
                         "bemerkung", "Bitte bis Ende Juli bezahlen"), json), Map.class);
 

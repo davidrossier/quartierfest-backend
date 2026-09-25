@@ -3,8 +3,8 @@ package ch.quartierfest.backend.allgemeinausgabe;
 /**
  * Traceability:
  *   UC: UC-007 (Allgemeinausgaben verwalten)
- *   TCs: TC-014, TC-015
- *   Last traced: 2026-05-01
+ *   TCs: TC-014, TC-015, TC-050
+ *   Last traced: 2026-09-25
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -26,7 +26,7 @@ import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-/** Integration tests for UC-007 – Allgemeinausgaben verwalten. TC-014, TC-015. */
+/** Integration tests for UC-007 – Allgemeinausgaben verwalten. TC-014, TC-015, TC-050. */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")
 class AllgemeinausgabeVerwaltenIT {
@@ -74,7 +74,7 @@ class AllgemeinausgabeVerwaltenIT {
     void tc014_allgemeinausgabeAnlegenHappyPath() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/allgemeinausgaben", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
+                        "eventId", eventId,
                         "beschreibung", "Getränkeeinkauf",
                         "herkunft", "Coop",
                         "betrag", "120.00"), json), Map.class);
@@ -95,9 +95,32 @@ class AllgemeinausgabeVerwaltenIT {
     void tc015_allgemeinausgabeAnlegenBetragFehlt() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/allgemeinausgaben", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
+                        "eventId", eventId,
                         "beschreibung", "Ohne Betrag"), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("TC-050 – UC-007 Allgemeinausgabe per PUT bearbeiten (REST-003, erweitert)")
+    @SuppressWarnings("unchecked")
+    void tc050_allgemeinausgabeBearbeiten() {
+        ResponseEntity<Map> angelegt = http.exchange("http://localhost:" + port + "/api/allgemeinausgaben",
+                HttpMethod.POST, new HttpEntity<>(Map.of("eventId", eventId, "beschreibung", "Kühlschrankmiete",
+                        "betrag", "120.00"), json), Map.class);
+        assertThat(angelegt.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String url = "http://localhost:" + port + "/api/allgemeinausgaben/" + angelegt.getBody().get("id");
+
+        ResponseEntity<Map> response = http.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(Map.of("eventId", eventId, "beschreibung", "Kühlschrankmiete",
+                        "herkunft", "Coop", "betrag", "150.00"), json), Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("id")).isEqualTo(angelegt.getBody().get("id"));
+        assertThat(response.getBody().get("herkunft")).isEqualTo("Coop");
+        assertThat(response.getBody().get("betrag")).isEqualTo(150.0);
+
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

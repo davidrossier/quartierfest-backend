@@ -1,6 +1,6 @@
 package ch.quartierfest.backend.konsumationsangebot;
 
-import ch.quartierfest.backend.event.Event;
+import ch.quartierfest.backend.event.EventResponse;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -16,6 +16,7 @@ import java.time.LocalTime;
 import java.util.List;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -33,44 +34,61 @@ class KonsumationsangebotControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    private Konsumationsangebot buildAngebot() {
-        Event event = new Event();
-        event.setId(1L);
-        event.setDatum(LocalDate.of(2025, 7, 5));
-        event.setStartzeit(LocalTime.of(15, 0));
-        event.setStandort("Buchlenwiese");
+    private KonsumationsangebotResponse buildAngebot(String preis) {
+        EventResponse event = new EventResponse(1L, LocalDate.of(2025, 7, 5), LocalTime.of(15, 0),
+                "Buchlenwiese", null, null, null);
+        return new KonsumationsangebotResponse(2L, event, "Bier 5dl", new BigDecimal(preis));
+    }
 
-        Konsumationsangebot k = new Konsumationsangebot();
-        k.setId(2L);
-        k.setEvent(event);
-        k.setBezeichnung("Bier 5dl");
-        k.setPreis(new BigDecimal("3.00"));
-        return k;
+    private KonsumationsangebotRequest buildRequest(String preis) {
+        return new KonsumationsangebotRequest(1L, "Bier 5dl", new BigDecimal(preis));
     }
 
     @Test
     @DisplayName("UC-008: GET /api/konsumationsangebote gibt alle Angebote zurück")
     void getAll_returnsList() throws Exception {
-        when(konsumationsangebotService.findAll()).thenReturn(List.of(buildAngebot()));
+        when(konsumationsangebotService.findAll()).thenReturn(List.of(buildAngebot("3.00")));
 
         mockMvc.perform(get("/api/konsumationsangebote"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].bezeichnung").value("Bier 5dl"))
-                .andExpect(jsonPath("$[0].preis").value(3.00));
+                .andExpect(jsonPath("$[0].preis").value(3.00))
+                .andExpect(jsonPath("$[0].event.id").value(1));
     }
 
     @Test
     @DisplayName("UC-008: POST /api/konsumationsangebote legt ein Angebot an und gibt es zurück")
     void create_returnsSavedAngebot() throws Exception {
-        Konsumationsangebot k = buildAngebot();
-        when(konsumationsangebotService.save(any(Konsumationsangebot.class))).thenReturn(k);
+        when(konsumationsangebotService.create(any(KonsumationsangebotRequest.class))).thenReturn(buildAngebot("3.00"));
 
         mockMvc.perform(post("/api/konsumationsangebote")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(k)))
+                        .content(objectMapper.writeValueAsString(buildRequest("3.00"))))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.id").value(2))
                 .andExpect(jsonPath("$.bezeichnung").value("Bier 5dl"));
+    }
+
+    @Test
+    @DisplayName("UC-008: POST ohne eventId wird mit 400 abgelehnt")
+    void create_ohneEventId_wirdAbgelehnt() throws Exception {
+        mockMvc.perform(post("/api/konsumationsangebote")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"bezeichnung\":\"Bier 5dl\",\"preis\":3.00}"))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @DisplayName("UC-008: PUT /api/konsumationsangebote/{id} aktualisiert ein Angebot (REST-003, erweitert)")
+    void update_returnsUpdatedAngebot() throws Exception {
+        when(konsumationsangebotService.update(eq(2L), any(KonsumationsangebotRequest.class)))
+                .thenReturn(buildAngebot("3.50"));
+
+        mockMvc.perform(put("/api/konsumationsangebote/2")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(buildRequest("3.50"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.preis").value(3.50));
     }
 
     @Test

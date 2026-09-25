@@ -1,17 +1,24 @@
 {
   "components" : {
     "schemas" : {
-      "Abrechnung" : {
+      "AbrechnungKurz" : {
+        "properties" : {
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "id" ],
+        "type" : "object"
+      },
+      "AbrechnungRequest" : {
         "properties" : {
           "anteilAllgemeinkosten" : {
             "type" : "number"
           },
-          "id" : {
+          "teilnahmeId" : {
             "format" : "int64",
             "type" : "integer"
-          },
-          "teilnahme" : {
-            "$ref" : "#/components/schemas/Teilnahme"
           },
           "totalBetrag" : {
             "type" : "number"
@@ -24,14 +31,64 @@
             "type" : "string"
           },
           "zustellungskanal" : {
-            "enum" : [ "TWINT", "EMAIL", "PAPIER" ],
-            "type" : "string"
+            "$ref" : "#/components/schemas/Zustellungskanal"
           }
         },
-        "required" : [ "anteilAllgemeinkosten", "teilnahme", "totalBetrag", "totalKonsumation", "zustellungskanal" ],
+        "required" : [ "anteilAllgemeinkosten", "teilnahmeId", "totalBetrag", "totalKonsumation", "zustellungskanal" ],
         "type" : "object"
       },
-      "Allgemeinausgabe" : {
+      "AbrechnungResponse" : {
+        "properties" : {
+          "anteilAllgemeinkosten" : {
+            "type" : "number"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "teilnahme" : {
+            "$ref" : "#/components/schemas/TeilnahmeKurz"
+          },
+          "totalBetrag" : {
+            "type" : "number"
+          },
+          "totalKonsumation" : {
+            "type" : "number"
+          },
+          "zustellungsDatum" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "zustellungskanal" : {
+            "$ref" : "#/components/schemas/Zustellungskanal"
+          }
+        },
+        "required" : [ "anteilAllgemeinkosten", "id", "teilnahme", "totalBetrag", "totalKonsumation", "zustellungskanal" ],
+        "type" : "object"
+      },
+      "AbrechnungUpdateRequest" : {
+        "properties" : {
+          "anteilAllgemeinkosten" : {
+            "type" : "number"
+          },
+          "totalBetrag" : {
+            "type" : "number"
+          },
+          "totalKonsumation" : {
+            "type" : "number"
+          },
+          "zustellungsDatum" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "zustellungskanal" : {
+            "$ref" : "#/components/schemas/Zustellungskanal"
+          }
+        },
+        "required" : [ "anteilAllgemeinkosten", "totalBetrag", "totalKonsumation", "zustellungskanal" ],
+        "type" : "object"
+      },
+      "AllgemeinausgabeRequest" : {
         "properties" : {
           "beschreibung" : {
             "minLength" : 1,
@@ -40,8 +97,27 @@
           "betrag" : {
             "type" : "number"
           },
+          "eventId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "herkunft" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "beschreibung", "betrag", "eventId" ],
+        "type" : "object"
+      },
+      "AllgemeinausgabeResponse" : {
+        "properties" : {
+          "beschreibung" : {
+            "type" : "string"
+          },
+          "betrag" : {
+            "type" : "number"
+          },
           "event" : {
-            "$ref" : "#/components/schemas/Event"
+            "$ref" : "#/components/schemas/EventResponse"
           },
           "herkunft" : {
             "type" : "string"
@@ -51,13 +127,46 @@
             "type" : "integer"
           }
         },
-        "required" : [ "beschreibung", "betrag", "event" ],
+        "required" : [ "beschreibung", "betrag", "event", "id" ],
         "type" : "object"
       },
-      "Benutzer" : {
+      "ApiError" : {
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          },
+          "status" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "message", "status" ]
+      },
+      "BenutzerRequest" : {
         "properties" : {
           "email" : {
             "minLength" : 1,
+            "type" : "string"
+          },
+          "parteiId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "passwort" : {
+            "maxLength" : 2147483647,
+            "minLength" : 10,
+            "type" : "string"
+          },
+          "rolle" : {
+            "$ref" : "#/components/schemas/Rolle"
+          }
+        },
+        "required" : [ "email", "passwort", "rolle" ],
+        "type" : "object"
+      },
+      "BenutzerResponse" : {
+        "properties" : {
+          "email" : {
             "type" : "string"
           },
           "id" : {
@@ -65,23 +174,43 @@
             "type" : "integer"
           },
           "partei" : {
-            "$ref" : "#/components/schemas/Partei"
-          },
-          "passwort" : {
-            "maxLength" : 2147483647,
-            "minLength" : 10,
-            "type" : "string",
-            "writeOnly" : true
+            "$ref" : "#/components/schemas/ParteiKurz"
           },
           "rolle" : {
-            "enum" : [ "ORGANISATOR", "PARTEI" ],
-            "type" : "string"
+            "$ref" : "#/components/schemas/Rolle"
           }
         },
-        "required" : [ "email", "passwort", "rolle" ],
+        "required" : [ "email", "id", "rolle" ],
         "type" : "object"
       },
-      "Einladung" : {
+      "BuffetBeitrag" : {
+        "enum" : [ "KEINER", "SALAT", "BROT_ZOPF", "DESSERT", "WEITERE" ],
+        "type" : "string"
+      },
+      "EinladungKurz" : {
+        "properties" : {
+          "anzahlPersonen" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "event" : {
+            "$ref" : "#/components/schemas/EventResponse"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "partei" : {
+            "$ref" : "#/components/schemas/ParteiKurz"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/EinladungStatus"
+          }
+        },
+        "required" : [ "event", "id", "partei", "status" ],
+        "type" : "object"
+      },
+      "EinladungRequest" : {
         "properties" : {
           "anzahlPersonen" : {
             "format" : "int32",
@@ -91,14 +220,49 @@
             "type" : "boolean"
           },
           "buffetBeitrag" : {
-            "enum" : [ "KEINER", "SALAT", "BROT_ZOPF", "DESSERT", "WEITERE" ],
+            "$ref" : "#/components/schemas/BuffetBeitrag"
+          },
+          "buffetBeitragBeschreibung" : {
             "type" : "string"
+          },
+          "eventId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hilftAufraumen" : {
+            "type" : "boolean"
+          },
+          "hilftAufstellen" : {
+            "type" : "boolean"
+          },
+          "parteiId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/EinladungStatus"
+          }
+        },
+        "required" : [ "bestaetigungVersendet", "eventId", "parteiId", "status" ],
+        "type" : "object"
+      },
+      "EinladungResponse" : {
+        "properties" : {
+          "anzahlPersonen" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "bestaetigungVersendet" : {
+            "type" : "boolean"
+          },
+          "buffetBeitrag" : {
+            "$ref" : "#/components/schemas/BuffetBeitrag"
           },
           "buffetBeitragBeschreibung" : {
             "type" : "string"
           },
           "event" : {
-            "$ref" : "#/components/schemas/Event"
+            "$ref" : "#/components/schemas/EventResponse"
           },
           "hilftAufraumen" : {
             "type" : "boolean"
@@ -111,17 +275,48 @@
             "type" : "integer"
           },
           "partei" : {
-            "$ref" : "#/components/schemas/Partei"
+            "$ref" : "#/components/schemas/ParteiKurz"
           },
           "status" : {
-            "enum" : [ "OFFEN", "ANGEMELDET", "ABGEMELDET" ],
-            "type" : "string"
+            "$ref" : "#/components/schemas/EinladungStatus"
           }
         },
-        "required" : [ "event", "partei", "status" ],
+        "required" : [ "bestaetigungVersendet", "event", "id", "partei", "status" ],
         "type" : "object"
       },
-      "Event" : {
+      "EinladungStatus" : {
+        "enum" : [ "OFFEN", "ANGEMELDET", "ABGEMELDET" ],
+        "type" : "string"
+      },
+      "EinladungUpdateRequest" : {
+        "properties" : {
+          "anzahlPersonen" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "bestaetigungVersendet" : {
+            "type" : "boolean"
+          },
+          "buffetBeitrag" : {
+            "$ref" : "#/components/schemas/BuffetBeitrag"
+          },
+          "buffetBeitragBeschreibung" : {
+            "type" : "string"
+          },
+          "hilftAufraumen" : {
+            "type" : "boolean"
+          },
+          "hilftAufstellen" : {
+            "type" : "boolean"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/EinladungStatus"
+          }
+        },
+        "required" : [ "bestaetigungVersendet", "status" ],
+        "type" : "object"
+      },
+      "EventRequest" : {
         "properties" : {
           "alternativerStandort" : {
             "type" : "string"
@@ -129,10 +324,6 @@
           "datum" : {
             "format" : "date",
             "type" : "string"
-          },
-          "id" : {
-            "format" : "int64",
-            "type" : "integer"
           },
           "standort" : {
             "minLength" : 1,
@@ -154,7 +345,57 @@
         "required" : [ "datum", "standort", "startzeit" ],
         "type" : "object"
       },
-      "Konsumation" : {
+      "EventResponse" : {
+        "properties" : {
+          "alternativerStandort" : {
+            "type" : "string"
+          },
+          "datum" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "standort" : {
+            "type" : "string"
+          },
+          "startzeit" : {
+            "format" : "time-local",
+            "type" : "string"
+          },
+          "zeitAufraumen" : {
+            "format" : "time-local",
+            "type" : "string"
+          },
+          "zeitAufstellen" : {
+            "format" : "time-local",
+            "type" : "string"
+          }
+        },
+        "required" : [ "datum", "id", "standort", "startzeit" ],
+        "type" : "object"
+      },
+      "KonsumationRequest" : {
+        "properties" : {
+          "anzahl" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "konsumationsangebotId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "teilnahmeId" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "anzahl", "konsumationsangebotId", "teilnahmeId" ],
+        "type" : "object"
+      },
+      "KonsumationResponse" : {
         "properties" : {
           "anzahl" : {
             "format" : "int32",
@@ -165,23 +406,29 @@
             "type" : "integer"
           },
           "konsumationsangebot" : {
-            "$ref" : "#/components/schemas/Konsumationsangebot"
+            "$ref" : "#/components/schemas/KonsumationsangebotKurz"
           },
           "teilnahme" : {
-            "$ref" : "#/components/schemas/Teilnahme"
+            "$ref" : "#/components/schemas/TeilnahmeKurz"
           }
         },
-        "required" : [ "anzahl", "konsumationsangebot", "teilnahme" ],
+        "required" : [ "anzahl", "id", "konsumationsangebot", "teilnahme" ],
         "type" : "object"
       },
-      "Konsumationsangebot" : {
+      "KonsumationUpdateRequest" : {
+        "properties" : {
+          "anzahl" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "anzahl" ],
+        "type" : "object"
+      },
+      "KonsumationsangebotKurz" : {
         "properties" : {
           "bezeichnung" : {
-            "minLength" : 1,
             "type" : "string"
-          },
-          "event" : {
-            "$ref" : "#/components/schemas/Event"
           },
           "id" : {
             "format" : "int64",
@@ -191,7 +438,43 @@
             "type" : "number"
           }
         },
-        "required" : [ "bezeichnung", "event", "preis" ],
+        "required" : [ "bezeichnung", "id", "preis" ],
+        "type" : "object"
+      },
+      "KonsumationsangebotRequest" : {
+        "properties" : {
+          "bezeichnung" : {
+            "minLength" : 1,
+            "type" : "string"
+          },
+          "eventId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "preis" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "bezeichnung", "eventId", "preis" ],
+        "type" : "object"
+      },
+      "KonsumationsangebotResponse" : {
+        "properties" : {
+          "bezeichnung" : {
+            "type" : "string"
+          },
+          "event" : {
+            "$ref" : "#/components/schemas/EventResponse"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "preis" : {
+            "type" : "number"
+          }
+        },
+        "required" : [ "bezeichnung", "event", "id", "preis" ],
         "type" : "object"
       },
       "LoginRequest" : {
@@ -214,12 +497,30 @@
             "type" : "string"
           }
         },
+        "required" : [ "token" ],
         "type" : "object"
       },
-      "Mahnung" : {
+      "MahnungRequest" : {
+        "properties" : {
+          "abrechnungId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "bemerkung" : {
+            "type" : "string"
+          },
+          "datum" : {
+            "format" : "date",
+            "type" : "string"
+          }
+        },
+        "required" : [ "abrechnungId", "datum" ],
+        "type" : "object"
+      },
+      "MahnungResponse" : {
         "properties" : {
           "abrechnung" : {
-            "$ref" : "#/components/schemas/Abrechnung"
+            "$ref" : "#/components/schemas/AbrechnungKurz"
           },
           "bemerkung" : {
             "type" : "string"
@@ -233,10 +534,32 @@
             "type" : "integer"
           }
         },
-        "required" : [ "abrechnung", "datum" ],
+        "required" : [ "abrechnung", "datum", "id" ],
         "type" : "object"
       },
-      "Partei" : {
+      "ParteiKurz" : {
+        "properties" : {
+          "adresse" : {
+            "type" : "string"
+          },
+          "bezeichnung" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "twintAktiv" : {
+            "type" : "boolean"
+          },
+          "twintMobilenummer" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "adresse", "bezeichnung", "id", "twintAktiv" ],
+        "type" : "object"
+      },
+      "ParteiRequest" : {
         "properties" : {
           "adresse" : {
             "minLength" : 1,
@@ -246,23 +569,12 @@
             "minLength" : 1,
             "type" : "string"
           },
-          "id" : {
-            "format" : "int64",
-            "type" : "integer"
-          },
-          "personen" : {
-            "items" : {
-              "$ref" : "#/components/schemas/Person"
-            },
-            "type" : "array"
-          },
           "personenIds" : {
             "items" : {
               "format" : "int64",
               "type" : "integer"
             },
-            "type" : "array",
-            "writeOnly" : true
+            "type" : "array"
           },
           "twintAktiv" : {
             "type" : "boolean"
@@ -271,7 +583,35 @@
             "type" : "string"
           }
         },
-        "required" : [ "adresse", "bezeichnung" ],
+        "required" : [ "adresse", "bezeichnung", "twintAktiv" ],
+        "type" : "object"
+      },
+      "ParteiResponse" : {
+        "properties" : {
+          "adresse" : {
+            "type" : "string"
+          },
+          "bezeichnung" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "personen" : {
+            "items" : {
+              "$ref" : "#/components/schemas/PersonResponse"
+            },
+            "type" : "array"
+          },
+          "twintAktiv" : {
+            "type" : "boolean"
+          },
+          "twintMobilenummer" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "adresse", "bezeichnung", "id", "personen", "twintAktiv" ],
         "type" : "object"
       },
       "PasswortReset" : {
@@ -285,14 +625,10 @@
         "required" : [ "passwort" ],
         "type" : "object"
       },
-      "Person" : {
+      "PersonRequest" : {
         "properties" : {
           "email" : {
             "type" : "string"
-          },
-          "id" : {
-            "format" : "int64",
-            "type" : "integer"
           },
           "mobilenummer" : {
             "type" : "string"
@@ -312,7 +648,87 @@
         "required" : [ "name", "vorname" ],
         "type" : "object"
       },
-      "Teilnahme" : {
+      "PersonResponse" : {
+        "properties" : {
+          "email" : {
+            "type" : "string"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "mobilenummer" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "telefonnummer" : {
+            "type" : "string"
+          },
+          "vorname" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name", "vorname" ],
+        "type" : "object"
+      },
+      "Rolle" : {
+        "enum" : [ "ORGANISATOR", "PARTEI" ],
+        "type" : "string"
+      },
+      "TeilnahmeBuffetBeitrag" : {
+        "properties" : {
+          "art" : {
+            "$ref" : "#/components/schemas/BuffetBeitrag"
+          },
+          "beschreibung" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "art" ],
+        "type" : "object"
+      },
+      "TeilnahmeKurz" : {
+        "properties" : {
+          "einladung" : {
+            "$ref" : "#/components/schemas/EinladungKurz"
+          },
+          "id" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "einladung", "id" ],
+        "type" : "object"
+      },
+      "TeilnahmeRequest" : {
+        "properties" : {
+          "anzahlPersonenEffektiv" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "buffetBeitraege" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TeilnahmeBuffetBeitrag"
+            },
+            "type" : "array"
+          },
+          "einladungId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hilftAufraumen" : {
+            "type" : "boolean"
+          },
+          "hilftAufstellen" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "einladungId" ],
+        "type" : "object"
+      },
+      "TeilnahmeResponse" : {
         "properties" : {
           "anzahlPersonenEffektiv" : {
             "format" : "int32",
@@ -325,7 +741,7 @@
             "type" : "array"
           },
           "einladung" : {
-            "$ref" : "#/components/schemas/Einladung"
+            "$ref" : "#/components/schemas/EinladungKurz"
           },
           "hilftAufraumen" : {
             "type" : "boolean"
@@ -338,19 +754,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "einladung" ],
-        "type" : "object"
-      },
-      "TeilnahmeBuffetBeitrag" : {
-        "properties" : {
-          "art" : {
-            "enum" : [ "KEINER", "SALAT", "BROT_ZOPF", "DESSERT", "WEITERE" ],
-            "type" : "string"
-          },
-          "beschreibung" : {
-            "type" : "string"
-          }
-        },
+        "required" : [ "buffetBeitraege", "einladung", "id" ],
         "type" : "object"
       },
       "TeilnahmeUpdateRequest" : {
@@ -374,10 +778,30 @@
         },
         "type" : "object"
       },
-      "Zahlung" : {
+      "ZahlungRequest" : {
+        "properties" : {
+          "abrechnungId" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "betrag" : {
+            "type" : "number"
+          },
+          "datum" : {
+            "format" : "date",
+            "type" : "string"
+          },
+          "zahlungskanal" : {
+            "$ref" : "#/components/schemas/Zahlungskanal"
+          }
+        },
+        "required" : [ "abrechnungId", "betrag", "datum", "zahlungskanal" ],
+        "type" : "object"
+      },
+      "ZahlungResponse" : {
         "properties" : {
           "abrechnung" : {
-            "$ref" : "#/components/schemas/Abrechnung"
+            "$ref" : "#/components/schemas/AbrechnungKurz"
           },
           "betrag" : {
             "type" : "number"
@@ -391,12 +815,19 @@
             "type" : "integer"
           },
           "zahlungskanal" : {
-            "enum" : [ "TWINT", "UEBERWEISUNG", "BAR" ],
-            "type" : "string"
+            "$ref" : "#/components/schemas/Zahlungskanal"
           }
         },
-        "required" : [ "abrechnung", "betrag", "datum", "zahlungskanal" ],
+        "required" : [ "abrechnung", "betrag", "datum", "id", "zahlungskanal" ],
         "type" : "object"
+      },
+      "Zahlungskanal" : {
+        "enum" : [ "TWINT", "UEBERWEISUNG", "BAR" ],
+        "type" : "string"
+      },
+      "Zustellungskanal" : {
+        "enum" : [ "TWINT", "EMAIL", "PAPIER" ],
+        "type" : "string"
       }
     },
     "securitySchemes" : {
@@ -420,16 +851,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Abrechnung"
+                    "$ref" : "#/components/schemas/AbrechnungResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "abrechnung-controller" ]
@@ -440,7 +881,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Abrechnung"
+                "$ref" : "#/components/schemas/AbrechnungRequest"
               }
             }
           },
@@ -449,13 +890,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Abrechnung"
+                  "$ref" : "#/components/schemas/AbrechnungResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "abrechnung-controller" ]
@@ -463,7 +914,7 @@
     },
     "/api/abrechnungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_11",
+        "operationId" : "delete_8",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -476,6 +927,61 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "abrechnung-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_8",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AbrechnungUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AbrechnungResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "abrechnung-controller" ]
@@ -487,16 +993,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Allgemeinausgabe"
+                    "$ref" : "#/components/schemas/AllgemeinausgabeResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "allgemeinausgabe-controller" ]
@@ -507,7 +1023,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Allgemeinausgabe"
+                "$ref" : "#/components/schemas/AllgemeinausgabeRequest"
               }
             }
           },
@@ -516,13 +1032,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Allgemeinausgabe"
+                  "$ref" : "#/components/schemas/AllgemeinausgabeResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "allgemeinausgabe-controller" ]
@@ -530,7 +1056,7 @@
     },
     "/api/allgemeinausgaben/{id}" : {
       "delete" : {
-        "operationId" : "delete_10",
+        "operationId" : "delete_7",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -543,6 +1069,61 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "allgemeinausgabe-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_7",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AllgemeinausgabeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AllgemeinausgabeResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "allgemeinausgabe-controller" ]
@@ -564,13 +1145,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "$ref" : "#/components/schemas/LoginResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "auth-controller" ]
@@ -582,16 +1173,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Benutzer"
+                    "$ref" : "#/components/schemas/BenutzerResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "benutzer-controller" ]
@@ -602,7 +1203,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Benutzer"
+                "$ref" : "#/components/schemas/BenutzerRequest"
               }
             }
           },
@@ -611,13 +1212,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Benutzer"
+                  "$ref" : "#/components/schemas/BenutzerResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "benutzer-controller" ]
@@ -625,7 +1236,7 @@
     },
     "/api/benutzer/{id}" : {
       "delete" : {
-        "operationId" : "delete_9",
+        "operationId" : "delete_11",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -638,6 +1249,16 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "benutzer-controller" ]
@@ -668,13 +1289,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Benutzer"
+                  "$ref" : "#/components/schemas/BenutzerResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "benutzer-controller" ]
@@ -686,16 +1317,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Einladung"
+                    "$ref" : "#/components/schemas/EinladungResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "einladung-controller" ]
@@ -706,7 +1347,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Einladung"
+                "$ref" : "#/components/schemas/EinladungRequest"
               }
             }
           },
@@ -715,13 +1356,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Einladung"
+                  "$ref" : "#/components/schemas/EinladungResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "einladung-controller" ]
@@ -729,7 +1380,7 @@
     },
     "/api/einladungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_8",
+        "operationId" : "delete_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -742,6 +1393,61 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "einladung-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_6",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EinladungUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EinladungResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "einladung-controller" ]
@@ -753,16 +1459,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Event"
+                    "$ref" : "#/components/schemas/EventResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "event-controller" ]
@@ -773,7 +1489,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Event"
+                "$ref" : "#/components/schemas/EventRequest"
               }
             }
           },
@@ -782,19 +1498,313 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Event"
+                  "$ref" : "#/components/schemas/EventResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "event-controller" ]
       }
     },
     "/api/events/{id}" : {
+      "delete" : {
+        "operationId" : "delete_5",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "event-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_5",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EventRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EventResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "event-controller" ]
+      }
+    },
+    "/api/konsumationen" : {
+      "get" : {
+        "operationId" : "findAll_6",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/KonsumationResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "konsumation-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_6",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KonsumationRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KonsumationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "konsumation-controller" ]
+      }
+    },
+    "/api/konsumationen/{id}" : {
+      "delete" : {
+        "operationId" : "delete_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "konsumation-controller" ]
+      },
+      "put" : {
+        "operationId" : "update_4",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KonsumationUpdateRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KonsumationResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "konsumation-controller" ]
+      }
+    },
+    "/api/konsumationsangebote" : {
+      "get" : {
+        "operationId" : "findAll_5",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/KonsumationsangebotResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "konsumationsangebot-controller" ]
+      },
+      "post" : {
+        "operationId" : "create_5",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KonsumationsangebotRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KonsumationsangebotResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
+          }
+        },
+        "tags" : [ "konsumationsangebot-controller" ]
+      }
+    },
+    "/api/konsumationsangebote/{id}" : {
       "delete" : {
         "operationId" : "delete_3",
         "parameters" : [ {
@@ -809,9 +1819,19 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
-        "tags" : [ "event-controller" ]
+        "tags" : [ "konsumationsangebot-controller" ]
       },
       "put" : {
         "operationId" : "update_3",
@@ -828,7 +1848,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Event"
+                "$ref" : "#/components/schemas/KonsumationsangebotRequest"
               }
             }
           },
@@ -837,147 +1857,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Event"
+                  "$ref" : "#/components/schemas/KonsumationsangebotResponse"
                 }
               }
             },
             "description" : "OK"
-          }
-        },
-        "tags" : [ "event-controller" ]
-      }
-    },
-    "/api/konsumationen" : {
-      "get" : {
-        "operationId" : "findAll_6",
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/Konsumation"
-                  },
-                  "type" : "array"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "tags" : [ "konsumation-controller" ]
-      },
-      "post" : {
-        "operationId" : "create_6",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/Konsumation"
-              }
-            }
           },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
+          "4XX" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Konsumation"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
-            "description" : "OK"
-          }
-        },
-        "tags" : [ "konsumation-controller" ]
-      }
-    },
-    "/api/konsumationen/{id}" : {
-      "delete" : {
-        "operationId" : "delete_7",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "format" : "int64",
-            "type" : "integer"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK"
-          }
-        },
-        "tags" : [ "konsumation-controller" ]
-      }
-    },
-    "/api/konsumationsangebote" : {
-      "get" : {
-        "operationId" : "findAll_5",
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/Konsumationsangebot"
-                  },
-                  "type" : "array"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "tags" : [ "konsumationsangebot-controller" ]
-      },
-      "post" : {
-        "operationId" : "create_5",
-        "requestBody" : {
-          "content" : {
-            "application/json" : {
-              "schema" : {
-                "$ref" : "#/components/schemas/Konsumationsangebot"
-              }
-            }
-          },
-          "required" : true
-        },
-        "responses" : {
-          "200" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Konsumationsangebot"
-                }
-              }
-            },
-            "description" : "OK"
-          }
-        },
-        "tags" : [ "konsumationsangebot-controller" ]
-      }
-    },
-    "/api/konsumationsangebote/{id}" : {
-      "delete" : {
-        "operationId" : "delete_6",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "id",
-          "required" : true,
-          "schema" : {
-            "format" : "int64",
-            "type" : "integer"
-          }
-        } ],
-        "responses" : {
-          "200" : {
-            "description" : "OK"
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "konsumationsangebot-controller" ]
@@ -989,16 +1885,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Mahnung"
+                    "$ref" : "#/components/schemas/MahnungResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "mahnung-controller" ]
@@ -1009,7 +1915,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Mahnung"
+                "$ref" : "#/components/schemas/MahnungRequest"
               }
             }
           },
@@ -1018,13 +1924,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Mahnung"
+                  "$ref" : "#/components/schemas/MahnungResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "mahnung-controller" ]
@@ -1032,7 +1948,7 @@
     },
     "/api/mahnungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_5",
+        "operationId" : "delete_10",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1045,6 +1961,16 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "mahnung-controller" ]
@@ -1056,16 +1982,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Partei"
+                    "$ref" : "#/components/schemas/ParteiResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "partei-controller" ]
@@ -1076,7 +2012,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Partei"
+                "$ref" : "#/components/schemas/ParteiRequest"
               }
             }
           },
@@ -1085,13 +2021,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Partei"
+                  "$ref" : "#/components/schemas/ParteiResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "partei-controller" ]
@@ -1112,6 +2058,16 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "partei-controller" ]
@@ -1131,7 +2087,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Partei"
+                "$ref" : "#/components/schemas/ParteiRequest"
               }
             }
           },
@@ -1140,13 +2096,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Partei"
+                  "$ref" : "#/components/schemas/ParteiResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "partei-controller" ]
@@ -1158,16 +2124,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Person"
+                    "$ref" : "#/components/schemas/PersonResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "person-controller" ]
@@ -1178,7 +2154,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Person"
+                "$ref" : "#/components/schemas/PersonRequest"
               }
             }
           },
@@ -1187,13 +2163,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Person"
+                  "$ref" : "#/components/schemas/PersonResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "person-controller" ]
@@ -1214,6 +2200,16 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "person-controller" ]
@@ -1233,7 +2229,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Person"
+                "$ref" : "#/components/schemas/PersonRequest"
               }
             }
           },
@@ -1242,13 +2238,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Person"
+                  "$ref" : "#/components/schemas/PersonResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "person-controller" ]
@@ -1260,16 +2266,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Teilnahme"
+                    "$ref" : "#/components/schemas/TeilnahmeResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "teilnahme-controller" ]
@@ -1280,7 +2296,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Teilnahme"
+                "$ref" : "#/components/schemas/TeilnahmeRequest"
               }
             }
           },
@@ -1289,13 +2305,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Teilnahme"
+                  "$ref" : "#/components/schemas/TeilnahmeResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "teilnahme-controller" ]
@@ -1307,13 +2333,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Teilnahme"
+                  "$ref" : "#/components/schemas/TeilnahmeResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "teilnahme-controller" ]
@@ -1334,6 +2370,16 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "teilnahme-controller" ]
@@ -1362,13 +2408,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Teilnahme"
+                  "$ref" : "#/components/schemas/TeilnahmeResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "teilnahme-controller" ]
@@ -1380,16 +2436,26 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
                   "items" : {
-                    "$ref" : "#/components/schemas/Zahlung"
+                    "$ref" : "#/components/schemas/ZahlungResponse"
                   },
                   "type" : "array"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "zahlung-controller" ]
@@ -1400,7 +2466,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/Zahlung"
+                "$ref" : "#/components/schemas/ZahlungRequest"
               }
             }
           },
@@ -1409,13 +2475,23 @@
         "responses" : {
           "200" : {
             "content" : {
-              "*/*" : {
+              "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Zahlung"
+                  "$ref" : "#/components/schemas/ZahlungResponse"
                 }
               }
             },
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "zahlung-controller" ]
@@ -1423,7 +2499,7 @@
     },
     "/api/zahlungen/{id}" : {
       "delete" : {
-        "operationId" : "delete_4",
+        "operationId" : "delete_9",
         "parameters" : [ {
           "in" : "path",
           "name" : "id",
@@ -1436,6 +2512,16 @@
         "responses" : {
           "200" : {
             "description" : "OK"
+          },
+          "4XX" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Fehler im einheitlichen Format (ERROR-001)"
           }
         },
         "tags" : [ "zahlung-controller" ]

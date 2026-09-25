@@ -3,8 +3,8 @@ package ch.quartierfest.backend.konsumation;
 /**
  * Traceability:
  *   UC: UC-010 (Konsumation übernehmen)
- *   TCs: TC-020, TC-021
- *   Last traced: 2026-05-01
+ *   TCs: TC-020, TC-021, TC-051
+ *   Last traced: 2026-09-25
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for UC-010 – Konsumation übernehmen.
- * Covers TC-020, TC-021.
+ * Covers TC-020, TC-021, TC-051.
  *
  * Preconditions: Event, Partei, Einladung, Teilnahme and Konsumationsangebot
  * are created in @BeforeEach.
@@ -64,15 +64,15 @@ class KonsumationUebernehmenIT {
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
                 Map.of("bezeichnung", "Konsumation-Partei", "adresse", "Konsumationsweg 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
-                "event", Map.of("id", eventId),
-                "partei", Map.of("id", parteiId),
+                "eventId", eventId,
+                "parteiId", parteiId,
                 "status", "ANGEMELDET",
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2)));
         angebotId = id(setupPost("http://localhost:" + port + "/api/konsumationsangebote",
-                Map.of("event", Map.of("id", eventId), "bezeichnung", "Bier 5dl", "preis", "3.00")));
+                Map.of("eventId", eventId, "bezeichnung", "Bier 5dl", "preis", "3.00")));
     }
 
     @AfterEach
@@ -100,8 +100,8 @@ class KonsumationUebernehmenIT {
     void tc020_konsumationErfassenHappyPath() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/konsumationen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId),
-                        "konsumationsangebot", Map.of("id", angebotId),
+                        "teilnahmeId", teilnahmeId,
+                        "konsumationsangebotId", angebotId,
                         "anzahl", 3), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
@@ -120,9 +120,35 @@ class KonsumationUebernehmenIT {
     void tc021_konsumationErfassenAnzahlFehlt() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/konsumationen", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "teilnahme", Map.of("id", teilnahmeId),
-                        "konsumationsangebot", Map.of("id", angebotId)), json), Map.class);
+                        "teilnahmeId", teilnahmeId,
+                        "konsumationsangebotId", angebotId), json), Map.class);
 
         assertThat(response.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+    }
+
+    @Test
+    @DisplayName("TC-051 – UC-010 Anzahl einer Konsumation per PUT ändern (REST-003, erweitert)")
+    @SuppressWarnings("unchecked")
+    void tc051_konsumationAnzahlAendern() {
+        ResponseEntity<Map> angelegt = http.exchange("http://localhost:" + port + "/api/konsumationen",
+                HttpMethod.POST, new HttpEntity<>(Map.of("teilnahmeId", teilnahmeId,
+                        "konsumationsangebotId", angebotId, "anzahl", 3), json), Map.class);
+        assertThat(angelegt.getStatusCode()).isEqualTo(HttpStatus.OK);
+        String url = "http://localhost:" + port + "/api/konsumationen/" + angelegt.getBody().get("id");
+
+        ResponseEntity<Map> response = http.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(Map.of("anzahl", 5), json), Map.class);
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("anzahl")).isEqualTo(5);
+        assertThat(((Map<String, Object>) response.getBody().get("teilnahme")).get("id"))
+                .isEqualTo(teilnahmeId.intValue());
+
+        // Teilnahme und Angebot einer Matrix-Zelle sind fix → unbekanntes Feld → 400
+        ResponseEntity<Map> mitAngebot = http.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(Map.of("anzahl", 1, "konsumationsangebotId", angebotId), json), Map.class);
+        assertThat(mitAngebot.getStatusCode()).isEqualTo(HttpStatus.BAD_REQUEST);
+
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }
 }

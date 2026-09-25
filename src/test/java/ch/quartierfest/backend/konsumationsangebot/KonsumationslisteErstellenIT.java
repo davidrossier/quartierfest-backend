@@ -65,13 +65,13 @@ class KonsumationslisteErstellenIT {
         parteiId = id(setupPost("http://localhost:" + port + "/api/parteien",
                 Map.of("bezeichnung", "Liste-Partei", "adresse", "Listenweg 1", "twintAktiv", false)));
         einladungId = id(setupPost("http://localhost:" + port + "/api/einladungen", Map.of(
-                "event", Map.of("id", eventId),
-                "partei", Map.of("id", parteiId),
+                "eventId", eventId,
+                "parteiId", parteiId,
                 "status", "ANGEMELDET",
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         angebotId = id(setupPost("http://localhost:" + port + "/api/konsumationsangebote",
-                Map.of("event", Map.of("id", eventId), "bezeichnung", "Bier 5dl", "preis", "3.00")));
+                Map.of("eventId", eventId, "bezeichnung", "Bier 5dl", "preis", "3.00")));
     }
 
     @AfterEach
@@ -114,7 +114,7 @@ class KonsumationslisteErstellenIT {
 
         // Given: create a Teilnahme for the ANGEMELDET Einladung from setup
         Map<String, Object> teilnahme = setupPost("http://localhost:" + port + "/api/teilnahmen",
-                Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2));
+                Map.of("einladungId", einladungId, "anzahlPersonenEffektiv", 2));
 
         ResponseEntity<String> response = http.exchange(
                 "http://localhost:" + port + "/api/teilnahmen", HttpMethod.GET, null, String.class);

@@ -70,7 +70,7 @@ traceability:
 2. Der Organisator wählt "Neue Ausgabe erfassen".
 3. Der Organisator gibt Beschreibung (Pflicht) und Betrag (Pflicht) ein sowie optional die Herkunft (z.B. Lieferant, Laden). *(→ E1 bei fehlendem Pflichtfeld, → E2 bei ungültigem Betrag)*
 4. Das System speichert die Ausgabe und zeigt die aktualisierte Ausgabenliste mit Gesamtbetrag.
-5. Der Organisator kann bestehende Ausgaben bearbeiten oder löschen.
+5. Der Organisator kann bestehende Ausgaben bearbeiten (`PUT /api/allgemeinausgaben/{id}`, TC-050) oder löschen.
 
 ---
 

@@ -3,10 +3,12 @@ package ch.quartierfest.backend.mahnung;
 import ch.quartierfest.backend.abrechnung.Abrechnung;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDate;
 
-@Data
+@Getter
+@Setter
 @Entity
 @Table(name = "mahnung")
 public class Mahnung {
@@ -16,7 +18,7 @@ public class Mahnung {
     private Long id;
 
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Abrechnung abrechnung;
 
     @NotNull

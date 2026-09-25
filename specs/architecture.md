@@ -10,8 +10,8 @@ graph LR
     subgraph Spring Boot Backend
         direction TB
         SEC[SecurityConfig\nCORS + JWT-Filter]
-        Controller[Controller\nREST API]
-        Service[Service\nGeschäftslogik]
+        Controller[Controller\nREST API\nRequest-/Response-Records]
+        Service[Service\nGeschäftslogik, Transaktion,\nMapping Entity → Record]
         Repository[Repository\nJPA / Spring Data]
         SEC --> Controller
         Controller --> Service
@@ -195,14 +195,14 @@ erDiagram
 | Person              | `/api/persons`                | ✓   | ✓    | ✓   | ✓      | — |
 | Partei              | `/api/parteien`               | ✓   | ✓    | ✓   | ✓      | — |
 | Event               | `/api/events`                 | ✓   | ✓    | ✓   | ✓      | — |
-| Einladung           | `/api/einladungen`            | ✓   | ✓    | —   | ✓      | — |
+| Einladung           | `/api/einladungen`            | ✓   | ✓    | ✓   | ✓      | PUT: Whitelist Rückmeldung/Bestätigung, Event/Partei fix (REST-003) |
 | Teilnahme           | `/api/teilnahmen`             | ✓   | ✓    | —   | ✓      | — |
 | Teilnahme (PARTEI)  | `/api/teilnahmen/meine`       | ✓   | —    | —   | —      | UC-016: eigene Teilnahme zum nächsten Event (JWT `sub`) |
 | Teilnahme (update)  | `/api/teilnahmen/{id}`        | —   | —    | ✓   | —      | UC-016: Whitelist-DTO; PARTEI nur eigene (403 sonst), ORGANISATOR alle |
-| Konsumationsangebot | `/api/konsumationsangebote`   | ✓   | ✓    | —   | ✓      | — |
-| Konsumation         | `/api/konsumationen`          | ✓   | ✓    | —   | ✓      | — |
-| Allgemeinausgabe    | `/api/allgemeinausgaben`      | ✓   | ✓    | —   | ✓      | — |
-| Abrechnung          | `/api/abrechnungen`           | ✓   | ✓    | —   | ✓      | — |
+| Konsumationsangebot | `/api/konsumationsangebote`   | ✓   | ✓    | ✓   | ✓      | — |
+| Konsumation         | `/api/konsumationen`          | ✓   | ✓    | ✓   | ✓      | PUT: nur `anzahl` (REST-003, erweitert) |
+| Allgemeinausgabe    | `/api/allgemeinausgaben`      | ✓   | ✓    | ✓   | ✓      | — |
+| Abrechnung          | `/api/abrechnungen`           | ✓   | ✓    | ✓   | ✓      | PUT: Kanal, Zustelldatum, Beträge; Teilnahme fix (REST-003) |
 | Zahlung             | `/api/zahlungen`              | ✓   | ✓    | —   | ✓      | — |
 | Mahnung             | `/api/mahnungen`              | ✓   | ✓    | —   | ✓      | — |
 | Benutzer            | `/api/benutzer`               | ✓   | ✓    | ✓   | ✓      | UC-015: PUT nur `/api/benutzer/{id}/passwort` (Reset); Duplikat-E-Mail/letzter ORGANISATOR → 409 |
@@ -228,7 +228,7 @@ erDiagram
 | TEST-001 | Tests | 17 der 18 IT-Klassen duplizieren `setUp()`-Boilerplate (14 davon zusätzlich `tryDelete()`) | MINOR | Offen |
 | DB-001 | Deployment | `ddl-auto=update` gilt auch in prod — keine Flyway/Liquibase-Migrationen | MAJOR | ✅ Behoben 2026-09-08 (Flyway, `ddl-auto=validate`) |
 | SEC-001 | Sicherheit | Security-Default fail-open: ohne `prod`-Profil ist die API komplett offen | MAJOR | ✅ Behoben 2026-07-09 |
-| API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | Stufe 1 ✅ 2026-09-17 (springdoc, `specs/openapi.json` + TC-046, Frontend-Typen generiert, CI-Drift-Check); Stufe 2 (DTO-Layer) offen |
+| API-001 | Architektur | API-Contract nur implizit: Entities als JSON, kein OpenAPI/DTO-Layer, TS-Typen handgepflegt | MAJOR | ✅ Behoben: Stufe 1 2026-09-17 (springdoc, `specs/openapi.json` + TC-046, Frontend-Typen generiert, CI-Drift-Check); Stufe 2 2026-09-25 (Request-/Response-Records, TC-052..TC-054; Plan `specs/plans/API-001_Stufe-2_Plan.md`) |
 | CI-001 | CI/CD | Playwright-E2E (UC-001..016) läuft nur lokal, nicht in CI | MAJOR | ✅ Behoben 2026-09-17 (Frontend `e2e.yml`: nächtlich + manuell, Backend-`main` oder `backend_ref`, Readiness `/actuator/health`) |
 | ERROR-001 | Code-Qualität | Kein `@RestControllerAdvice` — FK-Fehler liefern 500, kein einheitliches Fehler-JSON | MINOR | ✅ Behoben 2026-07-09 |
 | REST-001 | Architektur | Frontend aktualisiert Teilnahmen via POST-Upsert statt `PUT /api/teilnahmen/{id}` | MINOR | ✅ Behoben 2026-07-09 (Teilnahme-Pfad) |
@@ -245,9 +245,9 @@ erDiagram
 | UX-001 | Usability | Meldungen nach 3–4 s weg, kein `aria-live`, `window.prompt` unmaskiert, UC-010-Matrix mobil ungeprüft | MINOR | Offen |
 | SEC-003 | Sicherheit | Kein Audit-Trail für Abrechnungen/Zahlungen/Mahnungen | MINOR | Offen |
 | DATA-001 | Datenschutz | Kein Löschkonzept/Aufbewahrungsregel für Personendaten (revDSG) | MINOR | Offen |
-| REST-002 | Architektur | `PUT` auf Person/Partei/Event legt bei nicht-existenter id still an statt 404 (`setId` + `save`) | MINOR | Offen |
-| CODE-002 | Code-Qualität | Lombok `@Data` auf allen 13 JPA-Entities — `equals`/`hashCode`/`toString` über Kollektionen (Lazy-Loading-/Set-Fallen) | MINOR | Offen |
-| REST-003 | Architektur | Kein `PUT` auf `/api/einladungen` und `/api/abrechnungen` — UC-006/UC-012 hängen am POST-Upsert (REST-001-Folgearbeit) | MINOR | Offen |
+| REST-002 | Architektur | `PUT` auf Person/Partei/Event legt bei nicht-existenter id still an statt 404 (`setId` + `save`) | MINOR | ✅ Behoben 2026-09-25 (API-001 Stufe 2, TC-052) |
+| CODE-002 | Code-Qualität | Lombok `@Data` auf allen 13 JPA-Entities — `equals`/`hashCode`/`toString` über Kollektionen (Lazy-Loading-/Set-Fallen) | MINOR | ✅ Behoben 2026-09-25 (`@Getter`/`@Setter`, API-001 Stufe 2) |
+| REST-003 | Architektur | Kein `PUT` auf `/api/einladungen` und `/api/abrechnungen` — UC-006/UC-012 hängen am POST-Upsert (REST-001-Folgearbeit) | MINOR | ✅ Behoben 2026-09-25, erweitert auf Konsumation, Konsumationsangebot, Allgemeinausgabe (API-001 Stufe 2, TC-013, TC-032, TC-048..TC-053) |
 | API-002 | Architektur | Listen-Endpunkte ohne `?eventId=`-Filter — alle Events werden geladen, Frontend filtert clientseitig | MINOR | Offen |
 | CI-002 | CI/CD | Qualitäts-Pipeline nie als Ganzes geprüft: kein Lint-Gate, Teststufen nicht getrennt, E2E nicht PR-blockierend, Traceability-Matrizen ohne automatischen Check | MAJOR | Offen |
 
@@ -255,7 +255,7 @@ erDiagram
 
 ## Traceability
 
-> Automatisch generiert durch Traceability-Manager — Stand: 2026-06-12, manuell nachgeführt 2026-09-18 (TC-041..TC-047)
+> Automatisch generiert durch Traceability-Manager — Stand: 2026-06-12, manuell nachgeführt 2026-09-18 (TC-041..TC-047) und 2026-09-25 (TC-048..TC-054, API-001 Stufe 2)
 > UC-Abdeckung: 14/16 vollständig | 2 mit Lücken (UC-009, UC-011)
 
 ### UC × Implementierung × Test
@@ -265,15 +265,15 @@ erDiagram
 | UC-001 | Personendaten verwalten | GET/POST/PUT/DELETE `/api/persons` | TC-001, TC-002, TC-029 | PersonVerwaltenIT | ✅ Vollständig |
 | UC-002 | Parteien verwalten | GET/POST/PUT/DELETE `/api/parteien` | TC-004, TC-005, TC-030 | ParteiVerwaltenIT | ✅ Vollständig |
 | UC-003 | Event anlegen | GET/POST/PUT/DELETE `/api/events` | TC-006, TC-007, TC-031 | EventAnlegenIT | ✅ Vollständig |
-| UC-004 | Einladung verwalten | GET/POST/DELETE `/api/einladungen` | TC-008, TC-009, TC-010, TC-042 | EinladungVerwaltenIT | ✅ Vollständig |
+| UC-004 | Einladung verwalten | GET/POST/PUT/DELETE `/api/einladungen` | TC-008, TC-009, TC-010, TC-042, TC-048 | EinladungVerwaltenIT | ✅ Vollständig |
 | UC-005 | Teilnahme erfassen | GET/POST/DELETE `/api/teilnahmen`, PUT `/api/teilnahmen/{id}` (seit REST-001) | TC-011, TC-012, TC-033, TC-041, TC-043 | TeilnahmeVerwaltenIT | ✅ Vollständig |
-| UC-006 | Bestätigung versenden | POST `/api/einladungen` (Upsert, Flag `bestaetigungVersendet`) | TC-013 | BestaetigungVerwaltenIT | ✅ Vollständig |
-| UC-007 | Allgemeinausgaben verwalten | GET/POST/DELETE `/api/allgemeinausgaben` | TC-014, TC-015 | AllgemeinausgabeVerwaltenIT | ✅ Vollständig |
-| UC-008 | Konsumationsangebot verwalten | GET/POST/DELETE `/api/konsumationsangebote` | TC-016 | KonsumationsangebotVerwaltenIT | ✅ Vollständig |
+| UC-006 | Bestätigung versenden | PUT `/api/einladungen/{id}` (Flag `bestaetigungVersendet`, REST-003) | TC-013 | BestaetigungVerwaltenIT | ✅ Vollständig |
+| UC-007 | Allgemeinausgaben verwalten | GET/POST/PUT/DELETE `/api/allgemeinausgaben` | TC-014, TC-015, TC-050 | AllgemeinausgabeVerwaltenIT | ✅ Vollständig |
+| UC-008 | Konsumationsangebot verwalten | GET/POST/PUT/DELETE `/api/konsumationsangebote` | TC-016, TC-049 | KonsumationsangebotVerwaltenIT | ✅ Vollständig |
 | UC-009 | Konsumationsliste erstellen | GET `/api/konsumationsangebote`, GET `/api/teilnahmen` | TC-018, TC-019 | KonsumationslisteErstellenIT | ⚠ Teilimpl. |
-| UC-010 | Konsumation übernehmen | GET/POST/DELETE `/api/konsumationen` | TC-020, TC-021 | KonsumationUebernehmenIT | ✅ Vollständig |
+| UC-010 | Konsumation übernehmen | GET/POST/PUT/DELETE `/api/konsumationen` | TC-020, TC-021, TC-051 | KonsumationUebernehmenIT | ✅ Vollständig |
 | UC-011 | Abrechnung erstellen | GET/POST/DELETE `/api/abrechnungen` | TC-022, TC-023, TC-044 | AbrechnungErstellenIT | ⚠ Teilimpl. |
-| UC-012 | Abrechnung zustellen | POST `/api/abrechnungen` (Upsert, Felder `zustellungskanal`, `zustellungsDatum`) | TC-024, TC-025, TC-032 | AbrechnungZustellenIT | ✅ Vollständig |
+| UC-012 | Abrechnung zustellen | PUT `/api/abrechnungen/{id}` (Felder `zustellungskanal`, `zustellungsDatum`, REST-003) | TC-024, TC-025, TC-032 | AbrechnungZustellenIT | ✅ Vollständig |
 | UC-013 | Inkasso sicherstellen | GET/POST/DELETE `/api/zahlungen`, `/api/mahnungen` | TC-026, TC-027, TC-028 | InkassoSicherstellenIT | ✅ Vollständig |
 | UC-014 | Benutzer anmelden | POST `/api/auth/login` | TC-038, TC-040, TC-045 | BenutzerAnmeldenIT, SecurityMatrixIT | ✅ Vollständig |
 | UC-015 | Benutzer verwalten | GET/POST/DELETE `/api/benutzer`, PUT `/api/benutzer/{id}/passwort` | TC-034, TC-035, TC-039 | BenutzerVerwaltenIT | ✅ Vollständig |
@@ -281,11 +281,11 @@ erDiagram
 
 > **Unit-Test-Abdeckung (zusätzlich):** 13 `*ControllerTest.java`-Klassen (`@WebMvcTest`) decken die HTTP-Schicht aller UC-Domänen ab. Drei Service-Tests (`ParteiServiceTest`, `BenutzerServiceTest`, `AuthServiceTest`) testen die Geschäftslogik von UC-002 bzw. UC-014/015; `LoginDrosselungTest` deckt die SEC-002-Komponente ab. Diese Tests sind nicht TC-gebunden, referenzieren UCs aber via `@DisplayName("UC-XXX: ...")`.
 >
-> **Nicht UC-gebundene ITs:** TC-040 + TC-047 (`SecurityMatrixIT`, Autorisierungsmatrix und Actuator-Health), TC-046 (`OpenApiContractIT`, API-001-Contract).
+> **Nicht UC-gebundene ITs:** TC-040 + TC-047 (`SecurityMatrixIT`, Autorisierungsmatrix und Actuator-Health), TC-046 (`OpenApiContractIT`, API-001-Contract), TC-052 + TC-053 (`RestKonventionenIT`, PUT → 404 und POST mit `id` → 400), TC-054 (`AbfrageAnzahlIT`, keine N+1-Queries).
 
 ### Offene Traceability-Lücken
 
 - **UC-009** (Konsumationsliste erstellen): Kein dedizierter `GET /api/events/{id}/konsumationsliste`-Endpunkt; Frontend kombiniert Daten clientseitig. → Empfehlung: Endpunkt für Event-spezifische Konsumationsansicht implementieren
 - **UC-011** (Abrechnung erstellen): Berechnung von `anteilAllgemeinkosten` / `totalKonsumation` nur im Frontend; das API nimmt die Beträge unvalidiert entgegen. → Empfehlung: Berechnungslogik im `AbrechnungService` kapseln (BIZ-001)
-- **UC-006 / UC-012** (Bestätigung versenden / Abrechnung zustellen): technisch vollständig, aber über den in REST-001 verworfenen POST-Upsert; `PUT`-Endpunkte fehlen (REST-003)
+- **UC-006 / UC-012** (Bestätigung versenden / Abrechnung zustellen): ✅ Behoben 2026-09-25 — laufen über `PUT /api/einladungen/{id}` bzw. `PUT /api/abrechnungen/{id}` (REST-003, API-001 Stufe 2)
 - **AUTH-002** (UC-014/015/016): ✅ Behoben 2026-06-12 — Eigenbau-Login, Benutzer-Domain und Teilnahme-Bestätigung vollständig implementiert und getestet (TC-034..TC-040). DEPLOY-003 (CI/CD) ist seit 2026-07-06 ebenfalls behoben

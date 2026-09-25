@@ -29,10 +29,11 @@ public class TeilnahmeZugriff {
         if (benutzerId == null) {
             return false;
         }
+        // API-001 Stufe 2 (E8): Abfrage statt Navigation Teilnahme → Einladung → Partei, damit die Prüfung
+        // ohne Transaktion und mit Lazy-Beziehungen funktioniert (Partei-Proxy: getId() lädt nicht nach)
         return benutzerRepository.findById(benutzerId)
                 .map(Benutzer::getPartei)
-                .flatMap(partei -> teilnahmeRepository.findById(teilnahmeId)
-                        .map(t -> t.getEinladung().getPartei().getId().equals(partei.getId())))
+                .map(partei -> teilnahmeRepository.existsByIdAndEinladungParteiId(teilnahmeId, partei.getId()))
                 .orElse(false);
     }
 
