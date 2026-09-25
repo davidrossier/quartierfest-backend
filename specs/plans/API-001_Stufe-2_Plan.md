@@ -1,6 +1,6 @@
 # API-001 Stufe 2 – DTO-Layer (Request-/Response-Records), Entkopplung vom DB-Schema
 
-> Stand: 2026-09-25, am selben Tag nach kritischer Prüfung revidiert (siehe «Revision»). Umsetzungsplan zu `TODO.md` → API-001 (Stufe 2). Baut auf Stufe 1 auf (`specs/plans/API-001_Stufe-1_Plan.md`).
+> Stand: 2026-09-25, am selben Tag nach kritischer Prüfung revidiert (siehe «Revision») und umgesetzt (siehe «Umsetzungsnotizen»). Umsetzungsplan zu `TODO.md` → API-001 (Stufe 2). Baut auf Stufe 1 auf (`specs/plans/API-001_Stufe-1_Plan.md`).
 > Branch (beide Repos): `feature/api-001-dto-stufe-2`
 
 ## Ziel
@@ -239,21 +239,49 @@ gh workflow run e2e.yml --ref feature/api-001-dto-stufe-2 -f backend_ref=feature
 
 ## Abnahme (Definition of Done)
 
-- [ ] Kein Controller nimmt oder liefert eine JPA-Entity: `grep -rn "@RequestBody" src/main/java` zeigt nur `*Request`-Records, die Rückgabetypen sind `*Response` oder `void`.
-- [ ] Entities ohne Jackson-Annotationen und ohne `@Transient`-Felder; kein `@Data` mehr auf Entities.
-- [ ] Alle Service-Methoden transaktional; `TeilnahmeZugriff` ohne Navigation über Entity-Beziehungen.
-- [ ] Alle Beziehungen lazy, `spring.jpa.open-in-view=false`, alle ITs grün.
-- [ ] Query-Anzahl-Test für `GET /api/abrechnungen` und `GET /api/einladungen` grün (PERF-001-Rest behoben).
-- [ ] Kein POST-Upsert mehr: fünf neue PUTs, PUT auf unbekannte id → 404 auf allen PUT-Endpunkten, POST mit `id` → 400 auf allen Ressourcen.
-- [ ] TC-040 deckt die neuen PUTs ab; TC-036 und TC-037 (PARTEI-Weg) nach A5 grün.
-- [ ] `specs/openapi.json` enthält Request- und Response-Schemas getrennt, `ApiError` und `application/json`.
-- [ ] Frontend: `Persisted<>` und alle handgeschriebenen `*Payload`-Interfaces gelöscht; `api:check`, Vitest, Production-Build grün.
-- [ ] E2E-Workflow auf den Feature-Branches grün, danach beide PRs ohne Nachtlauf dazwischen gemergt.
-- [ ] Doku in beiden Repos nachgeführt (A8, B5).
+- [x] Kein Controller nimmt oder liefert eine JPA-Entity: `grep -rn "@RequestBody" src/main/java` zeigt nur `*Request`-Records (plus `LoginRequest`, `PasswortReset`), die Rückgabetypen sind `*Response` oder `void`.
+- [x] Entities ohne Jackson-Annotationen und ohne `@Transient`-Felder; kein `@Data` mehr auf Entities.
+- [x] Alle Service-Methoden transaktional; `TeilnahmeZugriff` ohne Navigation über Entity-Beziehungen.
+- [x] Alle Beziehungen lazy, `spring.jpa.open-in-view=false`, alle ITs grün.
+- [x] Query-Anzahl-Test (TC-054) für Einladungen, Teilnahmen, Abrechnungen, Zahlungen und Parteien grün (PERF-001-Rest behoben).
+- [x] Kein POST-Upsert mehr: fünf neue PUTs, PUT auf unbekannte id → 404 auf allen PUT-Endpunkten (TC-052), POST mit `id` → 400 auf allen zwölf Ressourcen (TC-053).
+- [x] TC-040 deckt die neuen PUTs ab; TC-036 und TC-037 (PARTEI-Weg) nach A5 grün.
+- [x] `specs/openapi.json` enthält Request- und Response-Schemas getrennt, `ApiError` und nur noch `application/json`.
+- [x] Frontend: `Persisted<>` und alle handgeschriebenen `*Payload`-Interfaces gelöscht; `api:check` (inkl. Negativtest), Vitest 27/27, Production-Build grün.
+- [ ] E2E-Workflow auf den Feature-Branches grün, danach beide PRs ohne Nachtlauf dazwischen gemergt. Lokal ist die Suite grün (61 passed, 1 skipped); CI-Lauf und Merge stehen aus.
+- [x] Doku in beiden Repos nachgeführt (A8, B5).
 
-## Umsetzungsnotizen
+## Umsetzungsnotizen (2026-09-25)
 
-_(während der Umsetzung ergänzen, insbesondere die Spike-Ergebnisse aus A0)_
+**Ergebnis:** Backend 83 Unit-Tests und 74 IT-Ausführungen (52 Methoden, 20 Klassen) grün; Frontend Vitest 27/27, Production-Build, Drift-Check und Playwright lokal 61 passed / 1 skipped.
+
+**Spike (A0)** — im ersten Umsetzungsschritt mit Person, Event und Konsumationsangebot beantwortet statt separat:
+- **E7 angepasst:** springdoc 3.1.1 setzt für Records ohne Bean-Validation kein `required`. Der Customizer findet die Records per Classpath-Scan und macht alle Komponenten ohne JSpecify-`@Nullable` zu Pflichtfeldern. Nullbare Felder bleiben **optional** statt «required + `type: [T, "null"]`», und `spring.jackson.default-property-inclusion=non_null` lässt sie in der Antwort weg. Damit stimmt der TypeScript-Typ `feld?: T` exakt mit der Laufzeit überein, ohne `oneOf`-Konstrukte für nullbare `$ref`-Felder.
+- **E6 bestätigt:** `spring.jackson.deserialization.fail-on-unknown-properties=true` greift unter Boot 4 / Jackson 3. Die Standardmeldung war «Failed to read request»; `GlobalExceptionHandler.handleHttpMessageNotReadable` meldet jetzt «Unbekanntes Feld: <name>». Rückwirkung auf noch nicht umgestellte Ressourcen: keine, die Property konnte direkt global gesetzt werden.
+- **E8 bestätigt:** OSIV ließ sich nach der letzten Ressource ohne weitere Anpassung abschalten; `LazyInitializationException` trat nicht auf.
+
+**Abweichungen vom Plan:**
+- **Jackson 3 und primitive Booleans:** Ein fehlendes primitives `boolean` in einem Record-Request scheitert unter Jackson 3 mit einer unspezifischen 400, noch bevor unbekannte Felder gemeldet werden. `ParteiRequest.twintAktiv` sowie `bestaetigungVersendet` in den Einladungs-Requests sind deshalb `@NotNull Boolean` (sauberer Validierungsfehler, Pflichtfeld im Schema). Aufgefallen durch TC-053.
+- **Fehler-Schema:** `ApiError` hängt als eine `4XX`-Antwort an allen Operationen, nicht als fünf einzelne Codes. Welche Codes konkret auftreten, dokumentiert das Testdesign; die Spec bleibt kompakter.
+- **Commits:** fünf Ressourcen-Commits statt elf (Querschnitt + Person/Event/Konsumationsangebot; Allgemeinausgabe/Partei/Benutzer; Einladung; Teilnahme; Konsumation/Abrechnung/Zahlung/Mahnung), jeder mit grünem `./mvnw verify`.
+- **Zusätzlich:** `GET /api/benutzer` mit Fetch-Join auf die Partei; unbekannte `personenIds` einer Partei → 400 statt stillem Verwerfen (E5 konsequent angewendet); `/api/auth/login` liefert ebenfalls `application/json`.
+- **Testnummern:** TC-048 (Einladung-Rückmeldung per PUT), TC-049 bis TC-051 (PUT Konsumationsangebot, Allgemeinausgabe, Konsumation), TC-052 (PUT → 404, acht Endpunkte), TC-053 (POST mit `id` → 400, zwölf Ressourcen), TC-054 (Query-Anzahl). Der Einladungs-PUT-Happy-Path steckt in TC-013 und TC-048; ein separater Test für den Abrechnungs-PUT war neben TC-032 nicht nötig.
+
+**Messwerte TC-054** (lokale Dev-DB mit Testdaten, vor A5 → nach A5):
+
+| Endpunkt | Statements vorher | nachher |
+|---|---|---|
+| `GET /api/einladungen` | 35 | ≤ 2 |
+| `GET /api/teilnahmen` | 19 | ≤ 2 |
+| `GET /api/abrechnungen` | 16 | ≤ 2 |
+| `GET /api/zahlungen` | 13 | ≤ 2 |
+
+**Frontend:**
+- Alle `*.model.ts` sind Aliase; die Komponenten-Templates brauchten keine Pfadänderung (E3 hat gehalten). Geändert haben sich nur die Payload-Aufbauten (flache IDs) und die Update-Aufrufe in fünf Komponenten.
+- **Neue E2E-Tests** für das Bearbeiten in UC-007, UC-008 und UC-010 — vorher gab es für diese Wege weder IT noch E2E.
+- **Befund:** Die E2E-Dateien werden von keiner CI-Stufe typgeprüft (Playwright transpiliert nur). Die Hilfen nutzen jetzt `satisfies XxxRequest`, das greift aber erst mit einem `tsc`-Schritt über `e2e/`. Ein lokaler Lauf zeigt einen bestehenden Typfehler in `e2e/specs/UC-005_Teilnahme-Verwalten.spec.ts:108`. Als Beifang bei QUAL-001 in `specs/TODO.md` erfasst.
+- **Möglicher Folgeschritt:** `abrechnungen-verwaltung` lädt weiterhin alle Parteien nur für `twintAktiv`; seit Stufe 2 steckt das Feld bereits in `teilnahme.einladung.partei`. Bewusst nicht mitgeändert, gehört zu BIZ-001, wenn die Berechnung ins Backend wandert.
+
 
 ## Aufwand (Schätzung)
 

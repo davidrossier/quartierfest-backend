@@ -1,6 +1,6 @@
 # Technische Schulden
 
-> Stand: 2026-09-18. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09, Lücken-Review TODO.md ↔ Code/Specs 2026-09-18.
+> Stand: 2026-09-25. Quellen: SonarQube-Analyse, Clean-Code-Review, Deployment-Analyse, AUTH-002-Spec-Session (revidiert 2026-06-12: Eigenbau statt Auth0), Repo-Review Frontend+Backend 2026-07-06, Multi-Perspektiven-Review (BA/Architektur/Dev/Test/Security/UX/Data/DevOps) 2026-07-09, Lücken-Review TODO.md ↔ Code/Specs 2026-09-18.
 > UC-spezifische Punkte sind in den jeweiligen `UC-*.md`-Open-Items erfasst.
 > Architektur-/Infrastruktur-Übersicht → `specs/architecture.md` (Abschnitt "Bekannte technische Schulden").
 
@@ -14,31 +14,21 @@
 
 **Hoher Nutzen, geringer Aufwand (nächster Sprint):**
 3. **ERROR-001** — `@RestControllerAdvice` (danach TC-012/TC-023 auf 404 korrigieren) — ✅ behoben 2026-07-09 (empirisch: 409 statt 404)
-4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen — ✅ behoben 2026-07-09 (Teilnahme-Pfad; die PUT-Endpunkte für UC-006/UC-012 sind als **REST-003** offen)
+4. **REST-001** — POST-Upsert unterbinden, Frontend auf `update()` umstellen — ✅ behoben 2026-07-09 (Teilnahme-Pfad; die PUT-Endpunkte für UC-006/UC-012 folgten mit **REST-003**, ✅ 2026-09-25)
 5. **CODE-001 + DEP-001** — Quick Wins (je < 1 h) — ✅ beide behoben 2026-07-09
-6. **API-001 Stufe 1** — springdoc + generierte Frontend-Typen mit Drift-Check — ✅ behoben 2026-09-17 (Plan: `specs/plans/API-001_Stufe-1_Plan.md`; Stufe 2 DTO-Layer bleibt als MAJOR offen)
+6. **API-001** — Stufe 1 springdoc + generierte Frontend-Typen mit Drift-Check — ✅ behoben 2026-09-17; Stufe 2 DTO-Layer — ✅ behoben 2026-09-25 (Pläne: `specs/plans/API-001_Stufe-1_Plan.md`, `specs/plans/API-001_Stufe-2_Plan.md`)
 
 **Mittelfristig:**
 7. **CI-001** — E2E-Workflow (Nightly), Actuator-Health als Readiness (→ OPS-001) — ✅ behoben 2026-09-17 (Frontend `e2e.yml`, Backend `/actuator/health` + TC-047; OPS-001 Punkt 3 damit erledigt)
 8. **BIZ-001** — UC-011-Berechnung ins Backend verlagern (fachlich wichtigste Lücke) inkl. `AbrechnungServiceTest` (TEST-003); UC-009-Endpunkt und Event-Filter (API-002)
 9. **CI-002 + QUAL-001** — gesamte Qualitäts-Pipeline durchgehend prüfen (Linting → Unit → IT → Contract → E2E → Coverage → Traceability-Check in CI); QUAL-001 (angular-eslint, Prettier-Check, Dependabot, Coverage als CI-Artifact, `playwright-report/` aus Git nehmen) geht darin auf
-10. **REFACT-001/002 + TEST-001/002 + REST-003** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen; REST-002 (PUT-404) und REST-003 (PUT für Einladung/Abrechnung) als Beifang der Controller-Basisklasse, CODE-002 (`@Data` → `@Getter`/`@Setter`) spätestens mit API-001 Stufe 2
+10. **REFACT-001/002 + TEST-001/002** — Basisklassen/`MeldungService`; Meldungs-UX/a11y (UX-001) gleich mitlösen. REST-002, REST-003 und CODE-002 sind mit API-001 Stufe 2 erledigt (2026-09-25); REFACT-001 nach dem DTO-Layer neu beurteilen
 11. **OPS-001, DATA-001, SEC-003** — Deployment (inkl. Nginx-`X-Forwarded-For` für SEC-002)/Backups dokumentieren, Löschkonzept, Audit-Trail-Entscheid
 12. **TEST-004** — Frontend-Unit-Tests für `shared/sortierung.ts` und `computed`-Ableitungen; günstig, aber ohne Blocker-Charakter, deshalb zuletzt
 
 ---
 
 ## MAJOR
-
-### API-001 – API-Contract nur implizit (kein OpenAPI, kein DTO-Layer) — Stufe 1 ✅ `2026-09-17`, Stufe 2 offen
-
-JPA-Entities sind direkt der API-Contract (inkl. verschachtelter Beziehungen wie `Teilnahme → Einladung → Partei → Personen`); die TypeScript-Interfaces im Frontend werden von Hand synchron gehalten. Es gibt keine OpenAPI-Spec, keine generierten Typen und keine Contract-Tests — Drift zwischen Entity und Frontend-Model fällt erst im lokal laufenden Playwright-E2E auf (das nicht in CI läuft, → CI-001). Folgeproblem: Entity-Serialisierung erzwingt die in PERF-001 dokumentierten verschachtelten Payloads.
-
-**Empfehlung:** In zwei Stufen:
-1. ✅ **Stufe 1 (2026-09-17):** `springdoc-openapi-starter-webmvc-ui` 3.1.1; Ist-Contract versioniert in `specs/openapi.json`, Abgleich via `OpenApiContractIT` (TC-046, Update mit `OPENAPI_UPDATE=true`); Frontend generiert `src/app/api/schema.d.ts` (`openapi-typescript`, `npm run api:generate`), alle `*.model.ts` leiten ihre Response-Typen daraus ab (`Persisted<T>`-Helper, weil `id` im Entity-Schema optional ist); Frontend-CI checkt die Spec von Backend-`main` aus und schlägt bei Drift fehl (`npm run api:check`). Prod: api-docs/Swagger-UI deaktiviert, ohne Profil 401. Einschränkung: `*Payload`-Typen bleiben handgeschrieben, weil Entity = Request- und Response-Schema. Details: `specs/plans/API-001_Stufe-1_Plan.md`.
-2. Mittelfristig DTO-Layer (Java Records je Endpunkt) einführen, beginnend bei den Endpunkten mit verschachtelten Payloads (`/api/einladungen`, `/api/teilnahmen`, `/api/abrechnungen`) — entkoppelt Frontend vom DB-Schema und löst den PERF-001-Rest. Umsetzungsplan (2026-09-25): `specs/plans/API-001_Stufe-2_Plan.md` — schliesst CODE-002, REST-002 und REST-003 mit ein; REST-003 dort erweitert auf Konsumation, Konsumationsangebot und Allgemeinausgabe (ebenfalls POST-Upsert).
-
----
 
 ### BIZ-001 – UC-011: Abrechnungs-Berechnung nur im Frontend, Backend rechnet und validiert nicht (fachlich wichtigste Lücke) *(Review 2026-07-09, präzisiert 2026-09-18)*
 
@@ -110,6 +100,8 @@ Es gibt kein Dockerfile, kein Deploy-Skript und keine Beschreibung, wie Jar + An
 
 **Empfehlung:** Abstrakte `BaseCrudController<T, ID>` und `BaseCrudService<T, ID, R extends JpaRepository<T, ID>>` Basisklassen einführen. `Person-`, `Partei-` und `EventController` erben zusätzlich `PUT`.
 
+**Nachtrag 2026-09-25:** Seit API-001 Stufe 2 unterscheiden sich die Controller und Services durch Records, Referenz-Auflösung und Whitelist-PUTs; der identische Boilerplate ist deutlich kleiner. Vor der Umsetzung neu beurteilen, ob sich eine Basisklasse noch lohnt.
+
 ---
 
 ### TEST-001 – IT-Test-Boilerplate ohne Basisklasse
@@ -167,6 +159,8 @@ SonarQube lief einmalig manuell (2026-05-01). Frontend hat kein ESLint; Prettier
 
 **Beifang (2026-09-18):** Im Frontend-Repo sind `playwright-report/index.html` und `test-results/.last-run.json` versioniert und nicht in der `.gitignore` — jeder lokale E2E-Lauf macht den Working Tree schmutzig und lädt zum versehentlichen Commit ein (die CI lädt den Report bereits als Artifact hoch, im Repo hat er nichts verloren).
 
+**Beifang (2026-09-25, API-001 Stufe 2):** Die Playwright-Dateien (`e2e/**/*.ts`) werden von keiner Stufe typgeprüft — Playwright transpiliert nur. Die E2E-Hilfen nutzen seit Stufe 2 die generierten Contract-Typen (`satisfies XxxRequest`); das schützt aber erst, wenn ein `tsc --noEmit` über `e2e/` in der CI läuft. Ein lokaler Lauf zeigt einen bestehenden Typfehler in `e2e/specs/UC-005_Teilnahme-Verwalten.spec.ts:108` und fehlende Node-Typen in `playwright.config.ts`.
+
 **Empfehlung:** Frontend: `ng add angular-eslint` + `npx prettier --check .` als CI-Steps; `playwright-report/` und `test-results/` in die `.gitignore` aufnehmen und per `git rm --cached` aus dem Index entfernen. Beide Repos: Dependabot aktivieren (`.github/dependabot.yml` für npm bzw. maven + github-actions). Optional: SonarCloud (gratis für öffentliche Repos) oder `-Dspotbugs` in die Backend-CI; JaCoCo-Reports (`actions/upload-artifact`) und Vitest-Coverage (`--coverage`) als CI-Artifact.
 
 ---
@@ -209,39 +203,45 @@ Das System speichert Namen, Adressen, Telefonnummern und Zahlungsdaten von Quart
 
 ---
 
-### REST-002 – PUT wirkt als Upsert: stilles Anlegen bei nicht-existenter id *(Clean-Code-Review 2026-07-09)*
-
-`PersonController`, `ParteiController` und `EventController` implementieren `update()` als `entity.setId(id); service.save(entity)` — ein `PUT` auf eine nicht-existente id legt still einen neuen Datensatz an, statt 404 zu liefern (JPA-`merge`-Semantik). Nebeneffekt: Das Request-Objekt wird im Controller mutiert. `TeilnahmeController` (Whitelist-DTO mit Existenzprüfung → 404) und `BenutzerController` machen es korrekt vor.
-
-**Empfehlung:** In den drei Services eine Update-Methode mit Existenzprüfung einführen (`findById(id).orElseThrow(→ 404 via ResponseStatusException)`), Controller darauf umstellen. Der `GlobalExceptionHandler` (ERROR-001) liefert das einheitliche Fehler-JSON. Je ein IT-Fall «PUT auf nicht-existente id → 404» (analog TC-041). Passt als Beifang zu REFACT-001.
-
----
-
-### CODE-002 – Lombok `@Data` auf allen 13 JPA-Entities *(Clean-Code-Review 2026-07-09)*
-
-`@Data` generiert `equals`/`hashCode`/`toString` über **alle** Felder — bei `Partei.personen` (`@OneToMany`) und `Teilnahme.buffetBeitraege` (`@ElementCollection`) also über Kollektionen. Klassische JPA-Fallen: `toString` in Logs kann Lazy-Loading auslösen (`LazyInitializationException` ausserhalb der Session), `hashCode` ist über den Entity-Lebenszyklus instabil (id `null` → gesetzt), Entities in `Set`/`Map` verhalten sich dadurch falsch. Bisher folgenlos, weil Entities kaum in Sets landen — es ist aber eine stille Mine.
-
-**Empfehlung:** `@Data` durch `@Getter`/`@Setter` ersetzen; `equals`/`hashCode` id-basiert (oder weglassen), `toString` ohne Beziehungsfelder (`@ToString.Exclude`). Mechanische Änderung über alle 13 Entities in einem Commit, `./mvnw verify` deckt Regressionen ab. Spätestens im Zuge von API-001 Stufe 2 (DTO-Layer) erledigen.
-
----
-
-### REST-003 – Kein PUT für Einladung und Abrechnung: UC-006/UC-012 hängen am POST-Upsert *(REST-001-Folgearbeit 2026-07-09, als eigener Eintrag 2026-09-18)*
-
-REST-001 hat den POST-Upsert nur auf dem Teilnahme-Pfad unterbunden. `EinladungController` und `AbrechnungController` haben keinen `PUT`-Endpunkt; das Frontend setzt `bestaetigungVersendet` (UC-006, `markiereVersendet()`/`alleMarkieren()`) sowie `zustellungsDatum`/`zustellungskanal` (UC-012, `alsZugestelltMarkieren()`) weiterhin per `POST` mit gesetzter `id` — genau das Muster, das REST-001 architektonisch verworfen hat. Solange die Endpunkte fehlen, kann der POST dort nicht geblockt werden; die Situation ist bisher nur im REST-001-«Behoben»-Eintrag, in den Klassenkommentaren von `BestaetigungVerwaltenIT`/`AbrechnungZustellenIT` und in den Open Items von UC-006/UC-012 festgehalten und fehlt in jeder Liste offener Punkte.
-
-**Empfehlung:** `PUT /api/einladungen/{id}` und `PUT /api/abrechnungen/{id}` mit Whitelist-DTO analog `TeilnahmeUpdateRequest` (Einladung: `status`, `bestaetigungVersendet`; Abrechnung: `zustellungskanal`, `zustellungsDatum`, optional die drei Beträge für die manuelle Übersteuerung aus BIZ-001), Existenzprüfung → 404 (wie REST-002). Danach `POST` mit `id` auf beiden Ressourcen mit 400 ablehnen (analog TC-041), Frontend-Services auf `update()` umstellen, TC-013/TC-032 auf den PUT umschreiben. Der Contract ändert sich → `specs/openapi.json` neu erzeugen (API-001). Passt als Beifang zur Controller-Basisklasse aus REFACT-001.
-
----
-
 ### API-002 – Listen-Endpunkte ohne Event-Filter *(testdesign.md-Open-Item, als eigener Eintrag 2026-09-18)*
 
 Alle Listen-Endpunkte (`GET /api/einladungen`, `/api/teilnahmen`, `/api/konsumationsangebote`, `/api/konsumationen`, `/api/allgemeinausgaben`, `/api/abrechnungen`, `/api/zahlungen`, `/api/mahnungen`) liefern sämtliche Datensätze über alle Events; jede Verwaltungs-Komponente filtert clientseitig über den `EventKontextService`. Das ist funktional korrekt, skaliert aber mit jedem weiteren Festjahr linear (Payload-Grösse, PERF-001-Rest) und ist der Grund, warum UC-009 als «teilweise implementiert» gilt. `KonsumationslisteErstellenIT` (TC-018/TC-019) hält die Lücke als TODO-Kommentar fest.
 
-**Empfehlung:** Optionaler Query-Parameter `?eventId={id}` auf den event-gebundenen Listen (Repository-Methoden `findByEventId` bzw. Fetch-Join über `teilnahme.einladung.event`), Frontend-Services reichen die aktuelle Event-Auswahl durch. Zusammen mit API-001 Stufe 2 (DTOs) umsetzen, damit die Response-Typen nur einmal angefasst werden; `GET /api/events/{id}/konsumationsliste` aus BIZ-001 wird damit zum Spezialfall.
+**Empfehlung:** Optionaler Query-Parameter `?eventId={id}` auf den event-gebundenen Listen (Repository-Methoden `findByEventId` bzw. Fetch-Join über `teilnahme.einladung.event`), Frontend-Services reichen die aktuelle Event-Auswahl durch. Die Response-Typen sind seit API-001 Stufe 2 (2026-09-25) vorbereitet: alle event-gebundenen Antworten tragen die Event-Referenz, der Filter ist rein additiv. `GET /api/events/{id}/konsumationsliste` aus BIZ-001 wird damit zum Spezialfall.
 
 ---
 
 ## Behoben
+
+### API-001 – API-Contract nur implizit (kein OpenAPI, kein DTO-Layer) ✅ Stufe 1 `2026-09-17`, Stufe 2 `2026-09-25`
+
+JPA-Entities waren direkt der API-Contract (inkl. verschachtelter Beziehungen wie `Teilnahme → Einladung → Partei → Personen`); die TypeScript-Interfaces im Frontend wurden von Hand synchron gehalten, Drift fiel erst im E2E auf. Folgeproblem: verschachtelte Payloads mit Lazy-Loading bei der Serialisierung (PERF-001-Rest).
+
+1. **Stufe 1 (2026-09-17):** springdoc 3.1.1, Contract versioniert in `specs/openapi.json` (TC-046), Frontend generiert `schema.d.ts` und prüft in der CI auf Drift. Plan: `specs/plans/API-001_Stufe-1_Plan.md`.
+2. **Stufe 2 (2026-09-25):** DTO-Layer. Plan und Umsetzungsnotizen: `specs/plans/API-001_Stufe-2_Plan.md`.
+   - Controller nehmen `*Request`-Records und liefern `*Response`-Records; Referenzen als `*Kurz`-Records ohne Collections, Pfade fürs Frontend unverändert. Requests referenzieren über flache IDs.
+   - Unbekannte Referenz → 400 (vorher 409 via FK), unbekannte JSON-Felder → 400 mit Feldname, `null`-Felder werden weggelassen; `OpenApiCustomizer` markiert Response-Pflichtfelder, `ApiError` steht als `4XX` in der Spec.
+   - Alle Services transaktional, alle To-one-Beziehungen lazy, `open-in-view=false`, Fetch-Joins in den Listen-Abfragen — TC-054 misst höchstens zwei Statements pro Listen-Endpunkt (vorher bis 35).
+   - Frontend: alle `*.model.ts` sind Schema-Aliase; `Persisted<>` und die handgeschriebenen Payload-Typen sind entfernt.
+   - Beifang: CODE-002, REST-002, REST-003 (siehe unten).
+
+### REST-003 – Kein PUT für Einladung und Abrechnung: UC-006/UC-012 hingen am POST-Upsert ✅ `2026-09-25`
+
+REST-001 hatte den POST-Upsert nur auf dem Teilnahme-Pfad unterbunden. **Bei der Planung von API-001 Stufe 2 erweitert:** Auch Konsumation (UC-010, Matrix), Konsumationsangebot (UC-008) und Allgemeinausgabe (UC-007) wurden im Frontend per POST mit `id` aktualisiert.
+
+**Umsetzung (API-001 Stufe 2):** `PUT` auf Einladung (Whitelist inkl. der Rückmeldungsfelder aus UC-004, nicht nur `status`/`bestaetigungVersendet` wie ursprünglich empfohlen; Event/Partei fix), Abrechnung (Kanal, Zustelldatum, Beträge; Teilnahme fix), Konsumation (nur `anzahl`), Konsumationsangebot und Allgemeinausgabe (voller Request). POST mit `id` → 400 auf allen Ressourcen (TC-053), PUT auf unbekannte id → 404 (TC-052). TC-013 und TC-032 auf PUT umgeschrieben, neu TC-048..TC-051; Frontend-Services mit `update()`, E2E-Tests für das Bearbeiten in UC-007/008/010.
+
+### REST-002 – PUT wirkte als Upsert: stilles Anlegen bei nicht-existenter id ✅ `2026-09-25`
+
+`PersonController`, `ParteiController` und `EventController` implementierten `update()` als `setId(id)` + `save()`.
+
+**Umsetzung (API-001 Stufe 2):** Services laden die Entity über `Referenzen.laden()` → 404 «… nicht gefunden.» und übertragen die Felder aus dem Request-Record. Gilt für alle PUT-Endpunkte (TC-052).
+
+### CODE-002 – Lombok `@Data` auf den JPA-Entities ✅ `2026-09-25`
+
+`@Data` generierte `equals`/`hashCode`/`toString` über alle Felder inkl. Kollektionen (Lazy-Loading-Falle in `toString`, instabiler `hashCode`).
+
+**Umsetzung (API-001 Stufe 2):** `@Getter`/`@Setter` auf den zwölf Entities, `equals`/`hashCode` weggelassen (Objektidentität); das Embeddable `TeilnahmeBuffetBeitrag` bleibt Wertobjekt mit `@Data`. Kein Test stützte sich auf Entity-Gleichheit.
 
 ### CI-001 – Playwright-E2E läuft nicht in CI ✅ `2026-09-17`
 
@@ -286,7 +286,7 @@ Befund beim Umsetzen: Hibernate hatte für die `@OneToOne`-Beziehungen (`teilnah
 
 Behoben auf dem Teilnahme-Pfad: Frontend nutzt `teilnahmeService.update(id, dto)` mit `TeilnahmeUpdatePayload` (Whitelist ohne `einladung`; `id` aus `TeilnahmePayload` entfernt); Backend lehnt `POST /api/teilnahmen` mit gesetzter `id` mit 400 ab (Fehlerformat aus ERROR-001, Verweis auf den PUT). Neu TC-041 in `TeilnahmeVerwaltenIT` + Slice-Test in `TeilnahmeControllerTest`; Playwright UC-005/UC-016 lokal grün (6/6).
 
-**Folgearbeit:** UC-006/UC-012 nutzen dasselbe Upsert-Muster (`bestaetigungVersendet`, `zustellungsDatum`), haben aber keinen PUT-Endpunkt — seit 2026-09-18 als eigener offener Eintrag **REST-003** geführt.
+**Folgearbeit:** UC-006/UC-012 nutzen dasselbe Upsert-Muster (`bestaetigungVersendet`, `zustellungsDatum`), hatten aber keinen PUT-Endpunkt — ab 2026-09-18 als eigener Eintrag **REST-003** geführt, ✅ behoben 2026-09-25 mit API-001 Stufe 2.
 
 ---
 
@@ -348,6 +348,8 @@ Vollständiger Konsistenz-Check aller Docs/Specs gegen den Code; behobene Drifts
 - API-Contract unverändert (OSIV bleibt aktiv, Collections werden weiterhin serialisiert)
 
 **Bewusst offen geblieben:** Verschachtelte Payloads (z.B. `GET /api/einladungen` → `partei.personen`, `GET /api/abrechnungen` → `teilnahme.buffetBeitraege`) laden die Collections weiterhin pro Zeile — neu lazy bei der Serialisierung statt eager beim Query, gleiche Query-Anzahl wie vorher. Echte Behebung bräuchte DTOs oder `@EntityGraph` pro Endpunkt.
+
+**Nachtrag 2026-09-25:** Mit API-001 Stufe 2 behoben — Referenzen ohne Collections, alle Beziehungen lazy, OSIV aus, Fetch-Joins; TC-054 sichert höchstens zwei Statements pro Listen-Endpunkt ab.
 
 ---
 

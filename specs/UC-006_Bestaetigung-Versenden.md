@@ -46,7 +46,7 @@ traceability:
 
 - **Ansichtsinhalt:** Buffet-Zusammenstellung (gruppiert nach Beitragstyp, mit Partei-Namen und Beschreibung), Konsumationsangebot mit Preisen, Anzahl noch nicht versendeter Bestätigungen (`unversendeteAnzahl`). Die Buffet-Daten werden aus `GET /api/teilnahmen` gelesen (`buffetBeitraege`-Liste je Teilnahme), **nicht** aus den Einladungen.
 - **Warnung:** Wenn kein Konsumationsangebot für den Event erfasst ist, zeigt `keinAngebot`-Signal einen Warnhinweis.
-- **`bestaetigungVersendet` setzen:** Das Frontend setzt das Flag via erneuten `POST`-Aufruf (Upsert-Mechanismus) auf `true` — es wird kein PATCH-Endpunkt benötigt.
+- **`bestaetigungVersendet` setzen:** Das Frontend setzt das Flag via `PUT /api/einladungen/{id}` (Whitelist ohne Event/Partei) auf `true` (REST-003, seit 2026-09-25; vorher POST-Upsert).
 - **Einzeln markieren:** `markiereVersendet(einladung)` — setzt `bestaetigungVersendet = true` für eine Einladung.
 - **Alle markieren:** `alleMarkieren()` — setzt via `forkJoin` alle noch nicht markierten Einladungen auf `bestaetigungVersendet = true`.
 - Es gibt keine PDF-Generierung; der Versand ist vollständig manuell ausserhalb des Systems.
@@ -129,7 +129,7 @@ Scenario: Bestätigung ohne Konsumationsangebot zeigt Warnung
 - [x] ~~OPEN: Individuell oder Rundschreiben?~~ → **Beantwortet:** Das Frontend markiert jede Einladung **individuell** (`markiereVersendet()`), bietet aber auch eine Bulk-Markierung aller unversendeten Bestätigungen (`alleMarkieren()`).
 - [x] ~~REVIEW: Partei als `Human`-Aktor?~~ → **Beantwortet (analog UC-004):** Partei ist externer Stakeholder, kein primärer Systemakteur. Typ auf `External` korrigiert.
 - [x] ~~REVIEW: `bestaetigungVersendet` ohne PATCH-Endpunkt?~~ → **Beantwortet:** Das Frontend nutzt den bestehenden `POST`-Endpunkt als Upsert (`einladungService.save({id: ..., bestaetigungVersendet: true, ...})`). Kein PATCH-Endpunkt benötigt.
-- [ ] **OPEN (REST-001-Folgearbeit, 2026-07-09):** Der Architekturentscheid aus REST-001 revidiert das obige Review: POST-Upsert soll generell unterbunden werden (auf dem Teilnahme-Pfad bereits geschehen, POST mit `id` → 400). Für das Setzen von `bestaetigungVersendet` braucht es dafür zuerst einen dedizierten `PUT`/`PATCH`-Endpunkt auf `/api/einladungen` — bis dahin bleibt der POST-Upsert hier bewusst bestehen (Hinweis im Klassenkommentar von `BestaetigungVerwaltenIT`; seit 2026-09-18 als eigener Eintrag **REST-003** in `specs/TODO.md` geführt: `PUT /api/einladungen/{id}` mit Whitelist-DTO, danach POST mit `id` → 400, TC-013 auf PUT umschreiben).
+- [x] ~~**OPEN (REST-001-Folgearbeit, 2026-07-09):** POST-Upsert unterbinden, dafür `PUT /api/einladungen/{id}`.~~ → **Erledigt 2026-09-25** (REST-003, API-001 Stufe 2): `PUT /api/einladungen/{id}` mit Whitelist, POST mit `id` → 400 (TC-053), TC-013 auf den PUT umgeschrieben.
 
 ---
 

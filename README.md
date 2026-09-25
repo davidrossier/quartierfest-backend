@@ -85,14 +85,14 @@ npm start        # http://localhost:4200
 ./mvnw verify -Dit.test=PersonVerwaltenIT
 ```
 
-**Unit-Tests** (`./mvnw test`): 64 Testmethoden.
-- 13 `*ControllerTest`-Klassen mit `@WebMvcTest` (50 Tests) — decken die HTTP-Schicht aller Domänen ab, ohne Datenbankabhängigkeit
-- 3 Service-Tests mit Mockito (13 Tests): `ParteiServiceTest` (`personenIds`-Auflösung), `BenutzerServiceTest` (BCrypt, Duplikat-E-Mail, letzter ORGANISATOR), `AuthServiceTest` (Token-Claims, 401)
+**Unit-Tests** (`./mvnw test`): 83 Testmethoden.
+- 13 `*ControllerTest`-Klassen mit `@WebMvcTest` (58 Tests) — decken die HTTP-Schicht aller Domänen ab, ohne Datenbankabhängigkeit
+- 4 Service-Tests mit Mockito (24 Tests): `ParteiServiceTest` (`personenIds`-Auflösung, unbekannte Person → 400, PUT → 404), `BenutzerServiceTest` (BCrypt, Duplikat-E-Mail, letzter ORGANISATOR, unbekannte Partei → 400), `AuthServiceTest` (Token-Claims, 401), `LoginDrosselungTest` (SEC-002)
 - `BackendApplicationTests` — Spring-Kontext-Smoke-Test (braucht PostgreSQL)
 
-**Integrationstests** (`./mvnw verify`): 45 Testmethoden (TC-001..TC-047, ohne TC-003 und TC-017) in 18 `*IT`-Klassen — 17 je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` plus `OpenApiContractIT` (TC-046, Abgleich `/v3/api-docs` ↔ `specs/openapi.json`) —, laufen gegen echte PostgreSQL.
+**Integrationstests** (`./mvnw verify`): 52 Testmethoden, 74 Ausführungen inkl. Parametrisierung (TC-001..TC-054, ohne TC-003 und TC-017) in 20 `*IT`-Klassen — 17 je im Domain-Package unter `src/test/java/ch/quartierfest/backend/<domäne>/` plus `OpenApiContractIT` (TC-046, Abgleich `/v3/api-docs` ↔ `specs/openapi.json`), `RestKonventionenIT` (TC-052/053) und `AbfrageAnzahlIT` (TC-054) —, laufen gegen echte PostgreSQL.
 
-**API-Contract (API-001):** Nach einer Änderung an Entities/Controllern die versionierte OpenAPI-Spec neu erzeugen und mitcommitten, sonst schlägt TC-046 fehl:
+**API-Contract (API-001):** Controller nehmen `*Request`-Records entgegen und liefern `*Response`-Records, nie JPA-Entities (Stufe 2, `specs/plans/API-001_Stufe-2_Plan.md`). Referenzen im Request sind flache IDs (`eventId`, `parteiId`, …). Nach einer Änderung an Records/Controllern die versionierte OpenAPI-Spec neu erzeugen und mitcommitten, sonst schlägt TC-046 fehl:
 
 ```bash
 OPENAPI_UPDATE=true ./mvnw verify -Dit.test=OpenApiContractIT
@@ -163,18 +163,18 @@ Alle Endpunkte erreichbar unter `http://localhost:8080`. OpenAPI-Spec: `GET /v3/
 | Personen | `GET /api/persons` | `POST /api/persons` | `PUT /api/persons/{id}` | `DELETE /api/persons/{id}` |
 | Parteien | `GET /api/parteien` | `POST /api/parteien` | `PUT /api/parteien/{id}` | `DELETE /api/parteien/{id}` |
 | Events | `GET /api/events` | `POST /api/events` | `PUT /api/events/{id}` | `DELETE /api/events/{id}` |
-| Einladungen | `GET /api/einladungen` | `POST /api/einladungen` (auch Upsert) | — | `DELETE /api/einladungen/{id}` |
+| Einladungen | `GET /api/einladungen` | `POST /api/einladungen` | `PUT /api/einladungen/{id}` (Rückmeldung, Bestätigung; REST-003) | `DELETE /api/einladungen/{id}` |
 | Teilnahmen | `GET /api/teilnahmen`, `GET /api/teilnahmen/meine` (PARTEI, UC-016) | `POST /api/teilnahmen` | `PUT /api/teilnahmen/{id}` (Whitelist-DTO, UC-016) | `DELETE /api/teilnahmen/{id}` |
-| Allgemeinausgaben | `GET /api/allgemeinausgaben` | `POST /api/allgemeinausgaben` | — | `DELETE /api/allgemeinausgaben/{id}` |
-| Konsumationsangebote | `GET /api/konsumationsangebote` | `POST /api/konsumationsangebote` | — | `DELETE /api/konsumationsangebote/{id}` |
-| Konsumationen | `GET /api/konsumationen` | `POST /api/konsumationen` | — | `DELETE /api/konsumationen/{id}` |
-| Abrechnungen | `GET /api/abrechnungen` | `POST /api/abrechnungen` (auch Upsert) | — | `DELETE /api/abrechnungen/{id}` |
+| Allgemeinausgaben | `GET /api/allgemeinausgaben` | `POST /api/allgemeinausgaben` | `PUT /api/allgemeinausgaben/{id}` | `DELETE /api/allgemeinausgaben/{id}` |
+| Konsumationsangebote | `GET /api/konsumationsangebote` | `POST /api/konsumationsangebote` | `PUT /api/konsumationsangebote/{id}` | `DELETE /api/konsumationsangebote/{id}` |
+| Konsumationen | `GET /api/konsumationen` | `POST /api/konsumationen` | `PUT /api/konsumationen/{id}` (nur Anzahl) | `DELETE /api/konsumationen/{id}` |
+| Abrechnungen | `GET /api/abrechnungen` | `POST /api/abrechnungen` | `PUT /api/abrechnungen/{id}` (Kanal, Zustellung, Beträge; REST-003) | `DELETE /api/abrechnungen/{id}` |
 | Zahlungen | `GET /api/zahlungen` | `POST /api/zahlungen` | — | `DELETE /api/zahlungen/{id}` |
 | Mahnungen | `GET /api/mahnungen` | `POST /api/mahnungen` | — | `DELETE /api/mahnungen/{id}` |
 | Benutzer | `GET /api/benutzer` | `POST /api/benutzer` | `PUT /api/benutzer/{id}/passwort` (Reset) | `DELETE /api/benutzer/{id}` |
 | Auth | — | `POST /api/auth/login` → `{token}` | — | — |
 
-Alle Endpunkte geben `200 OK` zurück (auch POST und DELETE). Beziehungen:
+Alle Endpunkte geben `200 OK` zurück (auch POST und DELETE). Ein POST mit `id` im Body wird mit `400` abgelehnt (unbekanntes Feld), ein PUT auf eine unbekannte id mit `404`. Beziehungen (alle lazy geladen, OSIV aus):
 
 | Entität | Beziehungen |
 |---|---|
@@ -199,7 +199,8 @@ Alle Spezifikationen liegen unter `specs/`:
 |---|---|
 | `use-cases_overview.md` | Übersicht aller 16 Use Cases |
 | `UC-001` .. `UC-016` | Einzelne Use Cases |
-| `testdesign.md` | Testdesign TC-001..TC-047, Transportstrategie, Open Items |
+| `testdesign.md` | Testdesign TC-001..TC-054, Transportstrategie, Open Items |
 | `datamodel.md` | Datenmodell |
 | `architecture.md` | Architekturdiagramm, Traceability-Matrix, technische Schulden |
 | `TODO.md` | Technische Schulden und Refactoring-Backlog |
+| `plans/` | Umsetzungspläne grösserer TODO-Punkte (z.B. `API-001_Stufe-2_Plan.md`) |

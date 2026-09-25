@@ -70,7 +70,7 @@ traceability:
 3. Der Organisator gibt Bezeichnung (Pflicht) und Preis (Pflicht) ein. *(→ E1 bei fehlendem Pflichtfeld)*
 4. Das System speichert den Angebotseintrag.
 5. Der Organisator wiederholt Schritt 2–4 für alle Einträge des Angebots.
-6. Der Organisator kann bestehende Einträge bearbeiten oder löschen. *(→ E2 beim Löschen wenn Konsumationen vorhanden)*
+6. Der Organisator kann bestehende Einträge bearbeiten (`PUT /api/konsumationsangebote/{id}`, TC-049) oder löschen. *(→ E2 beim Löschen wenn Konsumationen vorhanden)*
 7. Das System zeigt das vollständige Angebot mit allen Positionen und Preisen.
 
 ---
