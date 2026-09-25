@@ -77,7 +77,7 @@ class KonsumationsangebotVerwaltenIT {
     void tc016_konsumationsangebotAnlegenUndLoeschen() {
         ResponseEntity<Map> response = http.exchange("http://localhost:" + port + "/api/konsumationsangebote", HttpMethod.POST,
                 new HttpEntity<>(Map.of(
-                        "event", Map.of("id", eventId),
+                        "eventId", eventId,
                         "bezeichnung", "Bier 5dl",
                         "preis", "3.00"), json), Map.class);
 

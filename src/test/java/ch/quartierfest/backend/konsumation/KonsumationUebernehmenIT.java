@@ -72,7 +72,7 @@ class KonsumationUebernehmenIT {
         teilnahmeId = id(setupPost("http://localhost:" + port + "/api/teilnahmen",
                 Map.of("einladung", Map.of("id", einladungId), "anzahlPersonenEffektiv", 2)));
         angebotId = id(setupPost("http://localhost:" + port + "/api/konsumationsangebote",
-                Map.of("event", Map.of("id", eventId), "bezeichnung", "Bier 5dl", "preis", "3.00")));
+                Map.of("eventId", eventId, "bezeichnung", "Bier 5dl", "preis", "3.00")));
     }
 
     @AfterEach

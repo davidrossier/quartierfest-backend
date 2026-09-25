@@ -8,6 +8,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ProblemDetail;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.orm.jpa.JpaObjectRetrievalFailureException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.web.ErrorResponse;
@@ -16,6 +17,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
+
+import tools.jackson.databind.exc.UnrecognizedPropertyException;
 
 import java.util.stream.Collectors;
 
@@ -90,6 +93,23 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 .collect(Collectors.joining("; "));
         return new ResponseEntity<>(new ApiError(status.value(), "Validierung fehlgeschlagen: " + felder),
                 headers, status);
+    }
+
+    /**
+     * 400 — unlesbarer Body. API-001 Stufe 2: unbekannte Felder (z.B. {@code id} im POST oder eine Referenz im
+     * Update-Request) werden mit dem Feldnamen gemeldet statt mit der generischen Meldung.
+     */
+    @Override
+    protected ResponseEntity<Object> handleHttpMessageNotReadable(HttpMessageNotReadableException ex,
+            HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (t instanceof UnrecognizedPropertyException unbekannt) {
+                return new ResponseEntity<>(new ApiError(status.value(),
+                        "Unbekanntes Feld: " + unbekannt.getPropertyName()), headers, status);
+            }
+            if (t.getCause() == t) break;
+        }
+        return super.handleHttpMessageNotReadable(ex, headers, status, request);
     }
 
     @Override

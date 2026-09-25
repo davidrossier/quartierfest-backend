@@ -71,7 +71,7 @@ class KonsumationslisteErstellenIT {
                 "anzahlPersonen", 2,
                 "bestaetigungVersendet", false)));
         angebotId = id(setupPost("http://localhost:" + port + "/api/konsumationsangebote",
-                Map.of("event", Map.of("id", eventId), "bezeichnung", "Bier 5dl", "preis", "3.00")));
+                Map.of("eventId", eventId, "bezeichnung", "Bier 5dl", "preis", "3.00")));
     }
 
     @AfterEach
