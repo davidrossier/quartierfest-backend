@@ -4,6 +4,7 @@ package ch.quartierfest.backend.benutzer;
 
 import ch.quartierfest.backend.partei.Partei;
 import jakarta.persistence.Column;
+import jakarta.persistence.FetchType;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -41,7 +42,7 @@ public class Benutzer {
     @Column(nullable = false)
     private Rolle rolle;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Partei partei;
 
     public enum Rolle {

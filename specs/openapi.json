@@ -243,7 +243,7 @@
             "$ref" : "#/components/schemas/EinladungStatus"
           }
         },
-        "required" : [ "eventId", "parteiId", "status" ],
+        "required" : [ "bestaetigungVersendet", "eventId", "parteiId", "status" ],
         "type" : "object"
       },
       "EinladungResponse" : {
@@ -313,7 +313,7 @@
             "$ref" : "#/components/schemas/EinladungStatus"
           }
         },
-        "required" : [ "status" ],
+        "required" : [ "bestaetigungVersendet", "status" ],
         "type" : "object"
       },
       "EventRequest" : {
@@ -583,7 +583,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "adresse", "bezeichnung" ],
+        "required" : [ "adresse", "bezeichnung", "twintAktiv" ],
         "type" : "object"
       },
       "ParteiResponse" : {

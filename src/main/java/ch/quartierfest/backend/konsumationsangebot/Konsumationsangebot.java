@@ -19,7 +19,7 @@ public class Konsumationsangebot {
     private Long id;
 
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Event event;
 
     @NotBlank

@@ -3,8 +3,8 @@ package ch.quartierfest.backend.konsumationsangebot;
 /**
  * Traceability:
  *   UC: UC-008 (Konsumationsangebot verwalten)
- *   TCs: TC-016
- *   Last traced: 2026-05-01
+ *   TCs: TC-016, TC-049
+ *   Last traced: 2026-09-25
  */
 
 import org.junit.jupiter.api.AfterEach;
@@ -28,7 +28,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 /**
  * Integration tests for UC-008 – Konsumationsangebot verwalten.
- * Covers TC-016, TC-017.
+ * Covers TC-016, TC-017, TC-049.
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.DEFINED_PORT)
 @ActiveProfiles("dev")
@@ -87,6 +87,27 @@ class KonsumationsangebotVerwaltenIT {
 
         // TC-017: Konsumationsangebot löschen – Cleanup als Lösch-Test (vor @AfterEach-Event-Cleanup)
         String url = "http://localhost:" + port + "/api/konsumationsangebote/" + response.getBody().get("id");
+        ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
+        assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
+    }
+
+    @Test
+    @DisplayName("TC-049 – UC-008 Konsumationsangebot per PUT bearbeiten (REST-003, erweitert)")
+    @SuppressWarnings("unchecked")
+    void tc049_konsumationsangebotBearbeiten() {
+        Map<String, Object> angelegt = setupPost("http://localhost:" + port + "/api/konsumationsangebote",
+                Map.of("eventId", eventId, "bezeichnung", "Bier 5dl", "preis", "3.00"));
+        String url = "http://localhost:" + port + "/api/konsumationsangebote/" + id(angelegt);
+
+        ResponseEntity<Map> response = http.exchange(url, HttpMethod.PUT,
+                new HttpEntity<>(Map.of("eventId", eventId, "bezeichnung", "Bier 3dl", "preis", "2.50"), json),
+                Map.class);
+
+        assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+        assertThat(response.getBody().get("id")).isEqualTo((int) id(angelegt));
+        assertThat(response.getBody().get("bezeichnung")).isEqualTo("Bier 3dl");
+        assertThat(response.getBody().get("preis")).isEqualTo(2.5);
+
         ResponseEntity<Void> del = http.exchange(url, HttpMethod.DELETE, null, Void.class);
         assertThat(del.getStatusCode()).isEqualTo(HttpStatus.OK);
     }

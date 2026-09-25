@@ -18,11 +18,11 @@ public class Konsumation {
     private Long id;
 
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Teilnahme teilnahme;
 
     @NotNull
-    @ManyToOne(optional = false)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     private Konsumationsangebot konsumationsangebot;
 
     @NotNull

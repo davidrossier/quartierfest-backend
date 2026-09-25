@@ -15,5 +15,5 @@ public record EinladungUpdateRequest(
         @Nullable Boolean hilftAufraumen,
         Einladung.@Nullable BuffetBeitrag buffetBeitrag,
         @Nullable String buffetBeitragBeschreibung,
-        boolean bestaetigungVersendet) {
+        @NotNull Boolean bestaetigungVersendet) {
 }

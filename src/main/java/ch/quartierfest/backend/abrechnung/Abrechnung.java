@@ -20,7 +20,7 @@ public class Abrechnung {
     private Long id;
 
     @NotNull
-    @OneToOne(optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     private Teilnahme teilnahme;
 
     // DB-002: Geldbeträge explizit numeric(10,2)

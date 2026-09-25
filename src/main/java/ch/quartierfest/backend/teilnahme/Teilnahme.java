@@ -21,7 +21,7 @@ public class Teilnahme {
     private Long id;
 
     @NotNull
-    @OneToOne(optional = false)
+    @OneToOne(fetch = FetchType.LAZY, optional = false)
     private Einladung einladung;
 
     private Integer anzahlPersonenEffektiv;
